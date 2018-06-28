@@ -132,7 +132,7 @@ def main(args):
     gamma_distributions=[]
     gamma_distributions.extend(learn_gammas(data[data["source"] == label_control]))
     
-    to_call = data[data["source"] == label_sample]
+    to_call = data[data["source"] == label_sample].copy()
     to_call.loc[:,"to_call"] = to_call.apply(lambda row: call_by_gamma(row["adjusted_freq"],row["mutation_type"], row["prev"],row["next"],gamma_distributions), axis=1)
 
     output_to_file(to_call[(to_call["source"]==label_sample)], args.output)
