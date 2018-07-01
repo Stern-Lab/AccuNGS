@@ -1,4 +1,4 @@
-import re, itertools, csv, numpy, os.path, sys
+import re, itertools, csv, numpy, os.path, sys, argparse
 import matplotlib.pyplot as plt
 from collections import Counter
 import seaborn as sns
@@ -16,25 +16,18 @@ def hamming_distance(s1, s2):
 def obtain_matches(barcodes_file):
 
     if os.path.isfile(barcodes_file):
-        print ("primers file found!")
         with open(barcodes_file,"r") as handle:
             return handle.read().splitlines()  
     raise Exception("No barcodes file") 
 
-'''
-args[0] = input file with primer_ids (each primer in each line)
-args[1] = output path for histogram of primer-ID abundance
-'''
 def main(args):
-    matches = [x for x in obtain_matches(args[0]) if x.count("-") < 3]
+    matches = [x for x in obtain_matches(args.barcodes_file) if x.count("-") < 3]
     
     with_counts = Counter(matches) 
     
-    print (with_counts)
-    print ("total distinct primer IDs",len(with_counts.keys()))
-    print ("total primer IDs", len(matches))
-    if len (args) > 2:
-        print ("total primer IDs with abundance above parameter",len(list(filterbyvalue(with_counts.values(), args[2]))))
+    print ("total primer IDs in input file: " + str(len(matches)))
+    print ("total distinct primer IDs: " + str(len(with_counts.keys())))
+    print ("total distinct primer IDs with abundance at or above parameter: " + str(len(list(filterbyvalue(with_counts.values(), args.cutoff)))))
     
     hist = numpy.histogram(with_counts.values(), max(with_counts.values()))
    
@@ -51,8 +44,16 @@ def main(args):
     
     for save_format in ["png"]:
         plt.tight_layout()
-        plt.savefig(args[1] + "histogram." + save_format , dpi=680, format=save_format )
+        plt.savefig(args.output_dir + "/histogram." + save_format , dpi=680, format=save_format )
     plt.close()
 
+    print ("output written to " + args.output_dir + "/histogram." + save_format )
+
 if __name__ == "__main__":
-    main(sys.argv[1:])
+    parser = argparse.ArgumentParser()
+    parser.add_argument("barcodes_file",type=str, help="text file with identified barcodes")
+    parser.add_argument("output_dir", type=str, help="folder for results output")
+    parser.add_argument("-c","--cutoff", type=int, help="barcodes abundance cutoff", default=1, required=False)
+    
+    args = parser.parse_args(sys.argv[1:])
+    main(args)
