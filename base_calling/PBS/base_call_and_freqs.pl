@@ -250,10 +250,10 @@ sub read_quality {
     
     my $cmd_line= "";
     if ($min_for_calling == 1){
-    	$cmd_line= "$grep_name -F -A1 -f $list_reads $fastq_file \| grep -v \'^--$\' >$list_reads_q";
+    	$cmd_line= "$grep_name -F -A1 -f $list_reads $fastq_file \| grep -v \'^--\$\' >$list_reads_q";
     }
     else{
-    	$cmd_line= "$grep_name -F -A3 -f $list_reads $fastq_file \| grep -v \'^--$\' >$list_reads_q";
+    	$cmd_line= "$grep_name -F -A3 -f $list_reads $fastq_file \| grep -v \'^--\$\' >$list_reads_q";
     }
 	
     my $res=`$cmd_line`;
