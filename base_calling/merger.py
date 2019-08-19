@@ -13,7 +13,7 @@ def merger_generator(forward_handle,reverse_handle, rep_length):
         b_quals=b.letter_annotations["phred_quality"]
         new_seq_qual= a_quals+[1.0 for a in range(rep_length)]+b_quals
 
-        new_seq=SeqRecord(new_seq_str,id=new_seq_id,description="",letter_annotations={"phred_quality":new_seq_qual})
+        new_seq=SeqRecord(Seq.Seq(new_seq_str),id=new_seq_id,description="",letter_annotations={"phred_quality":new_seq_qual})
         yield new_seq
 
 def main(args):
