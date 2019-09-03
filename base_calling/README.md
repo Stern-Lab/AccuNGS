@@ -18,7 +18,7 @@ The general flow of the base calling process in AccuNGS is as the following (LIN
 	
 	makeblastdb -in ${in_fastq} -dbtype nucl
 	
-	blastn -query ${ref_genome} -task blastn -db ${in_fastq} -outfmt \"6 sseqid qstart qend qstrand sstart send sstrand length btop\" -num_alignments ${max_num_alignments} -dust no -soft_masking F -perc_identity ${pcID_blast} -evalue 1e-10 -out ${out_blast}";
+	blastn -query ${ref_genome} -task blastn -db ${in_fastq} -outfmt \"6 sseqid qstart qend qstrand sstart send sstrand length btop\" -num_alignments ${max_num_alignments} -dust no -soft_masking F -perc_identity ${pcID_blast} -evalue 1e-10 -out ${out_blast};
 	
 3. Basecalling with "base_call_and_freqs.pl" perl script. Parameters:
 	out_blast - result output of the previous BLAST run
