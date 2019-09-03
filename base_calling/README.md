@@ -3,14 +3,21 @@ The general flow of the base calling process in AccuNGS is as the following (LIN
 1. Forward (R1) and Reverse (R2) of a paired-end (Illumina) sequencing run are concatenated using "merger.py" python script. The script simply concatenates the two reads to a single read, with multiple "N" bases between the two.
 
 2. BLAST (v2.7.1+) the merged fastq against the reference. Parameters:
+
 	ref_genome - reference genome (FASTA format)
+	
 	in_fastq - merged fastq file
+	
 	max_num_alignments - maximum number of alignments (typically 10x of the length of the input file)
+	
 	pcID_blast - percents identity of each alignment to the reference. suggested default: 85
+	
 	out_blast - blast output file
 	
 	Typical use case:
+	
 	makeblastdb -in ${in_fastq} -dbtype nucl
+	
 	blastn -query ${ref_genome} -task blastn -db ${in_fastq} -outfmt \"6 sseqid qstart qend qstrand sstart send sstrand length btop\" -num_alignments ${max_num_alignments} -dust no -soft_masking F -perc_identity ${pcID_blast} -evalue 1e-10 -out ${out_blast}";
 	
 3. Basecalling with "base_call_and_freqs.pl" perl script. Parameters:
