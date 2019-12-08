@@ -70,11 +70,11 @@ def output_to_file(data, output_file):
     dataToOutput=pd.DataFrame()
     dataToOutput["Ref_Pos"]=dataFiltered["Pos"]
     dataToOutput["Var"]=dataFiltered["Base"]
-    dataToOutput["Cons"]=dataFiltered["Ref"]   
+    dataToOutput["Cons"]=dataFiltered["consensus"]   
     dataToOutput["pval"]=dataFiltered["to_call"]
     dataToOutput["Type"]="snp"
     dataToOutput["Var_perc"]=dataFiltered["Freq"]
-    dataToOutput["SNP_Profile"]=dataFiltered["Ref"] + ":" + dataFiltered["major_read_count"].astype(np.int32).astype(str)  + " " + dataFiltered["Base"] + ":" + dataFiltered["counts_for_position_x"].astype(np.int32).astype(str) 
+    dataToOutput["SNP_Profile"]=dataFiltered["consensus"] + ":" + dataFiltered["major_read_count"].astype(np.int32).astype(str)  + " " + dataFiltered["Base"] + ":" + dataFiltered["counts_for_position_x"].astype(np.int32).astype(str) 
     dataToOutput["pval"] = np.where(dataToOutput["Var_perc"] == 0, "1.0", dataToOutput["pval"])
     dataToOutput["pval"]=dataToOutput["pval"].apply(pd.to_numeric)
 
