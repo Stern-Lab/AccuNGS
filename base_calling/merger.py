@@ -1,4 +1,3 @@
-#! /usr/local/python_anaconda/bin/python3.4
 import sys, gzip, argparse
 from Bio import SeqIO,Seq
 from Bio.SeqRecord import SeqRecord
@@ -42,9 +41,9 @@ def concat_fastq_gz(file1, file2, output_file, rep_length):
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("-1", "--forward",type=str, help="Forward fastq file")
-    parser.add_argument("-2", "--reverse",type=str, help="Reverse fastq file")
-    parser.add_argument("-o", "--output_file", type=str, help="output merged fastq file")
+    parser.add_argument("forward",type=str, help="Forward FASTQ file")
+    parser.add_argument("reverse",type=str, help="Reverse FASTQ file")
+    parser.add_argument("output_file", type=str, help="output: merged FASTQ file")
     parser.add_argument("-n", "--rep_length", help="amount of N bases to repeat", type=int, default=60, required=False)
     
     args = parser.parse_args(sys.argv[1:])
