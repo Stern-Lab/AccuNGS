@@ -99,10 +99,10 @@ def main(args):
     label_sample = "Sample"
 
     print ("loading " + sample_file + " as sample")
-    data_mutations = pd.read_table(sample_file)
+    data_mutations = pd.read_csv(sample_file, sep="\t")
     data_mutations["source"] = label_sample
     print ("loading " + control_file + " as homogeneous control")
-    data_control = pd.read_table(control_file)
+    data_control = pd.read_csv(control_file, sep="\t")
     data_control["source"] = label_control
     
     data = pd.concat([data_control, data_mutations])
@@ -141,7 +141,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("sample",type=str, help="input sample .freqs file")
     parser.add_argument("control", type=str, help="input control .freqs file")
-    parser.add_argument("-c", "--coverage", type=int, help="minimum position coverage to fit and call variants", required=False, default=100000)
+    parser.add_argument("-c", "--coverage", type=int, help="minimum position coverage to fit and call variants", required=False, default=1000)
     parser.add_argument("-o", "--output", type=str, help="output variant file", required=False, default="output.var.csv")
     
     args = parser.parse_args(sys.argv[1:])
