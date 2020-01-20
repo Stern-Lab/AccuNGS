@@ -14,7 +14,7 @@ $| = 1;
 
 die "usage base_call_and_freqs.pl <blast output file in -m6 btop format format> <fastq (or fastq.gz) with quality scores> <reference sequence used with blast, fasta format> <output file for frequencies> <infer gaps? Y/N default Y> <min number repeats> <quality cutoff; default=30, requires all repeats to have this q or higher>" unless (scalar(@ARGV)>=4);
 
-my $current_version_path = ""; #path to folder with AccuNGS scripts
+my $current_version_path = "/sternadi/home/volume1/maozgelbart/AccuNGS/base_calling"; #path to folder with AccuNGS scripts
 
 my $infile = $ARGV[0];
 my $fastq_file = $ARGV[1];
@@ -356,7 +356,7 @@ sub summarize {
 
 sub print_and_out {
     open OUT, ">$out_file" or die "cannot open file $out_file\n";
-    print OUT "#Pos\tBase\tFreq\tRef\tCoverage\tRank\n";
+    print OUT "Pos\tBase\tFreq\tRef\tRead_count\tRank\n";
     foreach my $pos (sort {$a <=> $b} keys %base_calls) {
 	if ($pos =~ m/\./) { # this represents an insertion in the reference seqeunce
 	    next if ($base_counts{$pos}==0);
