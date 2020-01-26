@@ -40,12 +40,12 @@ if (defined $ARGV[4]) {
 }
 
 # default quality cutoff per base is 30
-my $min_for_calling = $ARGV[5];
+my $min_for_calling = 2;
 
 my $quality_cutoff=30;
 
-if (defined $ARGV[6]) {
-   $quality_cutoff=$ARGV[6];
+if (defined $ARGV[5]) {
+   $quality_cutoff=$ARGV[5];
 }
 
 my $ascii_q_file = "$current_version_path/ascii_table_processed.txt";
@@ -242,13 +242,7 @@ sub read_quality {
 	print OUT "@".$read."\n"; # removed space before \n due to grep problems
     }
     
-    my $cmd_line= "";
-    if ($min_for_calling == 1){
-    	$cmd_line= "$grep_name -F -A1 -f $list_reads $fastq_file \| grep -v \'^--\$\' >$list_reads_q";
-    }
-    else{
-    	$cmd_line= "$grep_name -F -A3 -f $list_reads $fastq_file \| grep -v \'^--\$\' >$list_reads_q";
-    }
+    my $cmd_line= "cat $fastq_file \| awk \'{if(NR%4==1) {print} else if(NR%4==0) print;}\' \| $grep_name -F -A1 -f $list_reads \| grep -v \'^--\$\' >$list_reads_q";
 	
     my $res=`$cmd_line`;
     

@@ -47,6 +47,6 @@ and not sequencing errors) are not used to fit the gamma distributions.
 
 .. code-block:: bash
 
-  python variant_calling/variant_caller.py merged.fasta.freqs merged.fasta.freqs -c 1000 -o ${output_file}
+  python variant_caller/variant_caller.py merged.fasta.freqs merged.fasta.freqs -c 500 -o ${output_file}
 
 The result of this line of code is similar to this :download:`example variants file <examples/example_output.var.csv>`

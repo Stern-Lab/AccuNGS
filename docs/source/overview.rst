@@ -1,13 +1,15 @@
 Overview
 ========
 
-AccuNGS is a sequencing approach aimed at accurate sequencing of DNA or RNA,
-especially with long genomic regions and low input. It is composed of several 
-different techniques that eliminate most errors that are created during 
-library prep and sequencing process. 
+AccuNGS is a sequencing approach aimed at accurate deep sequencing of DNA or RNA,
+especially with long genomic regions and low input that often requires amplification. 
+It is composed of several techniques that eliminate most errors that are 
+created during library prep and sequencing. 
 
 AccuNGS's sequencing principles
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ 
+The main idea behind this approach is to reduce the error sources to a minimum. 
+This is achieved by adhering to the following principles:
 
 * High-yield reverse transcription reactions (RT) [if required]
 * High-fidelity PCR reactions [if required]

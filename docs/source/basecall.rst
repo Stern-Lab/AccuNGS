@@ -17,7 +17,7 @@ Unmapped loci (i.e. due to lack of coverage) are omitted from the output file.
     A PBS-compatible pipeline is available under ``PBS`` directory 
     (``runner.pl``).
 
-The flow of the base calling process in AccuNGS is as the following:
+The base calling process in AccuNGS is composed of the following steps, all executed one after another:
 
 Merging paired reads
 ^^^^^^^^^^^^^^^^^^^^
@@ -86,8 +86,6 @@ output_file           Text           the output file name (better use .FREQS for
 --------------------- -------------- --------------------------------
 do_gaps               Text           Y if the base calling should report indels; N otherwise
 --------------------- -------------- --------------------------------
-num_repeats           Integer        2 if overlapping paired-reads are present; 1 otherwise
---------------------- -------------- --------------------------------
 min_qual_score        Float          minimum average quality score (on the two reads) to be reported. Typically 30 or 38
 ===================== ============== ================================
 
@@ -95,7 +93,7 @@ A typical use case:
 
 .. code-block:: bash
 
-  perl base_calling/base_call_and_freqs.pl ${out_blast} ${in_fastq} ${ref_genome} ${output_file} ${do_gaps} ${num_repeats} ${min_qual_score}
+  perl base_calling/base_call_and_freqs.pl ${out_blast} ${in_fastq} ${ref_genome} ${output_file} ${do_gaps} ${min_qual_score}
 
 The output of this chain of scripts is similar to this :download:`example output file <examples/example_output.freqs>`, and contains frequencies of different alleles observed for each loci, including insertions and deletions. 
 
@@ -122,7 +120,7 @@ to output the following :download:`output file <examples/example_output.freqs>`.
 
 .. code-block:: bash
 
-  perl base_calling/base_call_and_freqs.pl merged.fasta.out.blast merged.fastq example_reference.fasta merged.fasta.freqs Y 2 30
+  perl base_calling/base_call_and_freqs.pl merged.fasta.out.blast merged.fastq example_reference.fasta merged.fasta.freqs Y 30
 
 The output of this chain of scripts is this :download:`example output file <examples/example_output.freqs>`. 
 
