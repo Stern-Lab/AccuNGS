@@ -1,8 +1,16 @@
+.. _Pandas: https://pandas.pydata.org/
+.. _Numpy: https://numpy.org/
+.. _Scipy: https://www.scipy.org/
+
 Variant calling
 ===============
 This part is taking advantage of a homogeneous control population sequenced in parallel to the samples of interest. 
 This homogeneous control acts as a marker for the baseline error levels of the protocol, 
 which can be modeled by several gamma distributions that correspond to different erroneous substitutions (i.e. A>G, G>A, etc.)
+
+Prerequisits
+^^^^^^^^^^^^
+This python script requires `Pandas`_, `Numpy`_ and `Scipy`_ python packages installed. 
 
 Input
 ^^^^^
@@ -32,11 +40,13 @@ Invokation:
 Output
 ^^^^^^
 
-The output by this step is similar to the output by `V-phaser2 <https://www.broadinstitute.org/viral-genomics/v-phaser-2>`_. 
+The output by this step is similar to the output by 
+`V-phaser2 <https://www.broadinstitute.org/viral-genomics/v-phaser-2>`_. 
 Here's an :download:`example variants file <examples/example_output.var.csv>`.
-Each possible variant for each loci with a high-enough coverage is assigned a line in the output file. 
-The ``pval`` column can be used to filter variants, to allow a specific false-positive rate in variant calling. 
-Using 1% filtering is a reasonable filtering value. 
+Each possible variant for each loci with a high-enough coverage is assigned 
+a line in the output file. The ``pval`` column can be used to filter variants, 
+to allow a specific false-positive rate in variant calling. 
+1% filtering is a reasonable filtering value. 
 
 Example
 ^^^^^^^

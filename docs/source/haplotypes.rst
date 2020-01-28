@@ -1,3 +1,7 @@
+.. _Pandas: https://pandas.pydata.org/
+.. _Numpy: https://numpy.org/
+.. _Scipy: https://www.scipy.org/
+
 Haplotypes inference
 ====================
 Sometimes variants are linked on the same genome. Since Illumina uses short reads, if variants that are present on the same genome 
@@ -7,6 +11,11 @@ By performing statistical tests for independence on the two variants it is possi
 to a certain frequency within the population). After pairs of loci were linked, if haplotypes do not share variants, it is possible
 to merge several pairs together to a longer haplotype.
 
+.. warning:: 
+    If the population is too heterogeneous (that is, many divergent sequences of the
+    same genomic region are present), the haplotypes inference is expected to be 
+    inaccurate due to possible sharing of variants between different strains.
+
 .. figure:: _static/Fig6.png
     :scale: 75%
     :align: center
@@ -14,6 +23,10 @@ to merge several pairs together to a longer haplotype.
     :figclass: align-center
 	
     Schematic of haplotypes inference script.
+
+Prerequisits
+^^^^^^^^^^^^
+This flow requires `Pandas`_, `Numpy`_ and `Scipy`_ python packages installed. 
 
 Finding pairs of linked loci
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^

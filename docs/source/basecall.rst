@@ -1,6 +1,7 @@
 .. _Python (3.5+): https://www.python.org/downloads/
 .. _Perl (5.26+): https://www.perl.org/get.html
 .. _Blast (2.2+): https://blast.ncbi.nlm.nih.gov/Blast.cgi?PAGE_TYPE=BlastDocs&DOC_TYPE=Download
+.. _BioPython: https://biopython.org/
 .. _GitHub repository: https://github.com/SternLabTAU/AccuNGS/
 
 Base calling 
@@ -17,14 +18,18 @@ Unmapped loci (i.e. due to lack of coverage) are omitted from the output file.
     A PBS-compatible pipeline is available under ``PBS`` directory 
     (``runner.pl``).
 
-The base calling process in AccuNGS is composed of the following steps, all executed one after another:
+
+Base calling flow
+#################
+
+The base calling process in AccuNGS is composed of the following steps, all executed one after another.
 
 Merging paired reads
 ^^^^^^^^^^^^^^^^^^^^
 Match forward (R1) and reverse (R2) reads of an Illumina paired-end sequencing
 output to each other using ``base_calling/merger.py`` python script. The script simply
 concatenates the two reads to a single read, with multiple "N" bases between
-the two. In order to run it requires `Python (3.5+)`_.
+the two. In order to run it requires `Python (3.5+)`_ with `BioPython`_ package installed.
 
 .. code-block:: bash
 
@@ -97,12 +102,14 @@ A typical use case:
 
 The output of this chain of scripts is similar to this :download:`example output file <examples/example_output.freqs>`, and contains frequencies of different alleles observed for each loci, including insertions and deletions. 
 
-Example files
-^^^^^^^^^^^^^
-Here are two example files for :download:`Forward (R1) <examples/example_input_S1_L001_R1_001.fastq.gz>` and 
+Example: sample data
+####################
+Here are two example files for 
+:download:`Forward (R1) <examples/example_input_S1_L001_R1_001.fastq.gz>` and 
 :download:`Reverse (R2) <examples/example_input_S1_L001_R2_001.fastq.gz>` FASTQ files.
-Together with a :download:`Reference FASTA file <examples/example_reference.fasta>` the step can be executed, 
-to output the following :download:`output file <examples/example_output.freqs>`.
+Together with a :download:`Reference FASTA file <examples/example_reference.fasta>` 
+the base calling flow can be executed, to output the following 
+:download:`output file <examples/example_output.freqs>`.
 
 .. code-block:: bash
 
