@@ -1,10 +1,12 @@
+.. _Sanger: https://en.wikipedia.org/wiki/Phred_quality_score
+
 Overview
 ========
 
 AccuNGS is a sequencing approach aimed at accurate deep sequencing of DNA or RNA,
-especially with long genomic regions and low input that often requires amplification. 
-It is composed of several techniques that eliminate most errors that are 
-created during library prep and sequencing. 
+especially for clinical samples with low input that are difficult to sequence. 
+It is composed of several stages that eliminate most errors that are created 
+during library preparataion and sequencing. 
 
 When to use AccuNGS?
 ^^^^^^^^^^^^^^^^^^^^
@@ -12,13 +14,12 @@ There are many sequencing techniques out there. What scenarios are suitable
 for AccuNGS sequencing? If your experiment meets the following criteria,
 AccuNGS sequencing may be good for you!
 
-* If you want to identify alleles in a population of genomes as rare as 1:10,000.
+* If you want to identify alleles in a population that are as rare as 1:10,000.
 
-* If you intend to apply deep sequencing (reach coverage x1,000 and deeper).
+* If you plan to sequence deeply (reach coverage of x1,000 and higher).
 
-* If you don't expect too admixed population of many diverged genomes. 
-  AccuNGS identifies variants that are relative to a central consensus sequence, 
-  which may be absent when many diverged genomes are present.
+* If your population is not very heterogeneous of many diverged genomes. 
+  AccuNGS identifies variants that are relative to a central consensus sequence.
 
 .. warning:: 
     Since deep sequencing is usually obtained on short genomic regions, the software
@@ -28,7 +29,7 @@ AccuNGS sequencing may be good for you!
 
 AccuNGS's sequencing principles
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ 
-The main idea behind this approach is to reduce the error sources to a minimum. 
+The main idea behind this approach is to reduce the errors to a minimum. 
 This is achieved by adhering to the following principles:
 
 * High-yield reverse transcription reactions (RT) [if required]
@@ -36,7 +37,7 @@ This is achieved by adhering to the following principles:
 * High-fidelity tagmentation 
 * Size selection for insert size that equals read size
 * Illumina paired-end sequencing
-* Sequencing of a homogeneous control sample for fitting substitution-specific distributions of errors
+* Sequencing of a homogeneous control sample for fitting specific distributions of errors
 
 .. figure:: _static/Fig1.png
     :scale: 40%
@@ -46,16 +47,20 @@ This is achieved by adhering to the following principles:
 	
     AccuNGS principles.
 
-Exact equipment and materials used are described in :ref:`cite`. 
+AccuNGS was calibrated as described in :ref:`cite`. 
 
 AccuNGS - code
 ^^^^^^^^^^^^^^
-The code accompanying AccuNGS is divided into several parts, each carrying a different stage
-in the computational analysis of sequencing output. The different flows are:
+The code accompanying AccuNGS is divided into several stages, each carrying out 
+a different stage in the computational analysis of sequencing output. 
+The different stages are:
 
 * :doc:`basecall`
 * :doc:`variants`
 * :doc:`haplotypes`
 * :doc:`barcodes`
 
-
+.. note::
+    AccuNGS code assumes its sequencing input quality scores to be compatible 
+    with the `Sanger`_ format encoded as ASCII +33 (standard Illumina FASTQ 
+    output since 2012).

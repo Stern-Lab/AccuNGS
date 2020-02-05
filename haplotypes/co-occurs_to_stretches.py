@@ -1,4 +1,4 @@
-import sys
+import sys, argparse
 import numpy as np
 import pandas as pd
 
@@ -24,9 +24,8 @@ class comutations_bubble(object):
         self.pvalues.update(other.pvalues)
         self.meandist=np.mean(list(self.distances.values())) 
     
-def load_file(path, label):
-    df = pd.read_csv(path, sep="\t", names=["start","end","fisher_stat","pval","variant_freq"])
-    df["sample"] = label
+def load_file(path):
+    df = pd.read_csv(path, sep="\t", names=["start","end","odds_ratio","pval","variant_freq"])
     df = df[df["pval"]<1]
     return df
 
@@ -64,7 +63,6 @@ def obtain_comutations(comutations, max_pval=10**-9, distance=10):
             data = pd.DataFrame(distances, columns=["Pos1", "Pos2", "Freq"])
             data["Stretch"]=i
 
-            data["Sample"]=comutations.iloc[0]['sample']
             data["meandist"]=cluster.meandist
             dfs.append(data)
     
@@ -72,3 +70,38 @@ def obtain_comutations(comutations, max_pval=10**-9, distance=10):
         return pd.DataFrame({"Pos1":[], "Stretch":[], "meandist":[]})    
     return pd.concat(dfs) 
 
+def main(args):
+    comutations = load_file(args.linked_pairs)
+    res_table = obtain_comutations(comutations, args.max_pval, args.distance)
+    kws={"index":False, "sep":"\t"}
+    if not args.out:
+        res_table.to_csv(args.linked_pairs + ".stretches.out", **kws)
+    else:
+        res_table.to_csv(args.out, **kws)
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "linked_pairs", type=str, help="all linked pairs to find haplotypes"
+    )
+    parser.add_argument(
+        "-p", "--max_pval",
+        type=float,
+        help="Maximal p-value of a given pair to consider for merging with another pair",
+        default=10 ** -9,
+    )
+    parser.add_argument(
+        "-d", "--distance",
+        type=float,
+        help="The position to consider pairs",
+        default=10,
+    )
+    parser.add_argument(
+        "-o", "--out",
+        type=str,
+        help="The output file",
+        default=None,
+    )
+
+    args = parser.parse_args(sys.argv[1:])
+    main(args)

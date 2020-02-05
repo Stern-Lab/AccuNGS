@@ -7,22 +7,23 @@
 Base calling 
 ============
 The script files supporting base calling are present in the ``base_calling/`` folder in the AccuNGS `GitHub repository`_. 
-The input for the flow is a pair of FASTQ files the correspond to an Illumina paired-end sequencing run, and a reference FASTA file.
+The input for this stage is a pair of FASTQ files the correspond to an Illumina paired-end sequencing run, and a reference FASTA file.
 The output is a file that contains frequencies of different alleles observed for each loci, including insertions and deletions. 
 Unmapped loci (i.e. due to lack of coverage) are omitted from the output file.
 
 .. note:: 
-    For large input files, it is extremely useful to split the initial input 
-    FASTQ files into smaller parts and running all code in parallel on a 
-    computational grid, and then merging the result FREQS files. 
-    A PBS-compatible pipeline is available under ``PBS`` directory 
-    (``runner.pl``).
+    If you have PBS-compatible computational grid, you may want to use the 
+    AccuNGS base calling flow from ``base_calling/PBS/`` folder. It will
+    streamline the scripts used for this stage, and will parallel the creation 
+    of the output by splitting the input for smaller files. Run (``runner.pl``)
+    on the merged fastq folder.
 
 
-Base calling flow
-#################
+Base calling stage
+##################
 
-The base calling process in AccuNGS is composed of the following steps, all executed one after another.
+The base calling process in AccuNGS is composed of the following steps, 
+that need to be executed one after another.
 
 Merging paired reads
 ^^^^^^^^^^^^^^^^^^^^
@@ -46,7 +47,8 @@ A linux command to create it:
 
 Run BLAST against the reference
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-This step performs mapping of the reads against the reference sequence, using `Blast (2.2+)`_. Consider the following parameters:	
+This step performs mapping of the reads against the reference sequence, using `Blast (2.2+)`_. 
+This step requires the following parameters:	
 
 ===================== ============== ================================ 
 Parameter name        Type           Description
@@ -74,7 +76,6 @@ A typical use case involves creating a BLAST database and then performing the BL
 Run base-calling script
 ^^^^^^^^^^^^^^^^^^^^^^^
 Base calling is done using ``base_call_and_freqs.pl`` perl script. It requires `Perl (5.26+)`_ installed. 
-Make sure line 17 properly contains the full path of the ``base_calling`` folder.
 
 The perl script requires the following parameters:
 
@@ -100,7 +101,31 @@ A typical use case:
 
   perl base_calling/base_call_and_freqs.pl ${out_blast} ${in_fastq} ${ref_genome} ${output_file} ${do_gaps} ${min_qual_score}
 
-The output of this chain of scripts is similar to this :download:`example output file <examples/example_output.freqs>`, and contains frequencies of different alleles observed for each loci, including insertions and deletions. 
+.. _basecall_output:
+
+Output format
+#############
+The output of this chain of scripts is similar to this 
+:download:`example output file <examples/example_output.freqs>`, 
+and contains frequencies of different alleles observed at each locus, 
+including insertions and deletions (if ``base_call_and_freqs.pl`` was 
+run with ``do_gaps=Y``). 
+
+===================== ================ ================================ 
+Column name           Type             Description
+===================== ================ ================================
+Pos                   Float            The locus which this data refers to, when using the reference for numbering. Insertions are marked by consecutive significant figures for this position, for instance insertion after locus ``15`` will be marked as ``15.1``.
+--------------------- ---------------- --------------------------------
+Base                  String           The identified base. One of {A,C,G,T,-}
+--------------------- ---------------- --------------------------------
+Freq                  Float            The frequency that this base was observed at this position
+--------------------- ---------------- --------------------------------
+Ref                   String           The referece base 
+--------------------- ---------------- --------------------------------
+Coverage              Integer          The number of reads supporting this locus. The number of reads supporting this base are ``Coverage x Freq``
+--------------------- ---------------- --------------------------------
+Rank                  Integer          The rank of ``Base`` starting at 0 for most prevalent base and descending
+===================== ================ ================================
 
 Example: sample data
 ####################

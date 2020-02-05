@@ -5,8 +5,8 @@
 
 Downloading and installing AccuNGS
 ==================================
-AccuNGS accompanying code is present at our `GitHub repository`_. 
-The different folders correspond to the different flows of AccuNGS as described in :doc:`overview`. 
+AccuNGS code is present on our `GitHub repository`_. 
+The different folders correspond to the different stages of AccuNGS as described in :doc:`overview`. 
 AccuNGS has a few external dependencies:
 
 * `Perl (5.26+)`_
