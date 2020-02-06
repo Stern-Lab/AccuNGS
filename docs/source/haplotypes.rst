@@ -106,7 +106,7 @@ Example usage:
 Required parameters
 *******************
 
-The ``obtain_comutations`` function accepts three parameters:
+This script function accepts four parameters:
 
 ===================== ================ ================================ 
 Parameter name        Type             Description
