@@ -138,7 +138,12 @@ the base calling flow can be executed, to output the following
 
 .. code-block:: bash
 
-  python base_calling/merger.py example_input_S1_L001_R1_001.fastq.gz example_input_S1_L001_R2_001.fastq.gz example_input_S1.merged.fastq
+  gunzip example_input_S1_L001_R1_001.fastq.gz 
+  gunzip example_input_S1_L001_R2_001.fastq.gz
+  
+.. code-block:: bash
+
+  python base_calling/merger.py example_input_S1_L001_R1_001.fastq example_input_S1_L001_R2_001.fastq example_input_S1.merged.fastq
 
 .. code-block:: bash
 
