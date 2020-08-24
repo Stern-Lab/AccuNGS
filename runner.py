@@ -1,15 +1,18 @@
 import argparse
 import os
 import multiprocessing as mp
+
+
 from data_preparation import prepare_data
 from computation import compute
 from aggregation import aggregate_computation_output
-from utils import get_files_by_extension, get_files_in_dir
+from utils import get_files_in_dir, get_sequence_from_fasta
 
 # TODO: relative paths
 #       progress bar
 
-def mp_compute(computation_dir, fastq_files, reference, max_cpus=None):
+
+def parallel_compute(computation_dir, fastq_files, reference, max_cpus=None):
     if not max_cpus:
         max_cpus = mp.cpu_count()
     pool = mp.Pool(processes=max_cpus)
@@ -19,39 +22,35 @@ def mp_compute(computation_dir, fastq_files, reference, max_cpus=None):
     return output
 
 
-def runner(input_dir, reference, output_dir, prepare_data_stage=False, computation_stage=False, aggregation_stage=True,
-           consolidate_consensus=True, max_basecall_iterations=2):
-    data_dir = os.path.join(output_dir, "data")
+def get_stages_list(stages_range):
+    stages_dict = {1: 'prepare_data', 2: 'compute & aggregate'}
+    stages = range(stages_range[0], stages_range[1] + 1)
+    return [stages_dict[stage] for stage in stages]
 
-    if prepare_data_stage:
+
+def runner(input_dir, reference_file, output_dir, stages_range, max_basecall_iterations):
+    if not max_basecall_iterations:
+        max_basecall_iterations = 2   #TODO: what should this be?!
+    data_dir = os.path.join(output_dir, "data")
+    stages = get_stages_list(stages_range)
+    if 'prepare_data' in stages:
         os.makedirs(data_dir, exist_ok=True)
         prepare_data(input_dir=input_dir, output_dir=data_dir)
     computation_dir = os.path.join(output_dir, "computation")
     os.makedirs(computation_dir, exist_ok=True)
-    if consolidate_consensus:
-        run_1 = os.path.join(computation_dir, "run_1")
-        os.makedirs(run_1, exist_ok=True)
-        computation_dir = run_1
-    data_files = get_files_in_dir(data_dir)
-    fastq_files = [file_path for file_path in data_files if "fastq.part_" in os.path.basename(file_path)]
-    results = mp_compute(computation_dir, fastq_files, reference)
-    if aggregation_stage:
-        aggregate_computation_output(input_dir=os.path.join(computation_dir, "basecall"), output_dir=output_dir)
-    if consolidate_consensus:
-        for basecall_iteration_counter in range(2, max_basecall_iterations + 1):
-            new_ref = make_reference_from_freqs(freqs, reference)
-            if reference == new_ref:
+    if 'compute & aggregate' in stages:
+        data_files = get_files_in_dir(data_dir)
+        fastq_files = [file_path for file_path in data_files if "fastq.part_" in os.path.basename(file_path)]
+        for basecall_iteration_counter in range(1, max_basecall_iterations + 1):
+            results = parallel_compute(computation_dir, fastq_files, reference_file)
+            aggregate_computation_output(input_dir=os.path.join(computation_dir, "basecall"), output_dir=output_dir,
+                                         reference=reference_file)
+            consensus_file = os.path.join(output_dir, 'consensus_with_indels.fasta')
+            consensus = get_sequence_from_fasta(consensus_file)
+            reference = get_sequence_from_fasta(reference_file)
+            if consensus == reference:
                 break
-            iteration_output_dir = os.path.join(computation_dir, f"run_{basecall_iteration_counter}")
-            results = mp_compute(iteration_output_dir, fastq_files, new_ref)
-            reference = new_ref
-            new_ref = make_reference_from_freqs(os.path.join(iteration_output_dir, "freqs.tsv"))
-        if reference != new_ref:
-            log.warning(f"Could not consolidate consensus in {max_basecall_iterations} iterations!")
-
-
-
-
+            reference_file = consensus_file
 
 
 if __name__ == "__main__":
@@ -59,6 +58,10 @@ if __name__ == "__main__":
     parser.add_argument("-i", "--input_dir", required=True,
                         help="Path to directory containing basecall files")
     parser.add_argument("-o", "--output_dir", required=True)
-    parser.add_argument("-r", "--reference", required=True)
+    parser.add_argument("-r", "--reference_file", required=True)
+    parser.add_argument("-s", "--stages_range", nargs="+", type=int, help="start and end stages separated by spaces")
+    parser.add_argument("-m", "--max_basecall_iterations", type=int,
+                        help="number of times to run basecall before giving up equalizing reference with consensus")
     args = parser.parse_args()
-    runner(input_dir=args.input_dir, output_dir=args.output_dir, reference=args.reference)
+    runner(input_dir=args.input_dir, output_dir=args.output_dir, reference_file=args.reference_file,
+           stages_range=args.stages_range, max_basecall_iterations=args.max_basecall_iterations)
