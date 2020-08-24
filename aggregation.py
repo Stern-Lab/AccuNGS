@@ -2,7 +2,7 @@ import argparse
 import os
 import pandas as pd
 
-from utils import get_files_by_extension, concatenate_files_by_extension
+from utils import get_files_by_extension, concatenate_files_by_extension, make_reference_from_freqs
 
 
 def convert_called_bases_to_freqs(called_bases):
@@ -42,9 +42,12 @@ def create_freqs_file(input_dir, output_path):
     freqs.to_csv(output_path, sep="\t", index=False)
 
 
-def aggregate_computation_output(input_dir, output_dir):
+def aggregate_computation_output(input_dir, output_dir, reference, min_coverage=None):
+    if not min_coverage:
+        min_coverage = 10
     os.makedirs(output_dir, exist_ok=True)
-    create_freqs_file(input_dir=input_dir, output_path=os.path.join(output_dir, "freqs.tsv"))
+    freqs_file_path = os.path.join(output_dir, "freqs.tsv")
+    create_freqs_file(input_dir=input_dir, output_path=freqs_file_path)
     concatenate_files_by_extension(input_dir=input_dir, extension="called_bases",
                                    output_path=os.path.join(output_dir, "called_bases.tsv"))
     concatenate_files_by_extension(input_dir=input_dir, extension="ignored_bases",
@@ -53,11 +56,21 @@ def aggregate_computation_output(input_dir, output_dir):
                                    output_path=os.path.join(output_dir, "suspicious_reads.tsv"))
     concatenate_files_by_extension(input_dir=input_dir, extension="ignored_reads",
                                    output_path=os.path.join(output_dir, "ignored_reads.tsv"))
+    make_reference_from_freqs(reference_fasta_file=reference, freqs_file=freqs_file_path, min_coverage=min_coverage,
+                              output_file=os.path.join(output_dir, "consensus_without_indels.fasta"), drop_indels=True)
+    make_reference_from_freqs(reference_fasta_file=reference, freqs_file=freqs_file_path, min_coverage=min_coverage,
+                              output_file=os.path.join(output_dir, "consensus_with_indels.fasta"), drop_indels=False)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-i", "--input_dir", required=True,
                         help="Path to directory containing basecall files")
     parser.add_argument("-o", "--output_dir", required=True)
+    parser.add_argument("-r", "--reference_file", required=True)
+    parser.add_argument("-mc", "--min_coverage",
+                        help="bases with less than this coverage will be excluded from affecting the consensus "
+                             "(default: 10)")
     args = parser.parse_args()
-    aggregate_computation_output(input_dir=args.input_dir, output_dir=args.output_dir)
+    aggregate_computation_output(input_dir=args.input_dir, output_dir=args.output_dir, reference=args.reference,
+                                 min_coverage=args.min_coverage)
