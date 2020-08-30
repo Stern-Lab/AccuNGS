@@ -31,14 +31,16 @@ def main(args):
         maps_for_two_pos = all_mappings[(all_mappings["start"] <= x) & (all_mappings["end"] >= y)]
         grouped = maps_for_two_pos.groupby('read_id')
         grouped = grouped.filter(lambda x: len(x) == 2)
+        # for every read_id which appears exactly twice (why?) merge with this specific x position
         merged = pd.merge(pd.DataFrame({"read_id":grouped["read_id"].unique()}), all_mutations[all_mutations["pos"]==x][["pos","read_id"]], on="read_id", how="left")
+        # merge every mutation in position x with mutations on the same read in position y
         merged = pd.merge(merged, all_mutations[all_mutations["pos"]==y][["pos","read_id"]], on="read_id", how="left")
         x_label = "pos_" + str(x)
         y_label = "pos_" + str(y)
         merged[x_label] = np.where(merged["pos_x"] == x, 1, 0)
         merged[y_label] = np.where(merged["pos_y"] == y, 1, 0)
         ct = pd.crosstab(merged[x_label], merged[y_label])
-        if ct.shape == (2,2):
+        if ct.shape == (2,2):  # what are the odds that the mutations in x and y were observed together by chance
             fisher_test = fisher_exact(ct, alternative='greater')
             print('\t'.join([str(x) for x in [x, y, fisher_test[0], fisher_test[1], ct[1][1]*1.0/(ct[0][0]+ct[0][1]+ct[1][0]+ct[1][1])]]))
         else:
