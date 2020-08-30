@@ -33,7 +33,7 @@ def _create_new_logger(logger, log_file):
     # add ch & fh to logger
     logger.addHandler(ch)
     logger.addHandler(fh)
-    logger.info(f'Log started! Outputing to: {log_file}')
+    logger.debug(f'Log started! Outputing to: {log_file}')
     # get the git hash of this directory.
     git_hash = subprocess.check_output(["git", "describe", "--always"], cwd=os.path.dirname(__file__)).strip().decode()
     logger.debug(f"git hash: {git_hash}")
