@@ -50,7 +50,7 @@ def get_alignments(blast_output, fastq_file):
     alignments = _rename_columns(df)
     ignored_reads = pd.DataFrame()
     suspicious_reads = pd.DataFrame()
-    alignments, single_reads, multi_mapped_alignments = filter_reads_by_alignment_count(alignments)
+    alignments, single_reads, multi_mapped_alignments, read_counter = filter_reads_by_alignment_count(alignments)
     ignored_reads['read'] = single_reads
     ignored_reads['dropped_because'] = "single read"
     multi_mapped_alignments['suspicious_because'] = "multiple alignments"
@@ -58,7 +58,7 @@ def get_alignments(blast_output, fastq_file):
     alignments, multi_paired_alignments = align_pairs(alignments, fastq_file)
     multi_paired_alignments['suspicious_because'] = "aligned with more than one pair"
     suspicious_reads = suspicious_reads.append(multi_paired_alignments)
-    return alignments, ignored_reads.reset_index(drop=True), suspicious_reads.reset_index(drop=True)
+    return alignments, ignored_reads.reset_index(drop=True), suspicious_reads.reset_index(drop=True), read_counter
 
 
 def filter_reads_by_alignment_count(alignments):
@@ -67,7 +67,8 @@ def filter_reads_by_alignment_count(alignments):
     multiple_alignments = alignments[alignments['read_id'].isin(multiple_reads)]  # we see these as suspicious but legit
     single_reads = list(read_counter[read_counter == 1].index)
     alignments = alignments.query("read_id not in @single_reads")
-    return alignments, single_reads, multiple_alignments
+    read_counter.name = "number_of_alignments"
+    return alignments, single_reads, multiple_alignments, read_counter
 
 
 def _apply_find_minus_with_max_range(row, minuses):
@@ -285,7 +286,8 @@ def basecall(blast_output_file, fastq_file, output_dir, quality_threshold, mode)
     outputs ignored_reads, ignored_bases, suspicious_alignments, called_bases
     """
     base_filename = os.path.basename(fastq_file)
-    alignments, ignored_reads, suspicious_reads = get_alignments(blast_output_file, fastq_file=fastq_file)
+    alignments, ignored_reads, suspicious_reads, read_counter = get_alignments(blast_output_file, fastq_file=fastq_file)
+    read_counter.to_csv(os.path.join(output_dir, base_filename + ".read_counter"), sep="\t")
     suspicious_reads.to_csv(os.path.join(output_dir, base_filename+".suspicious_reads"), sep="\t")
     ignored_reads.to_csv(os.path.join(output_dir, base_filename+".ignored_reads"), sep="\t")
     bases_object = alignments.apply(lambda row: basecall_on_read(row, quality_threshold=quality_threshold, mode=mode),
