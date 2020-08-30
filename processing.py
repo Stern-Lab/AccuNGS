@@ -8,7 +8,6 @@ import numpy as np
 
 
 def run_blast(reads_fasta, reference, output, mode, task, evalue, perc_identity, num_alignments, dust, soft_masking, log):
-    log.info(f"Starting run_blast in mode {mode} with parameters: {locals()}")
 
     if mode == "SeqToRef":
         query = reads_fasta
@@ -176,14 +175,31 @@ def reverse_string(string):
     return string[::-1]
 
 
+def get_max_insertion_value(df_index, insertion):
+    max_decimal = 0
+    for num in range(10):
+        decimal = num/10
+        if insertion + decimal in df_index:
+            if decimal > max_decimal:
+                max_decimal = decimal
+    return insertion + max_decimal
+
+
 def fix_insertions_index(df, ref_start):
     # change insertions index to original index + 0.1 realign bases to ref index
     df.index = df.index + ref_start
     insertions = df[df.ref_seq == "-"].index.to_list()
-    df_index = df.index.to_list()
+    df_index = [float(i) for i in df.index.to_list()]
+    insertion_counter = 0
     for insertion in insertions:
-        df_index[df_index.index(insertion)] = insertion + 0.1
+        insertion = insertion - insertion_counter  # each insertion moves the other insertions
+        insertion_position = df_index.index(insertion)
+        insertion_value = insertion + 0.1
+        while insertion_value-1 in df_index:
+            insertion_value += 0.1
+        df_index[insertion_position] = insertion_value
         df_index = [x - 1 if x > insertion else x for x in df_index]
+        insertion_counter += 1
     df.index = df_index
     return df
 
@@ -205,20 +221,23 @@ def create_read_df(data, read_seq, ref_seq, read_start, ref_start, minus_seq=Fal
     deletions = df[df.read_seq == "-"].read_pos
     if len(deletions) > 0:
         deletions = df[df.read_seq == "-"].read_pos
-        for deletion in deletions.values:  # deletions have no quality...!
+        for deletion in deletions.values:         # deletions have no quality...!
             quality.insert(deletion - 1, np.inf)  # set deletions quality to be inf so that we dont filter them later
     df['quality'] = df.read_pos.map(lambda pos: quality[pos - 1])
     df = fix_insertions_index(df, data[ref_start])
     return df
 
 
-def create_plus_minus_dfs(data):
+def create_plus_minus_dfs(data, mode):
     plus_df = create_read_df(data, read_seq='read_seq_plus', ref_seq='ref_seq_plus', read_start='read_start_plus',
                              ref_start='ref_start_plus')
     plus_df.columns = plus_df.columns + "_plus"
-    minus_df = create_read_df(data, read_seq='read_seq_minus', ref_seq='ref_seq_minus', read_start='read_start_minus',
-                              ref_start='ref_end_minus',
-                              minus_seq=True)  # TODO: with other blast option this would break
+    if mode == "SeqToRef":
+        minus_df = create_read_df(data, read_seq='read_seq_minus', ref_seq='ref_seq_minus',
+                                  read_start='read_start_minus', ref_start='ref_end_minus', minus_seq=True)
+    else:
+        minus_df = create_read_df(data, read_seq='read_seq_minus', ref_seq='ref_seq_minus', read_start='read_end_minus',
+                                  ref_start='ref_start_minus', minus_seq=True)
     minus_df.columns = minus_df.columns + "_minus"
     return plus_df, minus_df
 
@@ -246,8 +265,8 @@ def filter_low_quality_bases(data, quality_threshold):
     return df, low_quality_bases
 
 
-def basecall_on_read(read_data, quality_threshold):
-    plus_df, minus_df = create_plus_minus_dfs(read_data)
+def basecall_on_read(read_data, quality_threshold, mode):
+    plus_df, minus_df = create_plus_minus_dfs(read_data, mode)
     bases = pd.concat([plus_df, minus_df], axis=1)
     bases['read_id'] = read_data['read_id']
     bases['avg_quality'] = (bases['quality_plus'] + bases['quality_minus']) / 2
@@ -255,20 +274,21 @@ def basecall_on_read(read_data, quality_threshold):
     bases, multimapped_bases = filter_overlapping_bases(bases, read_data['multi_mapped_bases'])
     bases, low_quality_bases = filter_low_quality_bases(bases, quality_threshold)
     dropped_bases = pd.concat([mismatching_bases, multimapped_bases, low_quality_bases])
+    bases = bases.rename(columns={'read_seq_plus': 'read_base', 'ref_seq_plus': 'ref_base'}).drop(
+        ['read_seq_minus', 'ref_seq_minus', 'avg_quality'], axis=1)  # these are redundant columns at this point.
     return bases, dropped_bases
 
 
-def basecall(blast_output_file, fastq_file, output_dir, quality_threshold, log):
+def basecall(blast_output_file, fastq_file, output_dir, quality_threshold, mode):
     """
     TODO: a no overlap version
     outputs ignored_reads, ignored_bases, suspicious_alignments, called_bases
     """
-    log.info(f"Starting basecall on {blast_output_file} and {fastq_file} with quality_threshold: {quality_threshold}")
     base_filename = os.path.basename(fastq_file)
     alignments, ignored_reads, suspicious_reads = get_alignments(blast_output_file, fastq_file=fastq_file)
     suspicious_reads.to_csv(os.path.join(output_dir, base_filename+".suspicious_reads"), sep="\t")
     ignored_reads.to_csv(os.path.join(output_dir, base_filename+".ignored_reads"), sep="\t")
-    bases_object = alignments.apply(lambda row: basecall_on_read(row, quality_threshold=quality_threshold),
+    bases_object = alignments.apply(lambda row: basecall_on_read(row, quality_threshold=quality_threshold, mode=mode),
                                     axis=1, result_type="expand")
     called_bases = pd.concat(list(bases_object[0]))
     ignored_bases = pd.concat(list(bases_object[1]))
@@ -284,7 +304,7 @@ def convert_fastq_to_fasta(output_dir, fastq_file):
 
 
 def compute(fastq_file, reference, output_dir, quality_threshold, with_overlap):
-    log = pipeline_logger(logger_name=f"Computation_{os.path.basename(output_dir)}", log_folder=output_dir)
+    log = pipeline_logger(logger_name=f"Computation_{os.path.basename(fastq_file)}", log_folder=output_dir)
     blast_output = os.path.join(output_dir, 'blast')
     os.makedirs(blast_output, exist_ok=True)
     reads_fasta_file_path = convert_fastq_to_fasta(fastq_file=fastq_file, output_dir=blast_output)
@@ -296,7 +316,7 @@ def compute(fastq_file, reference, output_dir, quality_threshold, with_overlap):
     dust = "no"
     soft_masking = "F"
     perc_identity = 85
-    mode = "SeqToRef"  # TODO: run with other mode as well.
+    mode = "SeqToRef"  # TODO: test differences between modes.
     run_blast(reads_fasta=reads_fasta_file_path, reference=reference, output=blast_output_file, mode=mode, task=task,
               evalue=evalue, num_alignments=num_alignments, dust=dust, soft_masking=soft_masking, log=log,
               perc_identity=perc_identity)
@@ -305,8 +325,7 @@ def compute(fastq_file, reference, output_dir, quality_threshold, with_overlap):
     basecall_output = os.path.join(output_dir, 'basecall')
     os.makedirs(basecall_output, exist_ok=True)
     basecall(blast_output_file=blast_output_file, fastq_file=fastq_file, output_dir=basecall_output,
-             quality_threshold=quality_threshold, log=log)
-    log.info(f"Computation Done. Output files are in {output_dir}")
+             quality_threshold=quality_threshold, mode=mode)
 
 
 if __name__ == "__main__":
