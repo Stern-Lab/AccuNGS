@@ -71,6 +71,14 @@ def create_mutation_read_list_file(called_bases_files, output_path):
     read_list.to_csv(output_path, sep='\t')
 
 
+def aggregate_read_counters(read_counters, output_path):
+    counter = {}
+    for read_counter in read_counters:
+        counter[read_counter] = pd.read_csv(read_counter, sep='\t')
+    counters = pd.concat(counter.values())
+    counters.groupby('read_id')['number_of_alignments'].sum().to_csv(output_path, sep='\t')
+
+
 def aggregate_computation_output(input_dir, output_dir, reference, min_coverage=None):
     # TODO: graphs.
     if not min_coverage:
@@ -85,18 +93,14 @@ def aggregate_computation_output(input_dir, output_dir, reference, min_coverage=
         raise Exception(f"Could not find files of type *.called_bases in {input_dir}")
     create_freqs_file(called_bases_files=called_bases_files, output_path=freqs_file_path)
     create_mutation_read_list_file(called_bases_files=called_bases_files, output_path=mutation_read_list_path)
+    read_counters = get_files_by_extension(basecall_dir, "read_counter")
+    aggregate_read_counters(read_counters=read_counters, output_path=os.path.join(output_dir, "read_counter.tsv"))
     concatenate_files_by_extension(input_dir=blast_dir, extension="blast",
                                    output_path=os.path.join(output_dir, "blast.tsv"))
-    concatenate_files_by_extension(input_dir=basecall_dir, extension="called_bases",
-                                   output_path=os.path.join(output_dir, "called_bases.tsv"))
-    concatenate_files_by_extension(input_dir=basecall_dir, extension="ignored_bases",
-                                   output_path=os.path.join(output_dir, "ignored_bases.tsv"))
-    concatenate_files_by_extension(input_dir=basecall_dir, extension="suspicious_reads",
-                                   output_path=os.path.join(output_dir, "suspicious_reads.tsv"))
-    concatenate_files_by_extension(input_dir=basecall_dir, extension="ignored_reads",
-                                   output_path=os.path.join(output_dir, "ignored_reads.tsv"))
-    concatenate_files_by_extension(input_dir=basecall_dir, extension="ignored_reads",
-                                   output_path=os.path.join(output_dir, "ignored_reads.tsv"))
+    for file_type in ['called_bases', 'ignored_bases', 'suspicious_reads', 'ignored_reads']:
+        concatenate_files_by_extension(input_dir=basecall_dir, extension=file_type,
+                                       output_path=os.path.join(output_dir, f"{file_type}.tsv"))
+
     create_new_ref_with_freqs(reference_fasta_file=reference, freqs_file=freqs_file_path, min_coverage=min_coverage,
                               output_file=os.path.join(output_dir, "consensus_without_indels.fasta"), drop_indels=True)
     create_new_ref_with_freqs(reference_fasta_file=reference, freqs_file=freqs_file_path, min_coverage=min_coverage,
