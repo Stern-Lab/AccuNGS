@@ -99,7 +99,7 @@ def runner(input_dir, reference_file, output_dir, stages_range, max_basecall_ite
         log.info("Drawing summary graphs!")
         graph_summary(freqs_file=freqs_file_path, blast_file=blast_file, read_counter_file=read_counter_file,
                       stretches_file=stretches, output_file=summary_graphs, min_coverage=3)  # TODO: default min coverage?
-    #TODO: make plots, test everything, finish up, pbs_runner,
+    #TODO: test everything, finish up, pbs_runner,
 
     log.info("Done!")
 

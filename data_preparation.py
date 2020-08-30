@@ -133,7 +133,7 @@ def prepare_data(input_dir, output_dir, rep_length=None, part_size=None, opposin
     if rep_length is None:
         rep_length = 60
     if part_size is None:
-        part_size = 10000
+        part_size = 100000
     if opposing_strings is None:
         opposing_strings = ("_R1", "_R2")
     os.makedirs(output_dir, exist_ok=True)
