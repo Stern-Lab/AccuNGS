@@ -1,7 +1,6 @@
 import argparse
 import os
 import multiprocessing as mp
-import pandas as pd
 import sys
 
 from Bio import pairwise2
@@ -9,6 +8,7 @@ from Bio import pairwise2
 from data_preparation import prepare_data
 from graph_haplotypes import graph_haplotypes
 from haplotypes.mutations_linking import calculate_linked_mutations
+from plotting import graph_summary
 from processing import compute
 from aggregation import aggregate_computation_output
 from logger import pipeline_logger
@@ -72,7 +72,7 @@ def runner(input_dir, reference_file, output_dir, stages_range, max_basecall_ite
         for basecall_iteration_counter in range(1, max_basecall_iterations + 1):
             #TODO: test that it sometimes takes more than just 2 iterations.
             log.info(f"compute & aggregate {basecall_iteration_counter}/{max_basecall_iterations}")
-            #parallel_compute(processing_dir, fastq_files, reference_file)
+            parallel_compute(processing_dir, fastq_files, reference_file)
             aggregate_computation_output(input_dir=processing_dir, output_dir=output_dir,
                                          reference=reference_file)
             consensus = get_sequence_from_fasta(consensus_file)
@@ -87,18 +87,21 @@ def runner(input_dir, reference_file, output_dir, stages_range, max_basecall_ite
         linked_mutations_path = os.path.join(output_dir, 'linked_mutations.tsv')
         mutation_read_list_path = os.path.join(output_dir, 'mutation_read_list.tsv')
         log.info(f"Calculating linked mutations with params: ")  # TODO: add params.
-        #calculate_linked_mutations(freqs_file_path=freqs_file_path, mutation_read_list_path=mutation_read_list_path,
-        #                           output=linked_mutations_path)
+        calculate_linked_mutations(freqs_file_path=freqs_file_path, mutation_read_list_path=mutation_read_list_path,
+                                   output=linked_mutations_path)
         stretches = os.path.join(output_dir, 'streches.tsv')
         log.info(f"Aggregating linked mutations to stretches with params: ")
         calculate_stretches(linked_mutations_path, max_pval=10 ** -9, distance=10, output=stretches)  #TODO: refactor that function
         graph_haplotypes(input_file=stretches, number_of_stretches=3, output_dir=output_dir)
-
+        blast_file = os.path.join(output_dir, 'blast.tsv')
+        read_counter_file = os.path.join(output_dir, 'read_counter.tsv')
+        summary_graphs = os.path.join(output_dir, 'summary.png')
+        log.info("Drawing summary graphs!")
+        graph_summary(freqs_file=freqs_file_path, blast_file=blast_file, read_counter_file=read_counter_file,
+                      stretches_file=stretches, output_file=summary_graphs, min_coverage=3)  # TODO: default min coverage?
     #TODO: make plots, test everything, finish up, pbs_runner,
 
     log.info("Done!")
-
-
 
 
 if __name__ == "__main__":
