@@ -122,7 +122,7 @@ def align_pairs(df, fastq_file):
     #breakpoint()
     paired_info = df.groupby('read_id').apply(lambda read_df: _find_pairs(read_df))
     print(paired_info.isna().sum(), fastq_file)
-    #breakpoint()
+    breakpoint()
     paired_info = paired_info.reset_index().set_index('level_1')
     print(paired_info, fastq_file)
     df['pair'] = paired_info[0].map(lambda x: x if x is not None else None)
@@ -293,6 +293,7 @@ def basecall(blast_output_file, fastq_file, output_dir, quality_threshold, mode)
     TODO: a no overlap version
     outputs ignored_reads, ignored_bases, suspicious_alignments, called_bases
     """
+    print(f"____________________{mode}__________________")
     base_filename = os.path.basename(fastq_file)
     alignments, ignored_reads, suspicious_reads, read_counter = get_alignments(blast_output_file, fastq_file=fastq_file)
     read_counter.to_csv(os.path.join(output_dir, base_filename + ".read_counter"), sep="\t")
