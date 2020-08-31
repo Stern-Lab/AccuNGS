@@ -55,6 +55,7 @@ def get_alignments(blast_output, fastq_file):
     ignored_reads['dropped_because'] = "single read"
     multi_mapped_alignments['suspicious_because'] = "multiple alignments"
     suspicious_reads = suspicious_reads.append(multi_mapped_alignments)
+    #print(alignments.shape)
     alignments, multi_paired_alignments = align_pairs(alignments, fastq_file)
     multi_paired_alignments['suspicious_because'] = "aligned with more than one pair"
     suspicious_reads = suspicious_reads.append(multi_paired_alignments)
@@ -118,11 +119,11 @@ def get_quality(fastq_file, alignments):
 
 def align_pairs(df, fastq_file):
     df = df.copy()
-    print(df, fastq_file)
+    #print(df, fastq_file)
     #breakpoint()
     paired_info = df.groupby('read_id').apply(lambda read_df: _find_pairs(read_df))
-    print(paired_info.isna().sum(), fastq_file)
-    print(paired_info, fastq_file)
+    #print(paired_info.isna().sum(), fastq_file)
+    #print(paired_info, fastq_file)
     #breakpoint()
     paired_info = paired_info.reset_index().set_index('level_1')
     df['pair'] = paired_info[0].map(lambda x: x if x is not None else None)
@@ -293,7 +294,7 @@ def basecall(blast_output_file, fastq_file, output_dir, quality_threshold, mode)
     TODO: a no overlap version
     outputs ignored_reads, ignored_bases, suspicious_alignments, called_bases
     """
-    print(f"____________________{mode}__________________")
+    #print(f"____________________{mode}__________________")
     base_filename = os.path.basename(fastq_file)
     alignments, ignored_reads, suspicious_reads, read_counter = get_alignments(blast_output_file, fastq_file=fastq_file)
     read_counter.to_csv(os.path.join(output_dir, base_filename + ".read_counter"), sep="\t")
@@ -314,20 +315,29 @@ def convert_fastq_to_fasta(output_dir, fastq_file):
     return reads_fasta_file_path
 
 
-def compute(fastq_file, reference, output_dir, quality_threshold, with_overlap):
+def process_fastq(fastq_file, reference, output_dir, quality_threshold, task, evalue, dust, num_alignments,
+                  soft_masking, perc_identity, mode, with_overlap=False):
     log = pipeline_logger(logger_name=f"Computation_{os.path.basename(fastq_file)}", log_folder=output_dir)
     blast_output = os.path.join(output_dir, 'blast')
     os.makedirs(blast_output, exist_ok=True)
     reads_fasta_file_path = convert_fastq_to_fasta(fastq_file=fastq_file, output_dir=blast_output)
     blast_output_file = reads_fasta_file_path + ".blast"
     # TODO: test all these blast defaults.
-    task = "blastn"
-    evalue = 1e-7
-    num_alignments = 1000000
-    dust = "no"
-    soft_masking = "F"
-    perc_identity = 85
-    mode = "RefToSeq"  # TODO: test differences between modes.
+    # Set blast defaults:
+    if not task:
+        task = "blastn"
+    if not evalue:
+        evalue = 1e-7
+    if not dust:
+        dust = "no"
+    if not num_alignments:
+        num_alignments = 1000000
+    if not soft_masking:
+        soft_masking = "F"
+    if not perc_identity:
+        perc_identity = 85
+    if not mode:
+        mode = "RefToSeq"  # TODO: test differences between modes.
     run_blast(reads_fasta=reads_fasta_file_path, reference=reference, output=blast_output_file, mode=mode, task=task,
               evalue=evalue, num_alignments=num_alignments, dust=dust, soft_masking=soft_masking, log=log,
               perc_identity=perc_identity)
@@ -346,8 +356,18 @@ if __name__ == "__main__":
     parser.add_argument("-r", "--reference_path", required=True)
     parser.add_argument("-o", "--output_dir", required=True)
     parser.add_argument("-ol", "--with_overlap")
-    parser.add_argument("-q", "--quality_threshold",
-                        help="bases with quality under this will be ignored. (default is 30")
+    parser.add_argument("-q", "--quality_threshold", type=int,
+                        help="bases with quality under this will be ignored (default: 30)")
+    parser.add_argument("-bt", "--blast_task", help="blast's task parameter (default: blastn")
+    parser.add_argument("-be", "--blast_evalue", help="blast's evalue parameter (default: 1e-7)", type=float)
+    parser.add_argument("-bd", "--blast_dust", help="blast's dust parameter (default: on)")
+    parser.add_argument("-bn", "--blast_num_alignments", type=int,
+                        help="blast's num_alignments parameter (default: 1000000)")
+    parser.add_argument("-bp", "--blast_perc_identity", type=int, help="blast's perc_identity parameter (default: 85)")
+    parser.add_argument("-bs", "--blast_soft_masking", type=int, help="blast's soft_masking parameter (default: F)")
+    parser.add_argument("-bm", "--blast_mode", help="RefToSeq or SeqToRef (default: RefToSeq)")  # TODO: docs
     args = parser.parse_args()
-    compute(fastq_file=args.fastq_file, reference=args.reference_path, output_dir=args.output_dir,
-            with_overlap=args.with_overlap, quality_threshold=args.quality_threshold)
+    process_fastq(fastq_file=args.fastq_file, reference=args.reference_path, output_dir=args.output_dir,
+                  with_overlap=args.with_overlap, quality_threshold=args.quality_threshold, task=args.blast_task,
+                  evalue=args.blast_evalue, dust=args.blast_dust, num_alignments=args.blast_num_alignments,
+                  mode=args.blast_mode, perc_identity=args.blast_perc_identity, soft_masking=args.blast_soft_masking)
