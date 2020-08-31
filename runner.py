@@ -49,9 +49,11 @@ def get_alignment_score(consensus, reference_file):
     return alignment_score
 
 
-def runner(input_dir, reference_file, output_dir, stages_range, max_basecall_iterations):
+def runner(input_dir, reference_file, output_dir, stages_range, max_basecall_iterations, part_size):
     if not max_basecall_iterations:
         max_basecall_iterations = 2   #TODO: what should this be?!
+    if not part_size:
+        part_size = 10000
     stages = get_stages_list(stages_range)
     log = pipeline_logger(logger_name='AccuNGS-Runner', log_folder=output_dir)
     log.info(f"Running stages: {stages}")
@@ -59,7 +61,7 @@ def runner(input_dir, reference_file, output_dir, stages_range, max_basecall_ite
         data_dir = os.path.join(output_dir, "data")
         os.makedirs(data_dir, exist_ok=True)
         log.info("Preparing data")
-        prepare_data(input_dir=input_dir, output_dir=data_dir)
+        prepare_data(input_dir=input_dir, output_dir=data_dir, part_size=part_size, opposing_strings=None)
     else:
         data_dir = input_dir
     if 'compute & aggregate' in stages:
@@ -113,6 +115,9 @@ if __name__ == "__main__":
     parser.add_argument("-s", "--stages_range", nargs="+", type=int, help="start and end stages separated by spaces")
     parser.add_argument("-m", "--max_basecall_iterations", type=int,
                         help="number of times to run basecall before giving up equalizing reference with consensus")
+    parser.add_argument("-p", "--part_size", type=int,
+                        help="size of part of data file in string length")
     args = parser.parse_args()
     runner(input_dir=args.input_dir, output_dir=args.output_dir, reference_file=args.reference_file,
-           stages_range=args.stages_range, max_basecall_iterations=args.max_basecall_iterations)
+           stages_range=args.stages_range, max_basecall_iterations=args.max_basecall_iterations,
+           part_size=args.part_size)

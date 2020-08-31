@@ -116,7 +116,8 @@ def get_quality(fastq_file, alignments):
 
 def align_pairs(df, fastq_file):
     df = df.copy()
-    paired_info = df.groupby('read_id').apply(lambda df: _find_pairs(df)).reset_index().set_index('level_1')
+    print(df)
+    paired_info = df.groupby('read_id').apply(lambda read_df: _find_pairs(read_df)).reset_index().set_index('level_1')
     df['pair'] = paired_info[0].map(lambda x: x if x is not None else None)
     df = get_minus_values(df, ['ref_seq', 'read_seq', 'ref_start', 'ref_end', 'read_start', 'read_end'])
     multi_paired_alignments = df.dropna(subset=['pair'])
