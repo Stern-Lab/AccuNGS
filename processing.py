@@ -314,6 +314,8 @@ def convert_fastq_to_fasta(output_dir, fastq_file):
 
 
 def compute(fastq_file, reference, output_dir, quality_threshold, with_overlap):
+    print("ASDASFAFS")
+    raise Exception("!")
     log = pipeline_logger(logger_name=f"Computation_{os.path.basename(fastq_file)}", log_folder=output_dir)
     blast_output = os.path.join(output_dir, 'blast')
     os.makedirs(blast_output, exist_ok=True)
