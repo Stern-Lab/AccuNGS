@@ -118,7 +118,7 @@ def align_pairs(df, fastq_file):
     df = df.copy()
     print(df, fastq_file)
     paired_info = df.groupby('read_id').apply(lambda read_df: _find_pairs(read_df))
-    print(paired_info, fastq_file)
+    print(paired_info.isna().sum(), fastq_file)
     breakpoint()
     paired_info = paired_info.reset_index().set_index('level_1')
     print(paired_info, fastq_file)
