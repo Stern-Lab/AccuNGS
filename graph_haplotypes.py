@@ -39,7 +39,6 @@ def graph_haplotypes(input_file, number_of_stretches, output_dir):
     df = pd.read_csv(input_file, sep="\t")
     biggest_stretches = df.Stretch.value_counts()[:number_of_stretches]
     plot_stretches_deep_dive(df=df, stretches=biggest_stretches, output_folder=output_dir)
-    plot_stretches_summary(df=df, stretches=biggest_stretches, output_folder=output_dir)
 
 
 if __name__ == "__main__":
