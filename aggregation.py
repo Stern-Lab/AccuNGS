@@ -41,7 +41,8 @@ def create_freqs_file(called_bases_files, output_path):
     freqs['coverage'] = freqs.ref_pos.map(lambda pos: coverage[pos])
     freqs['frequency'] = freqs['base_count'] / freqs['coverage']
     freqs['base_rank'] = 5 - freqs.groupby('ref_pos').base_count.rank('min')
-    # TODO: probabiliy.
+    freqs['probability'] = 1 - 10**(np.log10(1 - freqs["frequency"] + 1e-07) * (freqs["coverage"] + 1))
+    # TODO: does probability logic make sense?
     freqs.to_csv(output_path, sep="\t", index=False)
 
 
@@ -80,7 +81,7 @@ def aggregate_read_counters(read_counters, output_path):
     counters.groupby('read_id')['number_of_alignments'].sum().to_csv(output_path, sep='\t')
 
 
-def aggregate_computation_output(input_dir, output_dir, reference, min_coverage=None):
+def aggregate_processed_output(input_dir, output_dir, reference, min_coverage):
     # TODO: graphs.
     if not min_coverage:
         min_coverage = 10
@@ -118,5 +119,5 @@ if __name__ == "__main__":
                         help="bases with less than this coverage will be excluded from affecting the consensus "
                              "(default: 10)")
     args = parser.parse_args()
-    aggregate_computation_output(input_dir=args.input_dir, output_dir=args.output_dir, reference=args.reference,
-                                 min_coverage=args.min_coverage)
+    aggregate_processed_output(input_dir=args.input_dir, output_dir=args.output_dir, reference=args.reference,
+                               min_coverage=args.min_coverage)
