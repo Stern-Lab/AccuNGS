@@ -41,6 +41,7 @@ def create_freqs_file(called_bases_files, output_path):
     freqs['coverage'] = freqs.ref_pos.map(lambda pos: coverage[pos])
     freqs['frequency'] = freqs['base_count'] / freqs['coverage']
     freqs['base_rank'] = 5 - freqs.groupby('ref_pos').base_count.rank('min')
+    # TODO: probabiliy.
     freqs.to_csv(output_path, sep="\t", index=False)
 
 
