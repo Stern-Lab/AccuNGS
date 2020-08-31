@@ -86,7 +86,9 @@ def _apply_find_minus_with_max_range(row, minuses):
         if len(intersection) > max_intersection_len:
             max_intersection_len = len(intersection)
             max_i = i
+    #print(max_i)
     if max_i:
+        #breakpoint()
         return max_i
     else:
         return None
@@ -117,9 +119,10 @@ def get_quality(fastq_file, alignments):
 def align_pairs(df, fastq_file):
     df = df.copy()
     print(df, fastq_file)
+    #breakpoint()
     paired_info = df.groupby('read_id').apply(lambda read_df: _find_pairs(read_df))
     print(paired_info.isna().sum(), fastq_file)
-    breakpoint()
+    #breakpoint()
     paired_info = paired_info.reset_index().set_index('level_1')
     print(paired_info, fastq_file)
     df['pair'] = paired_info[0].map(lambda x: x if x is not None else None)
@@ -323,7 +326,7 @@ def compute(fastq_file, reference, output_dir, quality_threshold, with_overlap):
     dust = "no"
     soft_masking = "F"
     perc_identity = 85
-    mode = "SeqToRef"  # TODO: test differences between modes.
+    mode = "RefToSeq"  # TODO: test differences between modes.
     run_blast(reads_fasta=reads_fasta_file_path, reference=reference, output=blast_output_file, mode=mode, task=task,
               evalue=evalue, num_alignments=num_alignments, dust=dust, soft_masking=soft_masking, log=log,
               perc_identity=perc_identity)
