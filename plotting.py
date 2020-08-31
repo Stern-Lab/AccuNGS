@@ -81,7 +81,10 @@ def graph_haplotype_overview(stretches_file, ax, stretches_to_plot):
     return plot_stretches_summary(df=df, stretches=biggest_stretches, ax=ax)
 
 
-def graph_summary(freqs_file, blast_file, read_counter_file, stretches_file, output_file, min_coverage=3):   # TODO: set defdults
+def graph_summary(freqs_file, blast_file, read_counter_file, stretches_file, output_file, stretches_to_plot,
+                  min_coverage):
+    if not min_coverage:
+        min_coverage = 10
     fig, axes = plt.subplots(figsize=(60, 20), ncols=3, nrows=2)
     plt.suptitle("Pipeline Statistics", fontsize=18)
     plt.subplots_adjust(wspace=0.2, hspace=0.25)
@@ -92,5 +95,5 @@ def graph_summary(freqs_file, blast_file, read_counter_file, stretches_file, out
     axes[0][2] = graph_coverage(freqs, axes[0][2])
     axes[1][0] = graph_mutation_freqs_by_mutation(mutation_data, axes[1][0])
     axes[1][1] = graph_mutation_freqs_by_position(mutation_data, axes[1][1])
-    axes[1][2] = graph_haplotype_overview(stretches_file, axes[1][2], stretches_to_plot=5)  #TODO: set defaults
+    axes[1][2] = graph_haplotype_overview(stretches_file, axes[1][2], stretches_to_plot=stretches_to_plot) 
     fig.savefig(output_file, bbox_inches="tight", pad_inches=0.3)  # TODO: what do these params mean?
