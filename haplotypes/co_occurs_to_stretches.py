@@ -76,6 +76,8 @@ def obtain_comutations(comutations, max_pval=10**-9, distance=10):
 
 
 def calculate_stretches(linked_pairs, max_pval, distance, output):
+    if not max_pval:
+        max_pval = 10 ** -9
     comutations = load_file(linked_pairs)
     res_table = obtain_comutations(comutations, max_pval, distance)
     kws={"index":False, "sep":"\t"}
