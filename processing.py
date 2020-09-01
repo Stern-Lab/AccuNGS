@@ -1,5 +1,7 @@
 import argparse
 import os
+import time
+
 import pandas as pd
 from Bio import SeqIO
 from Bio.Blast.Applications import NcbiblastnCommandline, NcbimakeblastdbCommandline
@@ -243,10 +245,10 @@ def create_read_df(data, read_seq, ref_seq, read_start, ref_start, mode, minus_s
 def create_plus_minus_dfs(data, mode):
     plus_df = create_read_df(data, read_seq='read_seq_plus', ref_seq='ref_seq_plus', read_start='read_start_plus',
                              ref_start='ref_start_plus', mode=mode)
-    plus_df.columns = plus_df.columns + "_plus"
+    #plus_df.columns = plus_df.columns + "_plus"
     minus_df = create_read_df(data, read_seq='read_seq_minus', ref_seq='ref_seq_minus', read_start='read_end_minus',
                               ref_start='ref_start_minus', minus_seq=True, mode=mode)
-    minus_df.columns = minus_df.columns + "_minus"
+    #minus_df.columns = minus_df.columns + "_minus"
     return plus_df, minus_df
 
 
@@ -275,7 +277,9 @@ def filter_low_quality_bases(data, quality_threshold):
 
 def basecall_on_read(read_data, quality_threshold, mode):
     plus_df, minus_df = create_plus_minus_dfs(read_data, mode)
-    bases = pd.concat([plus_df, minus_df], axis=1)
+    #print(plus_df.shape, minus_df.shape, read_data)
+    bases = plus_df.join(minus_df, how='outer', lsuffix='_plus', rsuffix='_minus')
+    #bases = pd.concat([plus_df, minus_df], axis=1)
     bases['read_id'] = read_data['read_id']
     bases['avg_quality'] = (bases['quality_plus'] + bases['quality_minus']) / 2
     bases, mismatching_bases = filter_mismatching_bases(bases)
@@ -293,12 +297,16 @@ def basecall(blast_output_file, fastq_file, output_dir, quality_threshold, mode)
     outputs ignored_reads, ignored_bases, suspicious_alignments, called_bases
     """
     base_filename = os.path.basename(fastq_file)
+    start_time = time.time()
     alignments, ignored_reads, suspicious_reads, read_counter = get_alignments(blast_output_file, fastq_file=fastq_file)
+    #print('getting alignments took: ',  time.time() - start_time)
     read_counter.to_csv(os.path.join(output_dir, base_filename + ".read_counter"), sep="\t")
     suspicious_reads.to_csv(os.path.join(output_dir, base_filename+".suspicious_reads"), sep="\t")
     ignored_reads.to_csv(os.path.join(output_dir, base_filename+".ignored_reads"), sep="\t")
+    start_time = time.time()
     bases_object = alignments.apply(lambda row: basecall_on_read(row, quality_threshold=quality_threshold, mode=mode),
                                     axis=1, result_type="expand")
+    #print('getting bases object took: ', time.time() - start_time)
     called_bases = pd.concat(list(bases_object[0]))
     ignored_bases = pd.concat(list(bases_object[1]))
     ignored_bases.to_csv(os.path.join(output_dir, base_filename+".ignored_bases"), sep="\t", index_label='ref_pos')
@@ -335,15 +343,20 @@ def process_fastq(fastq_file, reference, output_dir, quality_threshold, task, ev
         perc_identity = 85
     if not mode:
         mode = "RefToSeq"  # TODO: test differences between modes.
+    start_time = time.time()
     run_blast(reads_fasta=reads_fasta_file_path, reference=reference, output=blast_output_file, mode=mode, task=task,
               evalue=evalue, num_alignments=num_alignments, dust=dust, soft_masking=soft_masking, log=log,
               perc_identity=perc_identity)
+    #print("blast took: ", time.time() - start_time)
     if not quality_threshold:
         quality_threshold = 30
     basecall_output = os.path.join(output_dir, 'basecall')
     os.makedirs(basecall_output, exist_ok=True)
+    start_time = time.time()
     basecall(blast_output_file=blast_output_file, fastq_file=fastq_file, output_dir=basecall_output,
              quality_threshold=quality_threshold, mode=mode)
+    #print("basecall took a total of: ", time.time() - start_time)
+
 
 
 if __name__ == "__main__":
