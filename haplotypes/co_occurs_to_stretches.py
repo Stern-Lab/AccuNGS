@@ -23,7 +23,7 @@ class comutations_bubble(object):
         self.nodes=self.nodes.union(other.nodes)
         self.distances.update(other.distances)
         self.pvalues.update(other.pvalues)
-        self.meandist=np.mean(list(self.distances.values())) 
+        self.meandist=np.mean(list(self.distances.values()))
 
 
 def load_file(path):
@@ -78,6 +78,8 @@ def obtain_comutations(comutations, max_pval=10**-9, distance=10):
 def calculate_stretches(linked_pairs, max_pval, distance, output):
     if not max_pval:
         max_pval = 10 ** -9
+    if distance is None:
+        distance = 10
     comutations = load_file(linked_pairs)
     res_table = obtain_comutations(comutations, max_pval, distance)
     kws={"index":False, "sep":"\t"}
