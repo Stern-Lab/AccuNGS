@@ -277,7 +277,8 @@ def filter_low_quality_bases(data, quality_threshold):
 
 def basecall_on_read(read_data, quality_threshold, mode):
     plus_df, minus_df = create_plus_minus_dfs(read_data, mode)
-    #print(plus_df.shape, minus_df.shape, read_data)
+    if plus_df.shape != minus_df.shape:
+        print(plus_df.shape, minus_df.shape, read_data)
     bases = plus_df.join(minus_df, how='outer', lsuffix='_plus', rsuffix='_minus')
     #bases = pd.concat([plus_df, minus_df], axis=1)
     bases['read_id'] = read_data['read_id']
