@@ -55,7 +55,6 @@ def get_alignments(blast_output, fastq_file):
     ignored_reads['dropped_because'] = "single read"
     multi_mapped_alignments['suspicious_because'] = "multiple alignments"
     suspicious_reads = suspicious_reads.append(multi_mapped_alignments)
-    #print(alignments.shape)
     alignments, multi_paired_alignments = align_pairs(alignments, fastq_file)
     multi_paired_alignments['suspicious_because'] = "aligned with more than one pair"
     suspicious_reads = suspicious_reads.append(multi_paired_alignments)
@@ -73,8 +72,6 @@ def filter_reads_by_alignment_count(alignments):
 
 
 def _apply_find_minus_with_max_range(row, minuses):
-    if row.plus_or_minus == 'minus':
-        return None
     max_intersection_len = 0
     max_i = None
     plus_range = range(row.ref_start, row.ref_end+1)
@@ -87,18 +84,19 @@ def _apply_find_minus_with_max_range(row, minuses):
         if len(intersection) > max_intersection_len:
             max_intersection_len = len(intersection)
             max_i = i
-    #print(max_i)
     if max_i:
-        #breakpoint()
-        return max_i
+        return {'pair_index': max_i, 'intersection_length': max_intersection_len}
     else:
-        return None
+        return {'pair_index': None, 'intersection_length': None}
 
 
 def _find_pairs(df):
     minuses = df[df.plus_or_minus == 'minus']
     pluses = df[df.plus_or_minus == 'plus']
-    df_with_intersection = pluses.apply(lambda row: _apply_find_minus_with_max_range(row, minuses), axis=1)
+    if pluses.empty:
+        return None
+    df_with_intersection = pluses.apply(lambda row: _apply_find_minus_with_max_range(row, minuses), axis=1,
+                                        result_type='expand')
     return df_with_intersection
 
 
@@ -117,16 +115,18 @@ def get_quality(fastq_file, alignments):
     return quality
 
 
+def get_paired_info(df):
+    # find pairs of plus and minus of the same read and return the longest alignment
+    paired_info = df.groupby('read_id', sort=False).apply(lambda read_df: _find_pairs(read_df))
+    # return to df's index
+    paired_info = paired_info.reset_index().set_index('level_1')
+    return paired_info['pair_index']
+
+
 def align_pairs(df, fastq_file):
     df = df.copy()
-    #print(df, fastq_file)
-    #breakpoint()
-    paired_info = df.groupby('read_id').apply(lambda read_df: _find_pairs(read_df))
-    #print(paired_info.isna().sum(), fastq_file)
-    #print(paired_info, fastq_file)
-    #breakpoint()
-    paired_info = paired_info.reset_index().set_index('level_1')
-    df['pair'] = paired_info[0].map(lambda x: x if x is not None else None)
+    paired_info = get_paired_info(df)
+    df['pair'] = paired_info
     df = get_minus_values(df, ['ref_seq', 'read_seq', 'ref_start', 'ref_end', 'read_start', 'read_end'])
     multi_paired_alignments = df.dropna(subset=['pair'])
     multi_paired_alignments = multi_paired_alignments[multi_paired_alignments['pair'].duplicated()]
@@ -214,8 +214,10 @@ def fix_insertions_index(df, ref_start):
     return df
 
 
-def create_read_df(data, read_seq, ref_seq, read_start, ref_start, minus_seq=False):
-    if minus_seq:
+def create_read_df(data, read_seq, ref_seq, read_start, ref_start, mode, minus_seq=False):
+    if minus_seq and (mode == "SeqToRef"):
+        read_start = 'read_start_minus'
+        ref_start = 'ref_end_minus'
         complimentary_base = {"A": "T", "T": "A", "C": "G", "G": "C", "-": "-"}
         seq = {'read': read_seq, 'ref': ref_seq}
         for seq_type, seq_data in seq.items():  # reverse and take complimentary
@@ -240,14 +242,10 @@ def create_read_df(data, read_seq, ref_seq, read_start, ref_start, minus_seq=Fal
 
 def create_plus_minus_dfs(data, mode):
     plus_df = create_read_df(data, read_seq='read_seq_plus', ref_seq='ref_seq_plus', read_start='read_start_plus',
-                             ref_start='ref_start_plus')
+                             ref_start='ref_start_plus', mode=mode)
     plus_df.columns = plus_df.columns + "_plus"
-    if mode == "SeqToRef":
-        minus_df = create_read_df(data, read_seq='read_seq_minus', ref_seq='ref_seq_minus',
-                                  read_start='read_start_minus', ref_start='ref_end_minus', minus_seq=True)
-    else:
-        minus_df = create_read_df(data, read_seq='read_seq_minus', ref_seq='ref_seq_minus', read_start='read_end_minus',
-                                  ref_start='ref_start_minus', minus_seq=True)
+    minus_df = create_read_df(data, read_seq='read_seq_minus', ref_seq='ref_seq_minus', read_start='read_end_minus',
+                              ref_start='ref_start_minus', minus_seq=True, mode=mode)
     minus_df.columns = minus_df.columns + "_minus"
     return plus_df, minus_df
 
@@ -294,7 +292,6 @@ def basecall(blast_output_file, fastq_file, output_dir, quality_threshold, mode)
     TODO: a no overlap version
     outputs ignored_reads, ignored_bases, suspicious_alignments, called_bases
     """
-    #print(f"____________________{mode}__________________")
     base_filename = os.path.basename(fastq_file)
     alignments, ignored_reads, suspicious_reads, read_counter = get_alignments(blast_output_file, fastq_file=fastq_file)
     read_counter.to_csv(os.path.join(output_dir, base_filename + ".read_counter"), sep="\t")
@@ -326,15 +323,15 @@ def process_fastq(fastq_file, reference, output_dir, quality_threshold, task, ev
     # Set blast defaults:
     if not task:
         task = "blastn"
-    if not evalue:
+    if evalue is None:
         evalue = 1e-7
     if not dust:
         dust = "no"
-    if not num_alignments:
+    if num_alignments is None:
         num_alignments = 1000000
     if not soft_masking:
         soft_masking = "F"
-    if not perc_identity:
+    if perc_identity is None:
         perc_identity = 85
     if not mode:
         mode = "RefToSeq"  # TODO: test differences between modes.
