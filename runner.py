@@ -2,7 +2,6 @@ import argparse
 import os
 import multiprocessing as mp
 import sys
-
 from Bio import pairwise2
 
 from data_preparation import prepare_data
@@ -67,8 +66,8 @@ def runner(input_dir, reference_file, output_dir, stages_range, max_basecall_ite
            consolidate_consensus_with_indels, stretches_pvalue, stretches_distance, stretches_to_plot):
     log = pipeline_logger(logger_name='AccuNGS-Runner', log_folder=output_dir)
     log.debug(f"runner params: {locals()}")
-    if not max_basecall_iterations:
-        max_basecall_iterations = 2   #TODO: what should this be?!
+    if max_basecall_iterations is None:
+        max_basecall_iterations = 2   # TODO: what should this be?!
     filenames = set_filenames(output_dir)
     stages = get_stages_list(stages_range)
     log.info(f"Running stages: {stages}")
@@ -146,7 +145,8 @@ if __name__ == "__main__":
     parser.add_argument("-bm", "--blast_mode", help="RefToSeq or SeqToRef (default: RefToSeq)")  # TODO: docs
     parser.add_argument("-qt", "--quality_threshold", type=int,
                         help="phred score must be higher than this to be included (default: 30)")
-    parser.add_argument("-mc", "--min_coverage", help="minimal coverage to plot in summary graphs (default: 10)") # TODO: different default?
+    parser.add_argument("-mc", "--min_coverage", type=int,
+                        help="minimal coverage to plot in summary graphs (default: 10)") # TODO: different default?
     parser.add_argument("-ccwi", "--consolidate_consensus_with_indels", type=str, default="Y",
                         help="Y/N where N means we consolidate consensus without indels (default: Y)")
     parser.add_argument("-sp", "--stretches_pvalue", type=float,
