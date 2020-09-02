@@ -10,7 +10,6 @@ import numpy as np
 
 
 def run_blast(reads_fasta, reference, output, mode, task, evalue, perc_identity, num_alignments, dust, soft_masking, log):
-
     if mode == "SeqToRef":
         query = reads_fasta
         subject = reference
@@ -245,10 +244,8 @@ def create_read_df(data, read_seq, ref_seq, read_start, ref_start, mode, minus_s
 def create_plus_minus_dfs(data, mode):
     plus_df = create_read_df(data, read_seq='read_seq_plus', ref_seq='ref_seq_plus', read_start='read_start_plus',
                              ref_start='ref_start_plus', mode=mode)
-    #plus_df.columns = plus_df.columns + "_plus"
     minus_df = create_read_df(data, read_seq='read_seq_minus', ref_seq='ref_seq_minus', read_start='read_end_minus',
                               ref_start='ref_start_minus', minus_seq=True, mode=mode)
-    #minus_df.columns = minus_df.columns + "_minus"
     return plus_df, minus_df
 
 
@@ -277,10 +274,7 @@ def filter_low_quality_bases(data, quality_threshold):
 
 def basecall_on_read(read_data, quality_threshold, mode):
     plus_df, minus_df = create_plus_minus_dfs(read_data, mode)
-    if plus_df.shape != minus_df.shape:
-        print(plus_df.shape, minus_df.shape, read_data)
     bases = plus_df.join(minus_df, how='outer', lsuffix='_plus', rsuffix='_minus')
-    #bases = pd.concat([plus_df, minus_df], axis=1)
     bases['read_id'] = read_data['read_id']
     bases['avg_quality'] = (bases['quality_plus'] + bases['quality_minus']) / 2
     bases, mismatching_bases = filter_mismatching_bases(bases)
