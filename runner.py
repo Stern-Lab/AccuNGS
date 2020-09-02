@@ -1,35 +1,27 @@
 import argparse
 import os
 import multiprocessing as mp
-import sys
+import pandas as pd
 from Bio import pairwise2
 
 from data_preparation import prepare_data
 from graph_haplotypes import graph_haplotypes
-from haplotypes.mutations_linking import calculate_linked_mutations
+from haplotypes.mutations_linking import get_variants_list, get_mutations_linked_with_position
 from plotting import graph_summary
 from processing import process_fastq
 from aggregation import aggregate_processed_output
 from logger import pipeline_logger
-from utils import get_files_in_dir, get_sequence_from_fasta
+from utils import get_files_in_dir, get_sequence_from_fasta, get_mp_results_and_report
 from haplotypes.co_occurs_to_stretches import calculate_stretches
 
 
 def parallel_process(processing_dir, fastq_files, reference_file, quality_threshold, task, evalue, dust, num_alignments,
-                     soft_masking, perc_identity, mode, max_cpus=None):
-    if not max_cpus:
-        max_cpus = mp.cpu_count()
-    pool = mp.Pool(processes=max_cpus)
+                     soft_masking, perc_identity, mode):
+    pool = mp.Pool(processes=mp.cpu_count())
     parts = [pool.apply_async(process_fastq, args=(fastq_file, reference_file, processing_dir, quality_threshold, task,
                                                    evalue, dust, num_alignments, soft_masking, perc_identity, mode,))
              for fastq_file in fastq_files]
-    i = 1
-    for res in parts:
-        res.get()
-        sys.stdout.write(f"\rDone {i}/{len(parts)} parts.")
-        sys.stdout.flush()
-        i = i + 1
-    sys.stdout.write("\n")
+    get_mp_results_and_report(parts)
 
 
 def get_stages_list(stages_range):
@@ -61,8 +53,46 @@ def set_filenames(output_dir):
     return filenames
 
 
+def calculate_linked_mutations(freqs_file_path, mutation_read_list, max_read_length):
+    variants_list = get_variants_list(freqs_file_path)
+    linked_mutations = []
+    for position in mutation_read_list.index.get_level_values(0).astype(int).unique():
+        linked_mutations.append(get_mutations_linked_with_position(position, variants_list=variants_list,
+                                                                   mutation_read_list=mutation_read_list,
+                                                                   max_read_size=max_read_length))
+    return pd.concat(linked_mutations)
+
+
+def parallel_calc_linked_mutations(freqs_file_path, output, mutation_read_list_path, max_read_length):
+    mutation_read_list = pd.read_csv(mutation_read_list_path, sep="\t").set_index(['ref_pos', 'read_base'], drop=True)
+    positions = mutation_read_list.index.get_level_values(0).astype(int).unique()
+    if max_read_length is None:
+        max_read_length = 350
+    part_size = 1.2 * max_read_length
+    mutation_read_list_parts = {}
+    start_index = min(positions)
+    end_index = 0
+    while end_index < max(positions):
+        next_start_index = start_index + part_size
+        next_end_index = min(next_start_index + part_size + max_read_length, max(positions))
+        if next_end_index == max(positions):
+            end_index = next_end_index
+        else:
+            end_index = start_index + part_size + max_read_length
+        mutation_read_list_parts[f"{start_index}_{end_index}"] = mutation_read_list.loc[start_index:end_index]
+        start_index += part_size
+    pool = mp.Pool(processes=mp.cpu_count())
+    parts = [pool.apply_async(calculate_linked_mutations,
+                              args=(freqs_file_path, read_list, max_read_length))
+             for read_list in mutation_read_list_parts.values()]
+    results = get_mp_results_and_report(parts)
+    pd.concat(results).to_csv(output, sep='\t', index=False)
+
+
+# TODO: trim read_ids to save ram
+
 def runner(input_dir, reference_file, output_dir, stages_range, max_basecall_iterations, part_size, min_coverage,
-           quality_threshold, task, evalue, dust, num_alignments, soft_masking, perc_identity, mode,
+           quality_threshold, task, evalue, dust, num_alignments, soft_masking, perc_identity, mode, max_read_size,
            consolidate_consensus_with_indels, stretches_pvalue, stretches_distance, stretches_to_plot):
     log = pipeline_logger(logger_name='AccuNGS-Runner', log_folder=output_dir)
     log.debug(f"runner params: {locals()}")
@@ -105,12 +135,12 @@ def runner(input_dir, reference_file, output_dir, stages_range, max_basecall_ite
                 break
             reference_file = consensus_file
         log.info(f"Calculating linked mutations...")
-        calculate_linked_mutations(freqs_file_path=filenames['freqs_file_path'],
+        parallel_calc_linked_mutations(freqs_file_path=filenames['freqs_file_path'],
                                    mutation_read_list_path=filenames['mutation_read_list_path'],
-                                   output=filenames['linked_mutations_path'])  # TODO: drop low quality mutations?
+                                   output=filenames['linked_mutations_path'], max_read_length=max_read_size)  # TODO: drop low quality mutations?
         log.info(f"Aggregating linked mutations to stretches...")
         calculate_stretches(filenames['linked_mutations_path'], max_pval=stretches_pvalue, distance=stretches_distance,
-                            output=filenames['stretches'])  #TODO: refactor that function and FIX THE BUG HERE!
+                            output=filenames['stretches'])  #TODO: refactor that function
         log.info(f"Processing done. Output files are in directory: {output_dir}")
     if 'analyze' in stages:
         log.info("Drawing summary graphs!")
@@ -155,6 +185,8 @@ if __name__ == "__main__":
                         help="mean transitive distance between joint mutations to calculate stretches (default: 10)")
     parser.add_argument("-stp", "--stretches_to_plot", type=int, default=5,
                         help="number of stretches to plot in deep dive (default: 5)")
+    parser.add_argument("-smrs", "--stretches_max_read_size", type=int,
+                        help="look this many positions forward for joint mutations (default: 350)")
 
     args = parser.parse_args()
     runner(input_dir=args.input_dir, output_dir=args.output_dir, reference_file=args.reference_file,
@@ -164,4 +196,4 @@ if __name__ == "__main__":
            mode=args.blast_mode, perc_identity=args.blast_perc_identity, soft_masking=args.blast_soft_masking,
            min_coverage=args.min_coverage, consolidate_consensus_with_indels=args.consolidate_consensus_with_indels,
            stretches_pvalue=args.stretches_pvalue, stretches_distance=args.stretches_distance,
-           stretches_to_plot=args.stretches_to_plot)
+           stretches_to_plot=args.stretches_to_plot, max_read_size=args.stretches_max_read_size)

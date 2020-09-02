@@ -10,9 +10,12 @@ def _get_total_read_list(mutations_reads_list):
     return complete_read_list
 
 
-def get_mutations_linked_with_position(x, variants_list, mutation_read_list):
+def get_mutations_linked_with_position(x, variants_list, mutation_read_list, max_read_size):
+    if max_read_size is None:
+        max_read_size = 350
     ret = []
-    relevant_positions = set(range(x+1, x+300)) & set(variants_list.get_level_values(0))
+    relevant_positions = set(range(x+1, x+max_read_size)) & set(variants_list.get_level_values(0).astype(int)) & set(
+        mutation_read_list.index.get_level_values(0).astype(int))
     x_read_list = _get_total_read_list(mutation_read_list.loc[x])
     for x_mutation in mutation_read_list.loc[x].index:
         if (x, x_mutation) in variants_list:
@@ -40,20 +43,7 @@ def get_mutations_linked_with_position(x, variants_list, mutation_read_list):
     return pd.DataFrame.from_dict(ret)
 
 
-def get_variants_list(freqs_file, min_base_count):
+def get_variants_list(freqs_file):
     freqs = pd.read_csv(freqs_file, sep='\t')
-    variants = freqs[(freqs.read_base != freqs.ref_base) & (freqs.base_count > min_base_count)].set_index(
-        ['ref_pos', 'read_base'])
+    variants = freqs[(freqs['base_rank'] != 0) & (freqs.base_count > 0)].set_index(['ref_pos', 'read_base'])
     return variants.index
-
-
-def calculate_linked_mutations(freqs_file_path, output, mutation_read_list_path):
-    # TODO: mp support if needed.
-    variants_list = get_variants_list(freqs_file_path, min_base_count=3)  # TODO: set defaults.
-    mutation_read_list = pd.read_csv(mutation_read_list_path, sep="\t").set_index(
-        ['ref_pos', 'read_base'], drop=True)
-    linked_mutations = {}
-    for position in variants_list.get_level_values(0).astype(int):
-        linked_mutations[position] = get_mutations_linked_with_position(position, variants_list=variants_list,
-                                                                        mutation_read_list=mutation_read_list)
-    pd.concat(linked_mutations.values()).to_csv(output, sep='\t', index=False)
