@@ -82,7 +82,6 @@ def aggregate_read_counters(read_counters, output_path):
 
 
 def aggregate_processed_output(input_dir, output_dir, reference, min_coverage):
-    # TODO: graphs.
     if not min_coverage:
         min_coverage = 10
     os.makedirs(output_dir, exist_ok=True)
@@ -102,7 +101,6 @@ def aggregate_processed_output(input_dir, output_dir, reference, min_coverage):
     for file_type in ['called_bases', 'ignored_bases', 'suspicious_reads', 'ignored_reads']:
         concatenate_files_by_extension(input_dir=basecall_dir, extension=file_type,
                                        output_path=os.path.join(output_dir, f"{file_type}.tsv"))
-
     create_new_ref_with_freqs(reference_fasta_file=reference, freqs_file=freqs_file_path, min_coverage=min_coverage,
                               output_file=os.path.join(output_dir, "consensus_without_indels.fasta"), drop_indels=True)
     create_new_ref_with_freqs(reference_fasta_file=reference, freqs_file=freqs_file_path, min_coverage=min_coverage,

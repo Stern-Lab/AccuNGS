@@ -73,6 +73,7 @@ def parallel_calc_linked_mutations(freqs_file_path, output, mutation_read_list_p
     mutation_read_list_parts = {}
     start_index = min(positions)
     end_index = 0
+
     while end_index < max(positions):
         next_start_index = start_index + part_size
         next_end_index = min(next_start_index + part_size + max_read_length, max(positions))
@@ -80,6 +81,7 @@ def parallel_calc_linked_mutations(freqs_file_path, output, mutation_read_list_p
             end_index = next_end_index
         else:
             end_index = start_index + part_size + max_read_length
+        print(start_index, end_index)
         mutation_read_list_parts[f"{start_index}_{end_index}"] = mutation_read_list.loc[start_index:end_index]
         start_index += part_size
     pool = mp.Pool(processes=mp.cpu_count())
@@ -129,6 +131,7 @@ def runner(input_dir, reference_file, output_dir, stages_range, max_basecall_ite
             log.info("Aggregating processed fastq files outputs...")
             aggregate_processed_output(input_dir=processing_dir, output_dir=output_dir,
                                        reference=reference_file, min_coverage=min_coverage)
+            # TODO: factor out creating consensus from aggregation
             consensus = get_sequence_from_fasta(consensus_file)
             alignment_score = get_alignment_score(consensus=consensus, reference_file=reference_file)
             log.info(f"Iteration done with alignment score: {round(alignment_score,4)}")
