@@ -65,6 +65,7 @@ def calculate_linked_mutations(freqs_file_path, mutation_read_list, max_read_len
 
 def parallel_calc_linked_mutations(freqs_file_path, output, mutation_read_list_path, max_read_length, part_size):
     mutation_read_list = pd.read_csv(mutation_read_list_path, sep="\t").set_index(['ref_pos', 'read_base'], drop=True)
+    print(mutation_read_list)
     positions = mutation_read_list.index.get_level_values(0).astype(int).unique()
     if max_read_length is None:
         max_read_length = 350
