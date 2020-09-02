@@ -139,7 +139,7 @@ def runner(input_dir, reference_file, output_dir, stages_range, max_basecall_ite
         parallel_calc_linked_mutations(freqs_file_path=filenames['freqs_file_path'],
                                        mutation_read_list_path=filenames['mutation_read_list_path'],
                                        output=filenames['linked_mutations_path'], max_read_length=max_read_size,
-                                       part_size=1)  # TODO: drop low quality mutations?, set part_size as param.
+                                       part_size=30)  # TODO: drop low quality mutations?, set part_size as param.
         log.info(f"Aggregating linked mutations to stretches...")
         calculate_stretches(filenames['linked_mutations_path'], max_pval=stretches_pvalue, distance=stretches_distance,
                             output=filenames['stretches'])  #TODO: refactor that function
