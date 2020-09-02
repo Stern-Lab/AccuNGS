@@ -1,6 +1,8 @@
 import os
 import gzip
 import shutil
+import sys
+
 import numpy as np
 import pandas as pd
 
@@ -72,7 +74,7 @@ def create_new_ref_with_freqs(reference_fasta_file, freqs_file, min_coverage, ou
     ref = pd.DataFrame(list(str(record.seq)), columns=['ref_base_from_fasta'])
     ref.index = (ref.index + 1).astype(float)
     df = pd.read_table(freqs_file)
-    df.loc[df["coverage"] >= min_coverage, 'coverage'] = None
+    df.loc[df["coverage"] <= min_coverage, 'read_base'] = None
     df = df[df["base_rank"] == 0]
     if drop_indels:
         df = df[df["ref_pos"] == np.round(df['ref_pos'])]   # drop insertions
@@ -83,3 +85,17 @@ def create_new_ref_with_freqs(reference_fasta_file, freqs_file, min_coverage, ou
     record.seq = new_sequence
     with open(output_file, "w") as output_handle:
         SeqIO.write(record, output_handle, "fasta")
+
+
+def get_mp_results_and_report(async_objects_list):
+    """Expects a list of pool.apply_async objects, runs them and reports when each of them is done."""
+    i = 1
+    results = []
+    for async_object in async_objects_list:
+        results.append(async_object.get())
+        sys.stdout.write(f"\rDone {i}/{len(async_objects_list)} parts.")
+        sys.stdout.flush()
+        i = i + 1
+    sys.stdout.write("\n")
+    return results
+
