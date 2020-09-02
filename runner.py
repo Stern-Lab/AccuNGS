@@ -63,12 +63,13 @@ def calculate_linked_mutations(freqs_file_path, mutation_read_list, max_read_len
     return pd.concat(linked_mutations)
 
 
-def parallel_calc_linked_mutations(freqs_file_path, output, mutation_read_list_path, max_read_length):
+def parallel_calc_linked_mutations(freqs_file_path, output, mutation_read_list_path, max_read_length, part_size):
     mutation_read_list = pd.read_csv(mutation_read_list_path, sep="\t").set_index(['ref_pos', 'read_base'], drop=True)
     positions = mutation_read_list.index.get_level_values(0).astype(int).unique()
     if max_read_length is None:
         max_read_length = 350
-    part_size = 1.2 * max_read_length
+    if not part_size:
+        part_size = 50  # smaller parts take less time to compute but take more time to aggregate and use more RAM.
     mutation_read_list_parts = {}
     start_index = min(positions)
     end_index = 0
@@ -136,8 +137,9 @@ def runner(input_dir, reference_file, output_dir, stages_range, max_basecall_ite
             reference_file = consensus_file
         log.info(f"Calculating linked mutations...")
         parallel_calc_linked_mutations(freqs_file_path=filenames['freqs_file_path'],
-                                   mutation_read_list_path=filenames['mutation_read_list_path'],
-                                   output=filenames['linked_mutations_path'], max_read_length=max_read_size)  # TODO: drop low quality mutations?
+                                       mutation_read_list_path=filenames['mutation_read_list_path'],
+                                       output=filenames['linked_mutations_path'], max_read_length=max_read_size,
+                                       part_size=1)  # TODO: drop low quality mutations?, set part_size as param.
         log.info(f"Aggregating linked mutations to stretches...")
         calculate_stretches(filenames['linked_mutations_path'], max_pval=stretches_pvalue, distance=stretches_distance,
                             output=filenames['stretches'])  #TODO: refactor that function
