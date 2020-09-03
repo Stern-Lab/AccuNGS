@@ -23,8 +23,8 @@ def get_files_in_dir(dir_path):
     return files
 
 
-def extract_gz(gz_file):
-    output_file = gz_file[:-3]
+def extract_gz(gz_file, output_dir):
+    output_file = os.path.join(output_dir, gz_file[:-3])
     with gzip.open(gz_file, 'rb') as f_in:
         with open(output_file, 'wb') as f_out:
             shutil.copyfileobj(f_in, f_out)
@@ -74,8 +74,8 @@ def create_new_ref_with_freqs(reference_fasta_file, freqs_file, min_coverage, ou
     ref = pd.DataFrame(list(str(record.seq)), columns=['ref_base_from_fasta'])
     ref.index = (ref.index + 1).astype(float)
     df = pd.read_table(freqs_file)
-    df.loc[df["coverage"] <= min_coverage, 'read_base'] = None
     df = df[df["base_rank"] == 0]
+    df.loc[df["coverage"] <= min_coverage, 'read_base'] = None
     if drop_indels:
         df = df[df["ref_pos"] == np.round(df['ref_pos'])]   # drop insertions
         df = df[df["read_base"] != "-"]                     # drop deletions
