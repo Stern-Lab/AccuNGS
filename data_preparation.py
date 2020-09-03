@@ -117,7 +117,7 @@ def prepare_data_in_dir(input_dir, output_dir, part_size, rep_length, opposing_s
             merged_reads = merge_opposing_reads(file1=files[0], file2=files[1], output_file=merged_reads,
                                                 rep_length=rep_length, file_type=file_type, log=log)
             if file_type == 'gz':
-                merged_reads = extract_gz(merged_reads)
+                merged_reads = extract_gz(merged_reads, output_dir)
             split_fastq_file(fastq_file=merged_reads, output_dir=output_dir, part_size=part_size)
         else:
             raise Exception(f"Found more than 2 files containing opposing_strings: {opposing_strings} !")
