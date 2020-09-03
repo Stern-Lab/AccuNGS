@@ -26,7 +26,7 @@ def parallel_process(processing_dir, fastq_files, reference_file, quality_thresh
 
 
 def get_stages_list(stages_range):
-    stages_dict = {1: 'prepare_data', 2: 'process_data', 3: 'analyze'}
+    stages_dict = {1: 'prepare data', 2: 'process data', 3: 'aggregate output', 4: 'infer haplotypes'}
     if len(stages_range) == 2:
         stages = range(stages_range[0], stages_range[1] + 1)
     elif len(stages_range) == 1:
@@ -47,7 +47,7 @@ def set_filenames(output_dir):
     filenames = {"freqs_file_path": os.path.join(output_dir, 'freqs.tsv'),
                  "linked_mutations_path": os.path.join(output_dir, 'linked_mutations.tsv'),
                  "mutation_read_list_path": os.path.join(output_dir, 'mutation_read_list.tsv'),
-                 "stretches": os.path.join(output_dir, 'streches.tsv'),
+                 "stretches": os.path.join(output_dir, 'stretches.tsv'),
                  "blast_file": os.path.join(output_dir, 'blast.tsv'),
                  "read_counter_file": os.path.join(output_dir, 'read_counter.tsv'),
                  "summary_graphs": os.path.join(output_dir, 'summary.png')}
@@ -123,14 +123,14 @@ def runner(input_dir, reference_file, output_dir, stages_range, max_basecall_ite
     filenames = set_filenames(output_dir)
     stages = get_stages_list(stages_range)
     log.info(f"Running stages: {stages}")
-    if 'prepare_data' in stages:
+    if 'prepare data' in stages:
         data_dir = os.path.join(output_dir, "data")
         os.makedirs(data_dir, exist_ok=True)
         log.info("Preparing data")
         prepare_data(input_dir=input_dir, output_dir=data_dir, part_size=part_size, opposing_strings=None)
     else:
         data_dir = input_dir
-    if 'process_data' in stages:
+    if 'process data' in stages:
         processing_dir = os.path.join(output_dir, "processing")
         os.makedirs(processing_dir, exist_ok=True)
         data_files = get_files_in_dir(data_dir)
@@ -151,14 +151,22 @@ def runner(input_dir, reference_file, output_dir, stages_range, max_basecall_ite
                                                                  basecall_dir=os.path.join(processing_dir, 'basecall'),
                                                                  with_indels=consolidate_consensus_with_indels,
                                                                  output_dir=output_dir, min_coverage=min_coverage)
-            log.info(f'Iteration alignment score: {alignment_score}')
+            log.info(f'Iteration alignment score: {round(alignment_score,4)}')
             if alignment_score == 1:
                 break
             reference_file = consensus_file
+    if 'aggregate output' in stages:
         log.info("Aggregating processed fastq files outputs...")
         aggregate_processed_output(input_dir=processing_dir, output_dir=output_dir,
                                    reference=reference_file, min_coverage=min_coverage)
+        graph_summary(freqs_file=filenames['freqs_file_path'], blast_file=filenames['blast_file'],
+                      read_counter_file=filenames['read_counter_file'], stretches_file=filenames['stretches'],
+                      output_file=filenames['summary_graphs'], min_coverage=min_coverage,
+                      stretches_to_plot=stretches_to_plot)  # TODO: drop low quality mutations?
+        log.info(f"Most outputs are ready in {output_dir} !")
+    if 'infer haplotypes' in stages:
         log.info(f"Calculating linked mutations...")
+        # TODO: pbs runner if speed is stiil and issue with linked mutations
         parallel_calc_linked_mutations(freqs_file_path=filenames['freqs_file_path'],
                                        mutation_read_list_path=filenames['mutation_read_list_path'],
                                        output=filenames['linked_mutations_path'], max_read_length=max_read_size,
@@ -166,18 +174,15 @@ def runner(input_dir, reference_file, output_dir, stages_range, max_basecall_ite
         log.info(f"Aggregating linked mutations to stretches...")
         calculate_stretches(filenames['linked_mutations_path'], max_pval=stretches_pvalue, distance=stretches_distance,
                             output=filenames['stretches'])  #TODO: refactor that function
-        log.info(f"Processing done. Output files are in directory: {output_dir}")
-    if 'analyze' in stages:
-        log.info("Drawing summary graphs!")
         graph_summary(freqs_file=filenames['freqs_file_path'], blast_file=filenames['blast_file'],
                       read_counter_file=filenames['read_counter_file'], stretches_file=filenames['stretches'],
                       output_file=filenames['summary_graphs'], min_coverage=min_coverage,
                       stretches_to_plot=stretches_to_plot)  # TODO: drop low quality mutations?
         graph_haplotypes(input_file=filenames['stretches'], number_of_stretches=stretches_to_plot,
                          output_dir=output_dir)
-    #TODO: test everything, finish up, pbs_runner?
-    log.info("Done!")
+    log.info(f"Done! Output files are in directory: {output_dir}")
 
+    #TODO: test everything, finish up, pbs_runner?
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

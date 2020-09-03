@@ -81,7 +81,9 @@ def plot_stretches_summary(df, stretches, ax):
 
 def graph_haplotype_overview(stretches_file, ax, stretches_to_plot):
     if not os.path.isfile(stretches_file):
-        return ax.text(0.5, 0.5, "Waiting for data...", fontsize=18, ha='center')
+        ax.text(0.5, 0.5, "Waiting for data...", fontsize=18, ha='center')
+        ax.title.set_text("Haplotypes")
+        return ax
     df = pd.read_csv(stretches_file, sep="\t")
     biggest_stretches = df.Stretch.value_counts()[:stretches_to_plot]
     return plot_stretches_summary(df=df, stretches=biggest_stretches, ax=ax)
