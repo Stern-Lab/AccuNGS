@@ -9,9 +9,10 @@ from graph_haplotypes import graph_haplotypes
 from haplotypes.mutations_linking import get_variants_list, get_mutations_linked_with_position
 from plotting import graph_summary
 from processing import process_fastq
-from aggregation import aggregate_processed_output
+from aggregation import aggregate_processed_output, create_freqs_file
 from logger import pipeline_logger
-from utils import get_files_in_dir, get_sequence_from_fasta, get_mp_results_and_report
+from utils import get_files_in_dir, get_sequence_from_fasta, get_mp_results_and_report, create_new_ref_with_freqs, \
+    get_files_by_extension
 from haplotypes.co_occurs_to_stretches import calculate_stretches
 
 
@@ -94,6 +95,22 @@ def parallel_calc_linked_mutations(freqs_file_path, output, mutation_read_list_p
     pd.concat(results).to_csv(output, sep='\t', index=False)
 
 
+def check_consensus_alignment_with_ref(reference_file, with_indels, min_coverage, output_dir, basecall_dir):
+    freqs_file_path = os.path.join(output_dir, 'freqs.tsv')
+    called_bases_files = get_files_by_extension(basecall_dir, "called_bases")
+    create_freqs_file(called_bases_files=called_bases_files, output_path=freqs_file_path)
+    if with_indels == "Y":
+        consensus_path = os.path.join(output_dir, "consensus_with_indels.fasta")
+        drop_indels = False
+    else:
+        consensus_path = os.path.join(output_dir, "consensus_without_indels.fasta")
+        drop_indels = True
+    create_new_ref_with_freqs(reference_fasta_file=reference_file, freqs_file=freqs_file_path,
+                              min_coverage=min_coverage, output_file=consensus_path, drop_indels=drop_indels)
+    consensus = get_sequence_from_fasta(consensus_path)
+    alignment_score = get_alignment_score(consensus=consensus, reference_file=reference_file)
+    return alignment_score
+
 # TODO: trim read_ids to save ram
 
 def runner(input_dir, reference_file, output_dir, stages_range, max_basecall_iterations, part_size, min_coverage,
@@ -130,16 +147,17 @@ def runner(input_dir, reference_file, output_dir, stages_range, max_basecall_ite
             parallel_process(processing_dir=processing_dir, fastq_files=fastq_files, reference_file=reference_file,
                              quality_threshold=quality_threshold, task=task, evalue=evalue, dust=dust, mode=mode,
                              num_alignments=num_alignments, soft_masking=soft_masking, perc_identity=perc_identity)
-            log.info("Aggregating processed fastq files outputs...")
-            aggregate_processed_output(input_dir=processing_dir, output_dir=output_dir,
-                                       reference=reference_file, min_coverage=min_coverage)
-            # TODO: factor out creating consensus from aggregation
-            consensus = get_sequence_from_fasta(consensus_file)
-            alignment_score = get_alignment_score(consensus=consensus, reference_file=reference_file)
-            log.info(f"Iteration done with alignment score: {round(alignment_score,4)}")
+            alignment_score = check_consensus_alignment_with_ref(reference_file=reference_file,
+                                                                 basecall_dir=os.path.join(processing_dir, 'basecall'),
+                                                                 with_indels=consolidate_consensus_with_indels,
+                                                                 output_dir=output_dir, min_coverage=min_coverage)
+            log.info(f'Iteration alignment score: {alignment_score}')
             if alignment_score == 1:
                 break
             reference_file = consensus_file
+        log.info("Aggregating processed fastq files outputs...")
+        aggregate_processed_output(input_dir=processing_dir, output_dir=output_dir,
+                                   reference=reference_file, min_coverage=min_coverage)
         log.info(f"Calculating linked mutations...")
         parallel_calc_linked_mutations(freqs_file_path=filenames['freqs_file_path'],
                                        mutation_read_list_path=filenames['mutation_read_list_path'],
