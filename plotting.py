@@ -1,3 +1,5 @@
+import os
+
 import pandas as pd
 import seaborn as sns
 from matplotlib import pyplot as plt
@@ -18,6 +20,7 @@ def set_plots_size_params(size):
 def graph_read_counter(read_counter_file, ax):
     data = pd.read_csv(read_counter_file, sep="\t")
     data.number_of_alignments.hist(bins=10, ax=ax)
+    ax.grid(False)
     ax.set_ylabel("Density")
     ax.set_xlabel("Times mapped")
     ax.title.set_text('Number of Reads')
@@ -27,6 +30,7 @@ def graph_read_counter(read_counter_file, ax):
 def graph_blast_length_distribution(blast_file, ax):
     data = pd.read_csv(blast_file, sep="\t", usecols=[7])
     data.hist(bins=30, ax=ax)
+    ax.grid(False)
     ax.set_ylabel("Density")
     ax.set_xlabel("Alignment Length")
     ax.title.set_text('Length distribution')
@@ -76,6 +80,8 @@ def plot_stretches_summary(df, stretches, ax):
 
 
 def graph_haplotype_overview(stretches_file, ax, stretches_to_plot):
+    if not os.path.isfile(stretches_file):
+        return ax.text(0.5, 0.5, "Waiting for data...", fontsize=18, ha='center')
     df = pd.read_csv(stretches_file, sep="\t")
     biggest_stretches = df.Stretch.value_counts()[:stretches_to_plot]
     return plot_stretches_summary(df=df, stretches=biggest_stretches, ax=ax)
