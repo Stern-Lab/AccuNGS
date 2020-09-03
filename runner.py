@@ -72,18 +72,19 @@ def parallel_calc_linked_mutations(freqs_file_path, output, mutation_read_list_p
     if not part_size:
         part_size = 50  # smaller parts take less time to compute but take more time to aggregate and use more RAM.
     mutation_read_list_parts = {}
-    start_index = min(positions)
+    start_index = 0
     end_index = 0
-
-    while end_index < max(positions):
+    while end_index < len(positions):
         next_start_index = start_index + part_size
-        next_end_index = min(next_start_index + part_size + max_read_length, max(positions))
-        if next_end_index == max(positions):
+        next_end_index = min(next_start_index + part_size + max_read_length, len(positions))
+        if next_end_index == len(positions):
             end_index = next_end_index
         else:
             end_index = start_index + part_size + max_read_length
         print(start_index, end_index)
-        mutation_read_list_parts[f"{start_index}_{end_index}"] = mutation_read_list.loc[start_index:end_index]
+        start_position = positions[start_index]
+        end_position = positions[end_index-1]
+        mutation_read_list_parts[f"{start_index}_{end_index}"] = mutation_read_list.loc[start_position:end_position]
         start_index += part_size
     pool = mp.Pool(processes=mp.cpu_count())
     parts = [pool.apply_async(calculate_linked_mutations,
