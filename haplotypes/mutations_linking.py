@@ -5,25 +5,27 @@ from scipy.stats import fisher_exact
 
 def _get_total_read_list(mutations_reads_list):
     complete_read_list = set()
-    for read_list in mutations_reads_list.read_id:
-        complete_read_list |= eval(read_list)
+    for read_list in mutations_reads_list:
+        complete_read_list |= read_list
     return complete_read_list
 
 
 def get_mutations_linked_with_position(x, variants_list, mutation_read_list, max_read_size):
+    # TODO: speed!
     if max_read_size is None:
         max_read_size = 350
     ret = []
     relevant_positions = set(range(x+1, x+max_read_size)) & set(variants_list.get_level_values(0).astype(int)) & set(
         mutation_read_list.index.get_level_values(0).astype(int))
+    mutation_read_list = mutation_read_list.read_id.map(eval)  # turn all those strings into sets TODO: security?
     x_read_list = _get_total_read_list(mutation_read_list.loc[x])
     for x_mutation in mutation_read_list.loc[x].index:
         if (x, x_mutation) in variants_list:
-            x_mutation_read_list = eval(mutation_read_list.loc[x, x_mutation].values[0])
+            x_mutation_read_list = mutation_read_list.loc[x, x_mutation]
             for y in relevant_positions:
                 y_read_list = _get_total_read_list(mutation_read_list.loc[y])
                 for y_mutation in mutation_read_list.loc[y].index:
-                    y_mutation_read_list = eval(mutation_read_list.loc[(y, y_mutation)].values[0])
+                    y_mutation_read_list = mutation_read_list.loc[(y, y_mutation)]
                     both_mutations_on_read = len(set(x_mutation_read_list) & set(y_mutation_read_list))
                     if both_mutations_on_read > 0:
                         just_x_on_read = len(set(x_mutation_read_list) - set(y_mutation_read_list))
