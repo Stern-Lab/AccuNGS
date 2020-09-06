@@ -99,3 +99,31 @@ def get_mp_results_and_report(async_objects_list):
     sys.stdout.write("\n")
     return results
 
+
+def create_pbs_cmd_file(path, alias, output_logs_dir, cmd, queue="adistzachi@power9", gmem=2, ncpus=1, nodes=1,
+                        load_python=True, jnum=False, run_after_job_id=None):
+    with open(path, 'w') as o:
+        o.write("#!/bin/bash\n#PBS -S /bin/bash\n#PBS -j oe\n#PBS -r y\n")
+        o.write(f"#PBS -q {queue}\n")
+        o.write("#PBS -v PBS_O_SHELL=bash,PBS_ENVIRONMENT=PBS_BATCH \n")
+        o.write("#PBS -N " + alias + "\n")
+        o.write(f"#PBS -o {output_logs_dir} \n")
+        o.write(f"#PBS -e {output_logs_dir} \n")
+        o.write(f"#PBS -l select={nodes}:ncpus={ncpus}:mem={gmem}gb\n")
+        if jnum:
+            if jnum != 1:
+                o.write("#PBS -J 1-" + str(jnum) + "\n\n")
+        if run_after_job_id is not None and 'adi' in queue:
+            o.write("#PBS -W depend=afterok:" + str(run_after_job_id) + ".power9.tau.ac.il\n\n")
+        if run_after_job_id is not None and 'dudu' in queue:
+            o.write("#PBS -W depend=afterok:" + str(run_after_job_id) + ".power8.tau.ac.il\n\n")
+        if load_python:
+            o.write("module load python/python-anaconda3.2019.10\n")
+        o.write(cmd)
+    o.close()
+
+
+def submit_cmdfile_to_pbs(cmdfile):
+    cmd = "/opt/pbs/bin/qsub " + cmdfile
+    result = os.popen(cmd).read()
+    return result.split(".")[0]

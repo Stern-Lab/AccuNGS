@@ -26,7 +26,8 @@ def parallel_process(processing_dir, fastq_files, reference_file, quality_thresh
 
 
 def get_stages_list(stages_range):
-    stages_dict = {1: 'prepare data', 2: 'process data', 3: 'aggregate output', 4: 'infer haplotypes'}
+    stages_dict = {1: 'prepare data', 2: 'process data', 3: 'aggregate output', 4: 'compute haplotypes',
+                   5: 'graph haplotypes'}
     if len(stages_range) == 2:
         stages = range(stages_range[0], stages_range[1] + 1)
     elif len(stages_range) == 1:
@@ -164,13 +165,14 @@ def runner(input_dir, reference_file, output_dir, stages_range, max_basecall_ite
                       output_file=filenames['summary_graphs'], min_coverage=min_coverage,
                       stretches_to_plot=stretches_to_plot)  # TODO: drop low quality mutations?
         log.info(f"Most outputs are ready in {output_dir} !")
-    if 'infer haplotypes' in stages:
+    if 'compute haplotypes' in stages:
         log.info(f"Calculating linked mutations...")
         # TODO: pbs runner if speed is stiil and issue with linked mutations
         parallel_calc_linked_mutations(freqs_file_path=filenames['freqs_file_path'],
                                        mutation_read_list_path=filenames['mutation_read_list_path'],
                                        output=filenames['linked_mutations_path'], max_read_length=max_read_size,
                                        part_size=30)  # TODO: drop low quality mutations?, set part_size as param.
+    if 'graph haplotypes' in stages:
         log.info(f"Aggregating linked mutations to stretches...")
         calculate_stretches(filenames['linked_mutations_path'], max_pval=stretches_pvalue, distance=stretches_distance,
                             output=filenames['stretches'])  #TODO: refactor that function
@@ -184,7 +186,8 @@ def runner(input_dir, reference_file, output_dir, stages_range, max_basecall_ite
 
     #TODO: test everything, finish up, pbs_runner?
 
-if __name__ == "__main__":
+
+def create_runner_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument("-i", "--input_dir", required=True,
                         help="Path to directory containing basecall files")
@@ -206,18 +209,22 @@ if __name__ == "__main__":
     parser.add_argument("-qt", "--quality_threshold", type=int,
                         help="phred score must be higher than this to be included (default: 30)")
     parser.add_argument("-mc", "--min_coverage", type=int,
-                        help="minimal coverage to plot in summary graphs (default: 10)") # TODO: different default?
+                        help="minimal coverage to plot in summary graphs (default: 10)")  # TODO: different default?
     parser.add_argument("-ccwi", "--consolidate_consensus_with_indels", type=str, default="Y",
                         help="Y/N where N means we consolidate consensus without indels (default: Y)")
     parser.add_argument("-sp", "--stretches_pvalue", type=float,
-                        help="only consider joint mutations with pvalue below this (default: 10**-9")  #TODO: better docs
+                        help="only consider joint mutations with pvalue below this (default: 10**-9")  # TODO: better docs
     parser.add_argument("-sd", "--stretches_distance", type=float,
                         help="mean transitive distance between joint mutations to calculate stretches (default: 10)")
     parser.add_argument("-stp", "--stretches_to_plot", type=int, default=5,
                         help="number of stretches to plot in deep dive (default: 5)")
     parser.add_argument("-smrs", "--stretches_max_read_size", type=int,
                         help="look this many positions forward for joint mutations (default: 350)")
+    return parser
 
+
+if __name__ == "__main__":
+    parser = create_runner_parser()
     args = parser.parse_args()
     runner(input_dir=args.input_dir, output_dir=args.output_dir, reference_file=args.reference_file,
            stages_range=args.stages_range, max_basecall_iterations=args.max_basecall_iterations,
