@@ -1,7 +1,7 @@
 import os
 
 from haplotypes.mutations_linking import get_variants_list
-from runner import get_stages_list, create_runner_parser
+from runner import create_runner_parser
 
 
 def create_pbs_cmd_file(path, alias, output_logs_dir, cmd, queue="adistzachi@power9", gmem=2, ncpus=1, nodes=1,
@@ -50,7 +50,7 @@ def runner_cmd(input_dir, output_dir, reference_file, stages_range, max_basecall
 def pbs_runner(input_dir, output_dir, reference_file, stages_range, max_basecall_iterations, part_size,
                quality_threshold, task, evalue, dust, num_alignments, mode, perc_identity, soft_masking, min_coverage,
                consolidate_consensus_with_indels, stretches_pvalue, stretches_distance, stretches_to_plot,
-               max_read_size, alias, queue):
+               max_read_size, alias, queue, num_of_nucs):
     # TODO: move defaults to a config file
     serial_job_id = None
     haplo_job_id = None
@@ -73,9 +73,6 @@ def pbs_runner(input_dir, output_dir, reference_file, stages_range, max_basecall
         serial_job_id = submit_cmdfile_to_pbs(serial_cmdfile)
     if (min(stages_range) <= 4) and (max(stages_range) >= 4):
         freqs_file_path = os.path.join(output_dir, 'freqs.tsv')
-        variants_list = get_variants_list(freqs_file_path).get_level_values(0).astype(int)
-        j_start = min(variants_list)
-        j_end = max(variants_list)
         alias += "_haplo"
         compute_haplo_path = os.path.join(pbs_logs_dir, f"AccuNGS_4.cmd")
         linked_mutations_dir = os.path.join(output_dir, 'linked_mutations')
@@ -84,7 +81,7 @@ def pbs_runner(input_dir, output_dir, reference_file, stages_range, max_basecall
               f"-r {output_dir}/mutation_read_list.tsv -m {max_read_size} " \
               f"-o {linked_mutations_dir}/$PBS_ARRAY_INDEX_linked_mutations.tsv"
         create_pbs_cmd_file(compute_haplo_path, alias, output_logs_dir=pbs_logs_dir, cmd=cmd, queue=queue, gmem=20,
-                            ncpus=1, jnums=(j_start, j_end), run_after_job_id=serial_job_id)
+                            ncpus=1, jnums=num_of_nucs, run_after_job_id=serial_job_id)
         haplo_job_id = submit_cmdfile_to_pbs(compute_haplo_path)
     if 5 in stages_range:
         alias += "_graph"
@@ -111,6 +108,8 @@ if __name__ == "__main__":
     parser.add_argument("-a", "--alias", default="AccuNGS", help="job alias visible in qstat (default: AccuNGS)")
     parser.add_argument("-q", "--queue", default="adistzachi@power9",
                         help="PBS queue to run on (default: adistzachi@power9)")
+    parser.add_argument("-non", "--num_of_nucs", default=3000, type=int,
+                        help="number of nucleotides in sequence")
     args = parser.parse_args()
     pbs_runner(input_dir=args.input_dir, output_dir=args.output_dir, reference_file=args.reference_file,
                stages_range=args.stages_range, max_basecall_iterations=args.max_basecall_iterations,
@@ -119,4 +118,5 @@ if __name__ == "__main__":
                mode=args.blast_mode, perc_identity=args.blast_perc_identity, soft_masking=args.blast_soft_masking,
                min_coverage=args.min_coverage, consolidate_consensus_with_indels=args.consolidate_consensus_with_indels,
                stretches_pvalue=args.stretches_pvalue, stretches_distance=args.stretches_distance, alias=args.alias,
-               stretches_to_plot=args.stretches_to_plot, max_read_size=args.stretches_max_read_size, queue=args.queue)
+               stretches_to_plot=args.stretches_to_plot, max_read_size=args.stretches_max_read_size, queue=args.queue,
+               num_of_nucs=args.num_of_nucs)
