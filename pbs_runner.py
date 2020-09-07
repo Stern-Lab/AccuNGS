@@ -1,43 +1,104 @@
-import argparse
 import os
 
+from haplotypes.mutations_linking import get_variants_list
 from runner import get_stages_list, create_runner_parser
-from utils import create_pbs_cmd_file, submit_cmdfile_to_pbs
+
+
+def create_pbs_cmd_file(path, alias, output_logs_dir, cmd, queue="adistzachi@power9", gmem=2, ncpus=1, nodes=1,
+                        load_python=True, jnums=None, run_after_job_id=None):
+    with open(path, 'w') as o:
+        o.write("#!/bin/bash\n#PBS -S /bin/bash\n#PBS -j oe\n#PBS -r y\n")
+        o.write(f"#PBS -q {queue}\n")
+        o.write("#PBS -v PBS_O_SHELL=bash,PBS_ENVIRONMENT=PBS_BATCH \n")
+        o.write("#PBS -N " + alias + "\n")
+        o.write(f"#PBS -o {output_logs_dir} \n")
+        o.write(f"#PBS -e {output_logs_dir} \n")
+        o.write(f"#PBS -l select={nodes}:ncpus={ncpus}:mem={gmem}gb\n")
+        if jnums:
+            if max(jnums) == min(jnums):
+                o.write(f"#PBS -J 1-{str(jnums)} \n\n")
+            else:
+                o.write(f"#PBS -J {str(jnums[0])}-{str(jnums[1])} \n\n")
+        if run_after_job_id is not None and 'adi' in queue:
+            o.write("#PBS -W depend=afterok:" + str(run_after_job_id) + ".power9.tau.ac.il\n\n")
+        if run_after_job_id is not None and 'dudu' in queue:
+            o.write("#PBS -W depend=afterok:" + str(run_after_job_id) + ".power8.tau.ac.il\n\n")
+        if load_python:
+            o.write("module load python/python-anaconda3.2019.10\n")
+        o.write(cmd)
+    o.close()
+
+
+def submit_cmdfile_to_pbs(cmdfile):
+    cmd = "/opt/pbs/bin/qsub " + cmdfile
+    result = os.popen(cmd).read()
+    return result.split(".")[0]
+
+
+def runner_cmd(input_dir, output_dir, reference_file, stages_range, max_basecall_iterations, part_size,
+               quality_threshold, task, evalue, dust, num_alignments, mode, perc_identity, soft_masking, min_coverage,
+               consolidate_consensus_with_indels, stretches_pvalue, stretches_distance, stretches_to_plot,
+               max_read_size):
+    cmd = f"python runner.py -i {input_dir} -o {output_dir} -r {reference_file} -s {stages_range} " \
+          f"-m {max_basecall_iterations} -p {part_size} -qt {quality_threshold} -bt {task} -be {evalue} -bd {dust} " \
+          f"-bn {num_alignments} -bm {mode} -bp {perc_identity} -bs {soft_masking} -mc {min_coverage} " \
+          f"-ccwi {consolidate_consensus_with_indels} -sp {stretches_pvalue} -sd {stretches_distance} " \
+          f"-stp {stretches_to_plot} -smrs {max_read_size}"
+    return cmd
 
 
 def pbs_runner(input_dir, output_dir, reference_file, stages_range, max_basecall_iterations, part_size,
                quality_threshold, task, evalue, dust, num_alignments, mode, perc_identity, soft_masking, min_coverage,
                consolidate_consensus_with_indels, stretches_pvalue, stretches_distance, stretches_to_plot,
                max_read_size, alias, queue):
-    # TODO: write cmds
-    stages = get_stages_list(stages_range)
-    serial_stages = ['prepare data', 'process data', 'aggregate output']
+    # TODO: move defaults to a config file
     serial_job_id = None
     haplo_job_id = None
     graph_job_id = None
     pbs_logs_dir = os.path.join(output_dir, "pbs_logs")
     os.makedirs(pbs_logs_dir, exist_ok=True)
-    if set(serial_stages) & set(stages):  # TODO: something clearer?
-        serial_cmdfile = os.path.join(pbs_logs_dir, f"serial_pipeline_stages.cmd")
-        cmd = "runner stages 1-3"
-        alias += "_serial"
+    if min(stages_range) <= 3:
+        serial_cmdfile = os.path.join(pbs_logs_dir, f"AccuNGS_123.cmd")
+        cmd = runner_cmd(input_dir=input_dir, output_dir=output_dir, reference_file=reference_file,
+                         stages_range=stages_range, max_basecall_iterations=max_basecall_iterations,
+                         part_size=part_size, quality_threshold=quality_threshold, task=task, evalue=evalue, dust=dust,
+                         num_alignments=num_alignments, mode=mode, perc_identity=perc_identity,
+                         soft_masking=soft_masking, min_coverage=min_coverage,
+                         consolidate_consensus_with_indels=consolidate_consensus_with_indels,
+                         stretches_pvalue=stretches_pvalue, stretches_distance=stretches_distance,
+                         stretches_to_plot=stretches_to_plot, max_read_size=max_read_size)
+        alias += "_123"
         create_pbs_cmd_file(serial_cmdfile, alias, output_logs_dir=pbs_logs_dir, cmd=cmd, queue=queue, gmem=100,
-                            ncpus=30, nodes=1, load_python=True, jnum=False, run_after_job_id=None)
+                            ncpus=30)
         serial_job_id = submit_cmdfile_to_pbs(serial_cmdfile)
-    if "compute haplotypes" in stages:
-        # TODO: get jnum and write cmd
+    if (min(stages_range) <= 4) and (max(stages_range) >= 4):
+        freqs_file_path = os.path.join(output_dir, 'freqs.tsv')
+        variants_list = get_variants_list(freqs_file_path).get_level_values(0).astype(int)
+        j_start = min(variants_list)
+        j_end = max(variants_list)
         alias += "_haplo"
-        compute_haplo_path = os.path.join(pbs_logs_dir, f"compute_haplotypes_array.cmd")
-        cmd = "runner stage 4 only as array"
-        create_pbs_cmd_file(compute_haplo_path, alias, output_logs_dir=pbs_logs_dir, cmd=cmd, queue=queue, gmem=100,
-                            ncpus=1, nodes=1, load_python=True, jnum=jnum, run_after_job_id=serial_job_id)
+        compute_haplo_path = os.path.join(pbs_logs_dir, f"AccuNGS_4.cmd")
+        linked_mutations_dir = os.path.join(output_dir, 'linked_mutations')
+        os.makedirs(linked_mutations_dir, exist_ok=True)
+        cmd = f"python haplotypes/mutations_linking.py -x $PBS_ARRAY_INDEX -f {freqs_file_path} " \
+              f"-r {output_dir}/mutation_read_list.tsv -m {max_read_size} " \
+              f"-o {linked_mutations_dir}/$PBS_ARRAY_INDEX_linked_mutations.tsv"
+        create_pbs_cmd_file(compute_haplo_path, alias, output_logs_dir=pbs_logs_dir, cmd=cmd, queue=queue, gmem=20,
+                            ncpus=1, jnums=(j_start, j_end), run_after_job_id=serial_job_id)
         haplo_job_id = submit_cmdfile_to_pbs(compute_haplo_path)
-    if "graph haplotypes" in stages:
+    if 5 in stages_range:
         alias += "_graph"
-        graph_haplo_path = os.path.join(pbs_logs_dir, "graph_haplotypes.cmd")
-        cmd = "runner stage 5 only"
-        create_pbs_cmd_file(graph_haplo_path, alias, output_logs_dir=pbs_logs_dir, cmd=cmd, queue=queue, gmem=2, ncpus=1,
-                            nodes=1, load_python=True, jnum=False, run_after_job_id=haplo_job_id)
+        graph_haplo_path = os.path.join(pbs_logs_dir, "AccuNGS_5.cmd")
+        cmd = runner_cmd(input_dir=input_dir, output_dir=output_dir, reference_file=reference_file,
+                         stages_range=5, max_basecall_iterations=max_basecall_iterations,
+                         part_size=part_size, quality_threshold=quality_threshold, task=task, evalue=evalue, dust=dust,
+                         num_alignments=num_alignments, mode=mode, perc_identity=perc_identity,
+                         soft_masking=soft_masking, min_coverage=min_coverage,
+                         consolidate_consensus_with_indels=consolidate_consensus_with_indels,
+                         stretches_pvalue=stretches_pvalue, stretches_distance=stretches_distance,
+                         stretches_to_plot=stretches_to_plot, max_read_size=max_read_size)
+        create_pbs_cmd_file(graph_haplo_path, alias, output_logs_dir=pbs_logs_dir, cmd=cmd, queue=queue, gmem=2,
+                            ncpus=1, run_after_job_id=haplo_job_id)
         graph_job_id = submit_cmdfile_to_pbs(graph_haplo_path)
     print(f"Jobs submitted: {serial_job_id, haplo_job_id, graph_job_id}")
     print(f"Output files will be in {output_dir} .")

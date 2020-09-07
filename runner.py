@@ -12,7 +12,7 @@ from processing import process_fastq
 from aggregation import aggregate_processed_output, create_freqs_file
 from logger import pipeline_logger
 from utils import get_files_in_dir, get_sequence_from_fasta, get_mp_results_and_report, create_new_ref_with_freqs, \
-    get_files_by_extension
+    get_files_by_extension, concatenate_files_by_extension
 from haplotypes.co_occurs_to_stretches import calculate_stretches
 
 
@@ -55,17 +55,17 @@ def set_filenames(output_dir):
     return filenames
 
 
-def calculate_linked_mutations(freqs_file_path, mutation_read_list, max_read_length):
+def calculate_linked_mutations(freqs_file_path, mutation_read_list, max_read_length, output_dir):
     variants_list = get_variants_list(freqs_file_path)
-    linked_mutations = []
     for position in mutation_read_list.index.get_level_values(0).astype(int).unique():
-        linked_mutations.append(get_mutations_linked_with_position(position, variants_list=variants_list,
-                                                                   mutation_read_list=mutation_read_list,
-                                                                   max_read_size=max_read_length))
-    return pd.concat(linked_mutations)
+        output_path = os.path.join(output_dir, f"{position}_linked_mutations.tsv")
+        get_mutations_linked_with_position(position, variants_list=variants_list,
+                                           mutation_read_list=mutation_read_list,
+                                           max_read_size=max_read_length,
+                                           output_path=output_path)
 
 
-def parallel_calc_linked_mutations(freqs_file_path, output, mutation_read_list_path, max_read_length, part_size):
+def parallel_calc_linked_mutations(freqs_file_path, output_dir, mutation_read_list_path, max_read_length, part_size):
     mutation_read_list = pd.read_csv(mutation_read_list_path, sep="\t").set_index(['ref_pos', 'read_base'], drop=True)
     print(mutation_read_list)
     positions = mutation_read_list.index.get_level_values(0).astype(int).unique()
@@ -90,10 +90,9 @@ def parallel_calc_linked_mutations(freqs_file_path, output, mutation_read_list_p
         start_index += part_size
     pool = mp.Pool(processes=mp.cpu_count())
     parts = [pool.apply_async(calculate_linked_mutations,
-                              args=(freqs_file_path, read_list, max_read_length))
+                              args=(freqs_file_path, read_list, max_read_length, output_dir))
              for read_list in mutation_read_list_parts.values()]
-    results = get_mp_results_and_report(parts)
-    pd.concat(results).to_csv(output, sep='\t', index=False)
+    get_mp_results_and_report(parts)
 
 
 def check_consensus_alignment_with_ref(reference_file, with_indels, min_coverage, output_dir, basecall_dir):
@@ -124,6 +123,7 @@ def runner(input_dir, reference_file, output_dir, stages_range, max_basecall_ite
     filenames = set_filenames(output_dir)
     stages = get_stages_list(stages_range)
     log.info(f"Running stages: {stages}")
+    linked_mutations_dir = os.path.join(output_dir, "linked_mutations")
     if 'prepare data' in stages:
         data_dir = os.path.join(output_dir, "data")
         os.makedirs(data_dir, exist_ok=True)
@@ -167,13 +167,16 @@ def runner(input_dir, reference_file, output_dir, stages_range, max_basecall_ite
         log.info(f"Most outputs are ready in {output_dir} !")
     if 'compute haplotypes' in stages:
         log.info(f"Calculating linked mutations...")
+        os.makedirs(linked_mutations_dir, exist_ok=True)
         # TODO: pbs runner if speed is stiil and issue with linked mutations
         parallel_calc_linked_mutations(freqs_file_path=filenames['freqs_file_path'],
                                        mutation_read_list_path=filenames['mutation_read_list_path'],
-                                       output=filenames['linked_mutations_path'], max_read_length=max_read_size,
+                                       output_dir=linked_mutations_dir, max_read_length=max_read_size,
                                        part_size=30)  # TODO: drop low quality mutations?, set part_size as param.
     if 'graph haplotypes' in stages:
         log.info(f"Aggregating linked mutations to stretches...")
+        concatenate_files_by_extension(input_dir=linked_mutations_dir, extension='tsv',
+                                       output_path=filenames['linked_mutations_path'])
         calculate_stretches(filenames['linked_mutations_path'], max_pval=stretches_pvalue, distance=stretches_distance,
                             output=filenames['stretches'])  #TODO: refactor that function
         graph_summary(freqs_file=filenames['freqs_file_path'], blast_file=filenames['blast_file'],
