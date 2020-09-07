@@ -127,7 +127,7 @@ def pbs_runner(input_dir, output_dir, reference_file, stages_range, max_basecall
                          soft_masking=soft_masking, min_coverage=min_coverage,
                          consolidate_consensus_with_indels=consolidate_consensus_with_indels,
                          stretches_pvalue=stretches_pvalue, stretches_distance=stretches_distance,
-                         stretches_to_plot=stretches_to_plot, max_read_size=max_read_size)
+                         stretches_to_plot=stretches_to_plot, max_read_size=max_read_size, base_path=base_path)
         create_pbs_cmd_file(graph_haplo_path, alias, output_logs_dir=pbs_logs_dir, cmd=cmd, queue=queue, gmem=2,
                             ncpus=1, run_after_job_id=haplo_job_id)
         graph_job_id = submit_cmdfile_to_pbs(graph_haplo_path)
