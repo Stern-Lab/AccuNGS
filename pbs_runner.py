@@ -15,7 +15,7 @@ def create_pbs_cmd_file(path, alias, output_logs_dir, cmd, queue="adistzachi@pow
         o.write(f"#PBS -e {output_logs_dir} \n")
         o.write(f"#PBS -l select={nodes}:ncpus={ncpus}:mem={gmem}gb\n")
         if jnums:
-            if max(jnums) == min(jnums):
+            if isinstance(jnums, int):
                 o.write(f"#PBS -J 1-{str(jnums)} \n\n")
             else:
                 o.write(f"#PBS -J {str(jnums[0])}-{str(jnums[1])} \n\n")
