@@ -87,10 +87,13 @@ def pbs_runner(input_dir, output_dir, reference_file, stages_range, max_basecall
     graph_job_id = None
     pbs_logs_dir = os.path.join(output_dir, "pbs_logs")
     os.makedirs(pbs_logs_dir, exist_ok=True)
+    if isinstance(stages_range, int):
+        stages_range = [stages_range, stages_range]
     if min(stages_range) <= 3:
         serial_cmdfile = os.path.join(pbs_logs_dir, f"AccuNGS_123.cmd")
+        stages_123 = (stages_range[0], min(3, stages_range[1]))
         cmd = runner_cmd(input_dir=input_dir, output_dir=output_dir, reference_file=reference_file,
-                         stages_range=stages_range, max_basecall_iterations=max_basecall_iterations,
+                         stages_range=stages_123, max_basecall_iterations=max_basecall_iterations,
                          part_size=part_size, quality_threshold=quality_threshold, task=task, evalue=evalue, dust=dust,
                          num_alignments=num_alignments, mode=mode, perc_identity=perc_identity,
                          soft_masking=soft_masking, min_coverage=min_coverage,
