@@ -41,11 +41,39 @@ def runner_cmd(input_dir, output_dir, reference_file, stages_range, max_basecall
     runner_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'runner.py')
     if not isinstance(stages_range, int):
         stages_range = f"{stages_range[0]} {stages_range[1]}"
-    cmd = f"python {runner_path} -i {input_dir} -o {output_dir} -r {reference_file} -s {stages_range} " \
-          f"-m {max_basecall_iterations} -p {part_size} -qt {quality_threshold} -bt {task} -be {evalue} -bd {dust} " \
-          f"-bn {num_alignments} -bm {mode} -bp {perc_identity} -bs {soft_masking} -mc {min_coverage} " \
-          f"-ccwi {consolidate_consensus_with_indels} -sp {stretches_pvalue} -sd {stretches_distance} " \
-          f"-stp {stretches_to_plot} -smrs {max_read_size}"
+    cmd = f"python {runner_path} -i {input_dir} -o {output_dir} -r {reference_file} -s {stages_range}"
+    if max_basecall_iterations:
+        cmd += f" -m {max_basecall_iterations}"
+    if part_size:
+        cmd += f" -p {part_size}"
+    if quality_threshold:
+        cmd += f" -qt {quality_threshold}"
+    if task:
+        cmd += f" -bt task"
+    if evalue:
+        cmd += f" -be {evalue}"
+    if dust:
+        cmd += f" -bd {dust}"
+    if num_alignments:
+        cmd += f" -bn {num_alignments}"
+    if mode:
+        cmd += f" -bm {mode}"
+    if perc_identity:
+        cmd += f" -bp {perc_identity}"
+    if soft_masking:
+        cmd += f" -bs {soft_masking}"
+    if min_coverage:
+        cmd += f" -mc {min_coverage}"
+    if consolidate_consensus_with_indels:
+        cmd += f" -ccwi {consolidate_consensus_with_indels}"
+    if stretches_pvalue:
+        cmd += f" -sp {stretches_pvalue}"
+    if stretches_distance:
+        cmd += f" -sd {stretches_distance}"
+    if stretches_to_plot:
+        cmd += f" -stp {stretches_to_plot}"
+    if max_read_size:
+        cmd += f" -smrs {max_read_size}"
     return cmd
 
 
