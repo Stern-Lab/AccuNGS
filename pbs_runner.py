@@ -39,6 +39,8 @@ def runner_cmd(input_dir, output_dir, reference_file, stages_range, max_basecall
                consolidate_consensus_with_indels, stretches_pvalue, stretches_distance, stretches_to_plot,
                max_read_size):
     runner_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'runner.py')
+    if not isinstance(stages_range, int):
+        stages_range = f"{stages_range[0]} {stages_range[1]}"
     cmd = f"python {runner_path} -i {input_dir} -o {output_dir} -r {reference_file} -s {stages_range} " \
           f"-m {max_basecall_iterations} -p {part_size} -qt {quality_threshold} -bt {task} -be {evalue} -bd {dust} " \
           f"-bn {num_alignments} -bm {mode} -bp {perc_identity} -bs {soft_masking} -mc {min_coverage} " \
