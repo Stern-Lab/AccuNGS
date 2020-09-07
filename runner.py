@@ -123,6 +123,7 @@ def runner(input_dir, reference_file, output_dir, stages_range, max_basecall_ite
     filenames = set_filenames(output_dir)
     stages = get_stages_list(stages_range)
     log.info(f"Running stages: {stages}")
+    processing_dir = os.path.join(output_dir, "processing")
     linked_mutations_dir = os.path.join(output_dir, "linked_mutations")
     if 'prepare data' in stages:
         data_dir = os.path.join(output_dir, "data")
@@ -132,7 +133,6 @@ def runner(input_dir, reference_file, output_dir, stages_range, max_basecall_ite
     else:
         data_dir = input_dir
     if 'process data' in stages:
-        processing_dir = os.path.join(output_dir, "processing")
         os.makedirs(processing_dir, exist_ok=True)
         data_files = get_files_in_dir(data_dir)
         fastq_files = [file_path for file_path in data_files if "fastq.part_" in os.path.basename(file_path)]
@@ -168,11 +168,10 @@ def runner(input_dir, reference_file, output_dir, stages_range, max_basecall_ite
     if 'compute haplotypes' in stages:
         log.info(f"Calculating linked mutations...")
         os.makedirs(linked_mutations_dir, exist_ok=True)
-        # TODO: pbs runner if speed is stiil and issue with linked mutations
         parallel_calc_linked_mutations(freqs_file_path=filenames['freqs_file_path'],
                                        mutation_read_list_path=filenames['mutation_read_list_path'],
                                        output_dir=linked_mutations_dir, max_read_length=max_read_size,
-                                       part_size=30)  # TODO: drop low quality mutations?, set part_size as param.
+                                       part_size=100)  # TODO: drop low quality mutations?, set part_size as param.
     if 'graph haplotypes' in stages:
         log.info(f"Aggregating linked mutations to stretches...")
         concatenate_files_by_extension(input_dir=linked_mutations_dir, extension='tsv',

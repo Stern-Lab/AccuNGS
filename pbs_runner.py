@@ -1,6 +1,5 @@
 import os
 
-from haplotypes.mutations_linking import get_variants_list
 from runner import create_runner_parser
 
 
@@ -39,7 +38,8 @@ def runner_cmd(input_dir, output_dir, reference_file, stages_range, max_basecall
                quality_threshold, task, evalue, dust, num_alignments, mode, perc_identity, soft_masking, min_coverage,
                consolidate_consensus_with_indels, stretches_pvalue, stretches_distance, stretches_to_plot,
                max_read_size):
-    cmd = f"python runner.py -i {input_dir} -o {output_dir} -r {reference_file} -s {stages_range} " \
+    runner_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'runner.py')
+    cmd = f"python {runner_path} -i {input_dir} -o {output_dir} -r {reference_file} -s {stages_range} " \
           f"-m {max_basecall_iterations} -p {part_size} -qt {quality_threshold} -bt {task} -be {evalue} -bd {dust} " \
           f"-bn {num_alignments} -bm {mode} -bp {perc_identity} -bs {soft_masking} -mc {min_coverage} " \
           f"-ccwi {consolidate_consensus_with_indels} -sp {stretches_pvalue} -sd {stretches_distance} " \
@@ -98,9 +98,9 @@ def pbs_runner(input_dir, output_dir, reference_file, stages_range, max_basecall
                             ncpus=1, run_after_job_id=haplo_job_id)
         graph_job_id = submit_cmdfile_to_pbs(graph_haplo_path)
     print(f"Jobs submitted: {serial_job_id, haplo_job_id, graph_job_id}")
-    print(f"Output files will be in {output_dir} .")
-    print(f"cmd files and pbs logs under will be in {pbs_logs_dir} .")
-    print(f"runner log file will be in {output_dir}/.log ")
+    print(f"Output files will be in {output_dir} ")
+    print(f"cmd files and pbs logs under will be in {pbs_logs_dir} ")
+    print(f"runner log file will be in {output_dir}.log ")
 
 
 if __name__ == "__main__":
