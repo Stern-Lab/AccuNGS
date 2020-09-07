@@ -184,7 +184,7 @@ def runner(input_dir, reference_file, output_dir, stages_range, max_basecall_ite
                       stretches_to_plot=stretches_to_plot)  # TODO: drop low quality mutations?
         graph_haplotypes(input_file=filenames['stretches'], number_of_stretches=stretches_to_plot,
                          output_dir=output_dir)
-    log.info(f"Done! Output files are in directory: {output_dir}")
+        log.info(f"Done! Output files are in directory: {output_dir}")
 
     #TODO: test everything, finish up, pbs_runner?
 

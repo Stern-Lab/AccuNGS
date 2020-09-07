@@ -37,8 +37,8 @@ def submit_cmdfile_to_pbs(cmdfile):
 def runner_cmd(input_dir, output_dir, reference_file, stages_range, max_basecall_iterations, part_size,
                quality_threshold, task, evalue, dust, num_alignments, mode, perc_identity, soft_masking, min_coverage,
                consolidate_consensus_with_indels, stretches_pvalue, stretches_distance, stretches_to_plot,
-               max_read_size):
-    runner_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'runner.py')
+               max_read_size, base_path):
+    runner_path = os.path.join(base_path, 'runner.py')
     if not isinstance(stages_range, int):
         stages_range = f"{stages_range[0]} {stages_range[1]}"
     cmd = f"python {runner_path} -i {input_dir} -o {output_dir} -r {reference_file} -s {stages_range}"
@@ -85,6 +85,7 @@ def pbs_runner(input_dir, output_dir, reference_file, stages_range, max_basecall
     serial_job_id = None
     haplo_job_id = None
     graph_job_id = None
+    base_path = os.path.dirname(os.path.abspath(__file__))
     pbs_logs_dir = os.path.join(output_dir, "pbs_logs")
     os.makedirs(pbs_logs_dir, exist_ok=True)
     if isinstance(stages_range, int):
@@ -99,7 +100,7 @@ def pbs_runner(input_dir, output_dir, reference_file, stages_range, max_basecall
                          soft_masking=soft_masking, min_coverage=min_coverage,
                          consolidate_consensus_with_indels=consolidate_consensus_with_indels,
                          stretches_pvalue=stretches_pvalue, stretches_distance=stretches_distance,
-                         stretches_to_plot=stretches_to_plot, max_read_size=max_read_size)
+                         stretches_to_plot=stretches_to_plot, max_read_size=max_read_size, base_path=base_path)
         alias = "AccuNGS_123"
         create_pbs_cmd_file(serial_cmdfile, alias, output_logs_dir=pbs_logs_dir, cmd=cmd, queue=queue, gmem=100,
                             ncpus=30)
@@ -109,7 +110,8 @@ def pbs_runner(input_dir, output_dir, reference_file, stages_range, max_basecall
         alias = "AccuNGS_haplo"
         compute_haplo_path = os.path.join(pbs_logs_dir, f"AccuNGS_4.cmd")
         linked_mutations_dir = os.path.join(output_dir, 'linked_mutations')
-        cmd = f"python haplotypes/mutations_linking.py -x $PBS_ARRAY_INDEX -f {freqs_file_path} " \
+        mutations_linking_path = os.path.join(base_path, 'haplotypes', 'mutations_linking.py')
+        cmd = f"python {mutations_linking_path} -x $PBS_ARRAY_INDEX -f {freqs_file_path} " \
               f"-r {output_dir}/mutation_read_list.tsv -m {max_read_size} " \
               f"-o {linked_mutations_dir}/$PBS_ARRAY_INDEX_linked_mutations.tsv"
         create_pbs_cmd_file(compute_haplo_path, alias, output_logs_dir=pbs_logs_dir, cmd=cmd, queue=queue, gmem=20,
