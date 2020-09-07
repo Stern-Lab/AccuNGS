@@ -97,16 +97,15 @@ def pbs_runner(input_dir, output_dir, reference_file, stages_range, max_basecall
                          consolidate_consensus_with_indels=consolidate_consensus_with_indels,
                          stretches_pvalue=stretches_pvalue, stretches_distance=stretches_distance,
                          stretches_to_plot=stretches_to_plot, max_read_size=max_read_size)
-        alias += "_123"
+        alias = "AccuNGS_123"
         create_pbs_cmd_file(serial_cmdfile, alias, output_logs_dir=pbs_logs_dir, cmd=cmd, queue=queue, gmem=100,
                             ncpus=30)
         serial_job_id = submit_cmdfile_to_pbs(serial_cmdfile)
     if (min(stages_range) <= 4) and (max(stages_range) >= 4):
         freqs_file_path = os.path.join(output_dir, 'freqs.tsv')
-        alias += "_haplo"
+        alias = "AccuNGS_haplo"
         compute_haplo_path = os.path.join(pbs_logs_dir, f"AccuNGS_4.cmd")
         linked_mutations_dir = os.path.join(output_dir, 'linked_mutations')
-        os.makedirs(linked_mutations_dir, exist_ok=True)
         cmd = f"python haplotypes/mutations_linking.py -x $PBS_ARRAY_INDEX -f {freqs_file_path} " \
               f"-r {output_dir}/mutation_read_list.tsv -m {max_read_size} " \
               f"-o {linked_mutations_dir}/$PBS_ARRAY_INDEX_linked_mutations.tsv"
@@ -114,7 +113,7 @@ def pbs_runner(input_dir, output_dir, reference_file, stages_range, max_basecall
                             ncpus=1, jnums=num_of_nucs, run_after_job_id=serial_job_id)
         haplo_job_id = submit_cmdfile_to_pbs(compute_haplo_path)
     if 5 in stages_range:
-        alias += "_graph"
+        alias = "AccuNGS_graph"
         graph_haplo_path = os.path.join(pbs_logs_dir, "AccuNGS_5.cmd")
         cmd = runner_cmd(input_dir=input_dir, output_dir=output_dir, reference_file=reference_file,
                          stages_range=5, max_basecall_iterations=max_basecall_iterations,

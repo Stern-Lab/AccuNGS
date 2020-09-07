@@ -18,6 +18,7 @@ def _get_total_read_list(mutations_reads_list):
 def get_mutations_linked_with_position(x, variants_list, mutation_read_list, max_read_size, output_path):
     # TODO: speed!
     # TODO: test insertions
+    os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
     if max_read_size is None:
         max_read_size = 350
     ret = []
