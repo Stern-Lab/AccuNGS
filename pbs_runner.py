@@ -77,7 +77,7 @@ def runner_cmd(input_dir, output_dir, reference_file, stages_range, max_basecall
     return cmd
 
 
-def pbs_runner(input_dir, output_dir, reference_file, stages_range, max_basecall_iterations, part_size,
+def pbs_runner_experimental(input_dir, output_dir, reference_file, stages_range, max_basecall_iterations, part_size,
                quality_threshold, task, evalue, dust, num_alignments, mode, perc_identity, soft_masking, min_coverage,
                consolidate_consensus_with_indels, stretches_pvalue, stretches_distance, stretches_to_plot,
                max_read_size, alias, queue, num_of_nucs):
@@ -145,13 +145,39 @@ def pbs_runner(input_dir, output_dir, reference_file, stages_range, max_basecall
     print(f"runner log file will be in {output_dir}.log ")
 
 
+def pbs_runner(input_dir, output_dir, reference_file, stages_range, max_basecall_iterations, part_size,
+               quality_threshold, task, evalue, dust, num_alignments, mode, perc_identity, soft_masking, min_coverage,
+               consolidate_consensus_with_indels, stretches_pvalue, stretches_distance, stretches_to_plot,
+               max_read_size, alias, queue):
+    # TODO: move defaults to a config file
+    base_path = os.path.dirname(os.path.abspath(__file__))
+    pbs_logs_dir = os.path.join(output_dir, "pbs_logs")
+    os.makedirs(pbs_logs_dir, exist_ok=True)
+    if isinstance(stages_range, int):
+        stages_range = [stages_range, stages_range]
+    cmd_path = os.path.join(pbs_logs_dir, 'AccuNGS.cmd')
+    cmd = runner_cmd(input_dir=input_dir, output_dir=output_dir, reference_file=reference_file,
+                     stages_range=stages_range, max_basecall_iterations=max_basecall_iterations,
+                     part_size=part_size, quality_threshold=quality_threshold, task=task, evalue=evalue, dust=dust,
+                     num_alignments=num_alignments, mode=mode, perc_identity=perc_identity,
+                     soft_masking=soft_masking, min_coverage=min_coverage,
+                     consolidate_consensus_with_indels=consolidate_consensus_with_indels,
+                     stretches_pvalue=stretches_pvalue, stretches_distance=stretches_distance,
+                     stretches_to_plot=stretches_to_plot, max_read_size=max_read_size, base_path=base_path)
+    create_pbs_cmd_file(cmd_path, alias, output_logs_dir=pbs_logs_dir, cmd=cmd, queue=queue, gmem=100,
+                        ncpus=40)
+    job_id = submit_cmdfile_to_pbs(cmd_path)
+    print(f"Job {job_id} submitted.")
+    print(f"Output files will be in {output_dir} ")
+    print(f"cmd file pbs log will be in {pbs_logs_dir} ")
+    print(f"runner log file will be in {output_dir}.log ")
+
+
 if __name__ == "__main__":
     parser = create_runner_parser()
     parser.add_argument("-a", "--alias", default="AccuNGS", help="job alias visible in qstat (default: AccuNGS)")
     parser.add_argument("-q", "--queue", default="adistzachi@power9",
                         help="PBS queue to run on (default: adistzachi@power9)")
-    parser.add_argument("-non", "--num_of_nucs", default=3000, type=int,
-                        help="number of nucleotides in sequence")
     args = parser.parse_args()
     pbs_runner(input_dir=args.input_dir, output_dir=args.output_dir, reference_file=args.reference_file,
                stages_range=args.stages_range, max_basecall_iterations=args.max_basecall_iterations,
@@ -160,5 +186,4 @@ if __name__ == "__main__":
                mode=args.blast_mode, perc_identity=args.blast_perc_identity, soft_masking=args.blast_soft_masking,
                min_coverage=args.min_coverage, consolidate_consensus_with_indels=args.consolidate_consensus_with_indels,
                stretches_pvalue=args.stretches_pvalue, stretches_distance=args.stretches_distance, alias=args.alias,
-               stretches_to_plot=args.stretches_to_plot, max_read_size=args.stretches_max_read_size, queue=args.queue,
-               num_of_nucs=args.num_of_nucs)
+               stretches_to_plot=args.stretches_to_plot, max_read_size=args.stretches_max_read_size, queue=args.queue)
