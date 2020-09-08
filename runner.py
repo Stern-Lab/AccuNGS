@@ -88,22 +88,17 @@ def parallel_calc_linked_mutations(freqs_file_path, output_dir, mutation_read_li
     get_mp_results_and_report(parts)
 
 
-def check_consensus_alignment_with_ref(reference_file, with_indels, min_coverage, output_dir, basecall_dir,
-                                       iteration_counter, keep_past_freqs):
+def check_consensus_alignment_with_ref(reference_file, with_indels, min_coverage, iteration_data_dir, basecall_dir,
+                                       iteration_counter):
     reference = get_sequence_from_fasta(reference_file)
-    if keep_past_freqs:
-        freqs_files_dir = os.path.join(output_dir, 'freqs')
-        os.makedirs(freqs_files_dir, exist_ok=True)
-        freqs_file_path = os.path.join(freqs_files_dir, f"freqs_{iteration_counter}.tsv")
-    else:
-        freqs_file_path = os.path.join(output_dir, 'freqs.tsv')
+    freqs_file_path = os.path.join(iteration_data_dir, f"freqs_{iteration_counter}.tsv")
     called_bases_files = get_files_by_extension(basecall_dir, "called_bases")
     create_freqs_file(called_bases_files=called_bases_files, output_path=freqs_file_path)
     if with_indels == "Y":
-        consensus_path = os.path.join(output_dir, "consensus_with_indels.fasta")
+        consensus_path = os.path.join(iteration_data_dir, f"consensus_with_indels_{iteration_counter}.fasta")
         drop_indels = False
     else:
-        consensus_path = os.path.join(output_dir, "consensus_without_indels.fasta")
+        consensus_path = os.path.join(iteration_data_dir, f"consensus_without_indels_{iteration_counter}.fasta")
         drop_indels = True
     create_new_ref_with_freqs(reference_fasta_file=reference_file, freqs_file=freqs_file_path,
                               min_coverage=min_coverage, output_file=consensus_path, drop_indels=drop_indels)
@@ -112,11 +107,19 @@ def check_consensus_alignment_with_ref(reference_file, with_indels, min_coverage
     alignment_score = alignment_score / max(len(consensus), len(reference))
     return alignment_score
 
-# TODO: trim read_ids to save ram
+
+def get_consensus_path(basecall_iteration_counter, consolidate_consensus_with_indels, iteration_data_dir):
+    consensus = os.path.join(iteration_data_dir, "consensus_with")
+    if consolidate_consensus_with_indels != "Y":
+        consensus += "out"
+    consensus += f"_indels_{basecall_iteration_counter}.fasta"
+    return consensus
+
 
 def runner(input_dir, reference_file, output_dir, stages_range, max_basecall_iterations, part_size, min_coverage,
            quality_threshold, task, evalue, dust, num_alignments, soft_masking, perc_identity, mode, max_read_size,
-           consolidate_consensus_with_indels, stretches_pvalue, stretches_distance, stretches_to_plot, keep_past_freqs):
+           consolidate_consensus_with_indels, stretches_pvalue, stretches_distance, stretches_to_plot):
+    # TODO: trim read_ids to save ram
     os.makedirs(output_dir, exist_ok=True)
     log = pipeline_logger(logger_name='AccuNGS-Runner', log_folder=output_dir)
     log.debug(f"runner params: {locals()}")
@@ -138,10 +141,6 @@ def runner(input_dir, reference_file, output_dir, stages_range, max_basecall_ite
         os.makedirs(processing_dir, exist_ok=True)
         data_files = get_files_in_dir(data_dir)
         fastq_files = [file_path for file_path in data_files if "fastq.part_" in os.path.basename(file_path)]
-        if consolidate_consensus_with_indels == "Y":
-            consensus_file = os.path.join(output_dir, 'consensus_with_indels.fasta')
-        else:
-            consensus_file = os.path.join(output_dir, 'consensus_without_indels.fasta')
         log.info(f"Processing {len(fastq_files)} fastq files.")
         for basecall_iteration_counter in range(1, max_basecall_iterations + 1):
             log.info(f"Processing fastq files iteration {basecall_iteration_counter}/{max_basecall_iterations}")
@@ -149,16 +148,20 @@ def runner(input_dir, reference_file, output_dir, stages_range, max_basecall_ite
             parallel_process(processing_dir=processing_dir, fastq_files=fastq_files, reference_file=reference_file,
                              quality_threshold=quality_threshold, task=task, evalue=evalue, dust=dust, mode=mode,
                              num_alignments=num_alignments, soft_masking=soft_masking, perc_identity=perc_identity)
+            iteration_data_dir = os.path.join(output_dir, 'iteration_data')
+            os.makedirs(iteration_data_dir, exist_ok=True)
             alignment_score = check_consensus_alignment_with_ref(reference_file=reference_file,
-                                                                 keep_past_freqs=keep_past_freqs,
                                                                  iteration_counter=basecall_iteration_counter,
                                                                  basecall_dir=os.path.join(processing_dir, 'basecall'),
                                                                  with_indels=consolidate_consensus_with_indels,
-                                                                 output_dir=output_dir, min_coverage=min_coverage)
+                                                                 iteration_data_dir=iteration_data_dir,
+                                                                 min_coverage=min_coverage)
             log.info(f'Iteration alignment score: {round(alignment_score,4)}')
             if alignment_score == 1:
                 break
-            reference_file = consensus_file
+            consensus_path = get_consensus_path(basecall_iteration_counter, consolidate_consensus_with_indels,
+                                           iteration_data_dir)
+            reference_file = consensus_path
     if 'aggregate output' in stages:
         log.info("Aggregating processed fastq files outputs...")
         aggregate_processed_output(input_dir=processing_dir, output_dir=output_dir,
@@ -174,7 +177,7 @@ def runner(input_dir, reference_file, output_dir, stages_range, max_basecall_ite
         parallel_calc_linked_mutations(freqs_file_path=filenames['freqs_file_path'],
                                        mutation_read_list_path=filenames['mutation_read_list_path'],
                                        output_dir=linked_mutations_dir, max_read_length=max_read_size,
-                                       part_size=1)  # TODO: drop low quality mutations?, set part_size as param.
+                                       part_size=100)  # TODO: drop low quality mutations?, set part_size as param.
     if 'graph haplotypes' in stages:
         log.info(f"Aggregating linked mutations to stretches...")
         concatenate_files_by_extension(input_dir=linked_mutations_dir, extension='tsv',
@@ -225,8 +228,6 @@ def create_runner_parser():
                         help="number of stretches to plot in deep dive (default: 5)")
     parser.add_argument("-smrs", "--stretches_max_read_size", type=int,
                         help="look this many positions forward for joint mutations (default: 350)")
-    parser.add_argument("-kpf", "--keep_past_freqs", default="Y",
-                        help="save every iteration's freq file (default: Y)")
     return parser
 
 
@@ -240,5 +241,4 @@ if __name__ == "__main__":
            mode=args.blast_mode, perc_identity=args.blast_perc_identity, soft_masking=args.blast_soft_masking,
            min_coverage=args.min_coverage, consolidate_consensus_with_indels=args.consolidate_consensus_with_indels,
            stretches_pvalue=args.stretches_pvalue, stretches_distance=args.stretches_distance,
-           stretches_to_plot=args.stretches_to_plot, max_read_size=args.stretches_max_read_size,
-           keep_past_freqs=args.keep_past_freqs)
+           stretches_to_plot=args.stretches_to_plot, max_read_size=args.stretches_max_read_size)
