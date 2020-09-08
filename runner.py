@@ -160,7 +160,7 @@ def runner(input_dir, reference_file, output_dir, stages_range, max_basecall_ite
             if alignment_score == 1:
                 break
             consensus_path = get_consensus_path(basecall_iteration_counter, consolidate_consensus_with_indels,
-                                           iteration_data_dir)
+                                                iteration_data_dir)
             reference_file = consensus_path
     if 'aggregate output' in stages:
         log.info("Aggregating processed fastq files outputs...")
@@ -174,6 +174,7 @@ def runner(input_dir, reference_file, output_dir, stages_range, max_basecall_ite
     if 'compute haplotypes' in stages:
         log.info(f"Calculating linked mutations...")
         os.makedirs(linked_mutations_dir, exist_ok=True)
+        # TODO: optimize part size
         parallel_calc_linked_mutations(freqs_file_path=filenames['freqs_file_path'],
                                        mutation_read_list_path=filenames['mutation_read_list_path'],
                                        output_dir=linked_mutations_dir, max_read_length=max_read_size,

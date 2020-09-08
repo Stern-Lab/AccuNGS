@@ -150,6 +150,7 @@ def pbs_runner(input_dir, output_dir, reference_file, stages_range, max_basecall
                consolidate_consensus_with_indels, stretches_pvalue, stretches_distance, stretches_to_plot,
                max_read_size, alias, queue):
     # TODO: move defaults to a config file
+    # TODO: optimize part size depending on input size and number of CPUs
     base_path = os.path.dirname(os.path.abspath(__file__))
     pbs_logs_dir = os.path.join(output_dir, "pbs_logs")
     os.makedirs(pbs_logs_dir, exist_ok=True)
@@ -165,12 +166,12 @@ def pbs_runner(input_dir, output_dir, reference_file, stages_range, max_basecall
                      stretches_pvalue=stretches_pvalue, stretches_distance=stretches_distance,
                      stretches_to_plot=stretches_to_plot, max_read_size=max_read_size, base_path=base_path)
     create_pbs_cmd_file(cmd_path, alias, output_logs_dir=pbs_logs_dir, cmd=cmd, queue=queue, gmem=100,
-                        ncpus=40)
+                        ncpus=50)  #todo: optimize ncpus and put it as a param
     job_id = submit_cmdfile_to_pbs(cmd_path)
     print(f"Job {job_id} submitted.")
-    print(f"Output files will be in {output_dir} ")
-    print(f"cmd file pbs log will be in {pbs_logs_dir} ")
-    print(f"runner log file will be in {output_dir}.log ")
+    print(f"Output files will be in {output_dir}")
+    print(f"cmd file pbs log will be in {pbs_logs_dir}")
+    print(f"runner log file will be in {os.path.join(output_dir, '.log')}")
 
 
 if __name__ == "__main__":
