@@ -85,6 +85,7 @@ def pbs_runner(input_dir, output_dir, reference_file, stages_range, max_basecall
     serial_job_id = None
     haplo_job_id = None
     graph_job_id = None
+    jobs_submitted = []
     base_path = os.path.dirname(os.path.abspath(__file__))
     pbs_logs_dir = os.path.join(output_dir, "pbs_logs")
     os.makedirs(pbs_logs_dir, exist_ok=True)
@@ -92,9 +93,9 @@ def pbs_runner(input_dir, output_dir, reference_file, stages_range, max_basecall
         stages_range = [stages_range, stages_range]
     if min(stages_range) <= 3:
         serial_cmdfile = os.path.join(pbs_logs_dir, f"AccuNGS_123.cmd")
-        stages_123 = (stages_range[0], min(3, stages_range[1]))
+        #stages_123 = (stages_range[0], min(3, stages_range[1]))
         cmd = runner_cmd(input_dir=input_dir, output_dir=output_dir, reference_file=reference_file,
-                         stages_range=stages_123, max_basecall_iterations=max_basecall_iterations,
+                         stages_range=stages_range, max_basecall_iterations=max_basecall_iterations,
                          part_size=part_size, quality_threshold=quality_threshold, task=task, evalue=evalue, dust=dust,
                          num_alignments=num_alignments, mode=mode, perc_identity=perc_identity,
                          soft_masking=soft_masking, min_coverage=min_coverage,
@@ -103,13 +104,14 @@ def pbs_runner(input_dir, output_dir, reference_file, stages_range, max_basecall
                          stretches_to_plot=stretches_to_plot, max_read_size=max_read_size, base_path=base_path)
         alias = "AccuNGS_123"
         create_pbs_cmd_file(serial_cmdfile, alias, output_logs_dir=pbs_logs_dir, cmd=cmd, queue=queue, gmem=100,
-                            ncpus=30)
+                            ncpus=40)
         serial_job_id = submit_cmdfile_to_pbs(serial_cmdfile)
+        jobs_submitted.append(serial_job_id)
     if (min(stages_range) <= 4) and (max(stages_range) >= 4):
         freqs_file_path = os.path.join(output_dir, 'freqs.tsv')
         alias = "AccuNGS_haplo"
         compute_haplo_path = os.path.join(pbs_logs_dir, f"AccuNGS_4.cmd")
-        linked_mutations_dir = os.path.join(output_dir, 'linked_mutations')
+        linked_mutations_dir = os.path.join(output_dir, 'processing', 'linked_mutations')
         mutations_linking_path = os.path.join(base_path, 'mutations_linking.py')
         cmd = f"python {mutations_linking_path} -x $PBS_ARRAY_INDEX -f {freqs_file_path} " \
               f"-r {output_dir}/mutation_read_list.tsv " \
@@ -120,7 +122,8 @@ def pbs_runner(input_dir, output_dir, reference_file, stages_range, max_basecall
         os.makedirs(haplo_logs, exist_ok=True)
         create_pbs_cmd_file(compute_haplo_path, alias, output_logs_dir=haplo_logs, cmd=cmd, queue=queue, gmem=20,
                             ncpus=1, jnums=num_of_nucs, run_after_job_id=serial_job_id)
-        haplo_job_id = submit_cmdfile_to_pbs(compute_haplo_path)
+        #haplo_job_id = submit_cmdfile_to_pbs(compute_haplo_path)
+        #jobs_submitted.append(haplo_job_id)
     if 5 in stages_range:
         alias = "AccuNGS_graph"
         graph_haplo_path = os.path.join(pbs_logs_dir, "AccuNGS_5.cmd")
@@ -134,8 +137,9 @@ def pbs_runner(input_dir, output_dir, reference_file, stages_range, max_basecall
                          stretches_to_plot=stretches_to_plot, max_read_size=max_read_size, base_path=base_path)
         create_pbs_cmd_file(graph_haplo_path, alias, output_logs_dir=pbs_logs_dir, cmd=cmd, queue=queue, gmem=2,
                             ncpus=1, run_after_job_id=haplo_job_id)
-        graph_job_id = submit_cmdfile_to_pbs(graph_haplo_path)
-    print(f"Jobs submitted: {serial_job_id, haplo_job_id, graph_job_id}")
+        #graph_job_id = submit_cmdfile_to_pbs(graph_haplo_path)
+        #jobs_submitted.append(graph_job_id)
+    print(f"Jobs submitted: {jobs_submitted}")
     print(f"Output files will be in {output_dir} ")
     print(f"cmd files and pbs logs under will be in {pbs_logs_dir} ")
     print(f"runner log file will be in {output_dir}.log ")
