@@ -25,7 +25,8 @@ def get_files_in_dir(dir_path):
 
 
 def extract_gz(gz_file, output_dir):
-    output_file = os.path.join(output_dir, gz_file[:-3])
+    file_name = os.path.basename(gz_file)
+    output_file = os.path.join(output_dir, file_name[:-3])
     with gzip.open(gz_file, 'rb') as f_in:
         with open(output_file, 'wb') as f_out:
             shutil.copyfileobj(f_in, f_out)
