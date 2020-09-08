@@ -112,8 +112,10 @@ def pbs_runner(input_dir, output_dir, reference_file, stages_range, max_basecall
         linked_mutations_dir = os.path.join(output_dir, 'linked_mutations')
         mutations_linking_path = os.path.join(base_path, 'mutations_linking.py')
         cmd = f"python {mutations_linking_path} -x $PBS_ARRAY_INDEX -f {freqs_file_path} " \
-              f"-r {output_dir}/mutation_read_list.tsv -m {max_read_size} " \
+              f"-r {output_dir}/mutation_read_list.tsv " \
               f"-o {linked_mutations_dir}/$PBS_ARRAY_INDEX_linked_mutations.tsv"
+        if max_read_size:
+            cmd += f" -m {max_read_size}"
         haplo_logs = os.path.join(pbs_logs_dir, 'linked_mutations_logs')
         os.makedirs(haplo_logs, exist_ok=True)
         create_pbs_cmd_file(compute_haplo_path, alias, output_logs_dir=haplo_logs, cmd=cmd, queue=queue, gmem=20,
