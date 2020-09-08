@@ -6,7 +6,7 @@ from Bio import pairwise2
 
 from data_preparation import prepare_data
 from graph_haplotypes import graph_haplotypes
-from haplotypes.mutations_linking import get_variants_list, get_mutations_linked_with_position
+from mutations_linking import get_variants_list, get_mutations_linked_with_position
 from plotting import graph_summary
 from processing import process_fastq
 from aggregation import aggregate_processed_output, create_freqs_file
