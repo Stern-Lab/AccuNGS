@@ -119,14 +119,17 @@ def runner(input_dir, reference_file, output_dir, stages_range, max_basecall_ite
            quality_threshold, task, evalue, dust, num_alignments, soft_masking, perc_identity, mode, max_read_size,
            consolidate_consensus_with_indels, stretches_pvalue, stretches_distance, stretches_to_plot, cleanup,
            cpu_count):
-    if not cpu_count:
-        cpu_count = mp.cpu_count()
+
     # TODO: trim read_ids to save ram
     os.makedirs(output_dir, exist_ok=True)
     log = pipeline_logger(logger_name='AccuNGS-Runner', log_folder=output_dir)
     log.debug(f"runner params: {locals()}")
     if max_basecall_iterations is None:
         max_basecall_iterations = 2   # TODO: what should this be?!
+    log.info(cpu_count)
+    if not cpu_count:
+        cpu_count = mp.cpu_count()
+    log.info(cpu_count)
     filenames = set_filenames(output_dir)
     stages = get_stages_list(stages_range)
     log.info(f"Running stages: {stages}")

@@ -158,6 +158,8 @@ def pbs_runner(input_dir, output_dir, reference_file, stages_range, max_basecall
     # TODO: optimize part size depending on input size and number of CPUs
     if not cpu_count:
         cpu_count = 100
+    print(cpu_count)
+    breakpoint()
     base_path = os.path.dirname(os.path.abspath(__file__))
     pbs_logs_dir = os.path.join(output_dir, "pbs_logs")
     os.makedirs(pbs_logs_dir, exist_ok=True)
