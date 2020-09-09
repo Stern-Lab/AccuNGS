@@ -164,8 +164,8 @@ def pbs_runner(input_dir, output_dir, reference_file, stages_range, max_basecall
     if isinstance(stages_range, int):
         stages_range = [stages_range, stages_range]
     cmd_identifier = randint(42, 777)  # so that we can easily connect cmdfile and job
-    cmd_path = os.path.join(pbs_logs_dir, f'AccuNGS_{cmd_identifier}.cmd')
     alias += f"_{cmd_identifier}"
+    cmd_path = os.path.join(pbs_logs_dir, f'{alias}.cmd')
     cmd = runner_cmd(input_dir=input_dir, output_dir=output_dir, reference_file=reference_file,
                      stages_range=stages_range, max_basecall_iterations=max_basecall_iterations,
                      part_size=part_size, quality_threshold=quality_threshold, task=task, evalue=evalue, dust=dust,
@@ -177,7 +177,7 @@ def pbs_runner(input_dir, output_dir, reference_file, stages_range, max_basecall
     create_pbs_cmd_file(cmd_path, alias, output_logs_dir=pbs_logs_dir, cmd=cmd, queue=queue, gmem=100,
                         ncpus=cpu_count)  # todo: optimize cpu_count
     job_id = submit_cmdfile_to_pbs(cmd_path)
-    print(f"Job {job_id} submitted.")
+    print(f"Submitted jod '{alias}' with {job_id} .")
     print(f"Output files will be in {output_dir}")
     print(f"cmd file pbs log will be in {pbs_logs_dir}")
     print(f"runner log file will be in {os.path.join(output_dir, '.log')}")
