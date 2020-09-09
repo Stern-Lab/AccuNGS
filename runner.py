@@ -18,6 +18,7 @@ from haplotypes.co_occurs_to_stretches import calculate_stretches
 
 def parallel_process(processing_dir, fastq_files, reference_file, quality_threshold, task, evalue, dust, num_alignments,
                      soft_masking, perc_identity, mode):
+    print(f"cpu_count: {mp.cpu_count()}")
     pool = mp.Pool(processes=mp.cpu_count())
     parts = [pool.apply_async(process_fastq, args=(fastq_file, reference_file, processing_dir, quality_threshold, task,
                                                    evalue, dust, num_alignments, soft_masking, perc_identity, mode,))
@@ -79,7 +80,7 @@ def parallel_calc_linked_mutations(freqs_file_path, output_dir, mutation_read_li
         end_position = positions[end_index-1]
         mutation_read_list_parts[f"{start_index}_{end_index}"] = mutation_read_list.loc[start_position:end_position]
         start_index += part_size
-    print(mp.cpu_count())
+    print(f"cpu_count: {mp.cpu_count()}")
     pool = mp.Pool(processes=mp.cpu_count())
     parts = [pool.apply_async(calculate_linked_mutations,
                               args=(freqs_file_path, read_list, max_read_length, output_dir))
