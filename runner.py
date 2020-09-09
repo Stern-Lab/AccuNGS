@@ -17,8 +17,8 @@ from haplotypes.co_occurs_to_stretches import calculate_stretches
 
 
 def parallel_process(processing_dir, fastq_files, reference_file, quality_threshold, task, evalue, dust, num_alignments,
-                     soft_masking, perc_identity, mode):
-    pool = mp.Pool(processes=mp.cpu_count())
+                     soft_masking, perc_identity, mode, cpu_count):
+    pool = mp.Pool(cpu_count)
     parts = [pool.apply_async(process_fastq, args=(fastq_file, reference_file, processing_dir, quality_threshold, task,
                                                    evalue, dust, num_alignments, soft_masking, perc_identity, mode,))
              for fastq_file in fastq_files]
@@ -58,7 +58,8 @@ def calculate_linked_mutations(freqs_file_path, mutation_read_list, max_read_len
                                            output_path=output_path)
 
 
-def parallel_calc_linked_mutations(freqs_file_path, output_dir, mutation_read_list_path, max_read_length, part_size):
+def parallel_calc_linked_mutations(freqs_file_path, output_dir, mutation_read_list_path, max_read_length, part_size,
+                                   cpu_count):
     mutation_read_list = pd.read_csv(mutation_read_list_path, sep="\t").set_index(['ref_pos', 'read_base'], drop=True)
     positions = mutation_read_list.index.get_level_values(0).astype(int).unique()
     if max_read_length is None:
@@ -79,7 +80,7 @@ def parallel_calc_linked_mutations(freqs_file_path, output_dir, mutation_read_li
         end_position = positions[end_index-1]
         mutation_read_list_parts[f"{start_index}_{end_index}"] = mutation_read_list.loc[start_position:end_position]
         start_index += part_size
-    pool = mp.Pool(processes=mp.cpu_count())
+    pool = mp.Pool(processes=cpu_count)
     parts = [pool.apply_async(calculate_linked_mutations,
                               args=(freqs_file_path, read_list, max_read_length, output_dir))
              for read_list in mutation_read_list_parts.values()]
@@ -116,7 +117,10 @@ def get_consensus_path(basecall_iteration_counter, consolidate_consensus_with_in
 
 def runner(input_dir, reference_file, output_dir, stages_range, max_basecall_iterations, part_size, min_coverage,
            quality_threshold, task, evalue, dust, num_alignments, soft_masking, perc_identity, mode, max_read_size,
-           consolidate_consensus_with_indels, stretches_pvalue, stretches_distance, stretches_to_plot, cleanup):
+           consolidate_consensus_with_indels, stretches_pvalue, stretches_distance, stretches_to_plot, cleanup,
+           cpu_count):
+    if not cpu_count:
+        cpu_count = mp.cpu_count()
     # TODO: trim read_ids to save ram
     os.makedirs(output_dir, exist_ok=True)
     log = pipeline_logger(logger_name='AccuNGS-Runner', log_folder=output_dir)
@@ -143,10 +147,11 @@ def runner(input_dir, reference_file, output_dir, stages_range, max_basecall_ite
         for basecall_iteration_counter in range(1, max_basecall_iterations + 1):
             log.info(f"Processing fastq files iteration {basecall_iteration_counter}/{max_basecall_iterations}")
             # TODO: whats up with the different modes?!?
-            log.info(f"cpu_count: {mp.cpu_count()}")  # TODO: drop this
+            log.info(f"cpu_count: {cpu_count}")  # TODO: drop this
             parallel_process(processing_dir=processing_dir, fastq_files=fastq_files, reference_file=reference_file,
                              quality_threshold=quality_threshold, task=task, evalue=evalue, dust=dust, mode=mode,
-                             num_alignments=num_alignments, soft_masking=soft_masking, perc_identity=perc_identity)
+                             num_alignments=num_alignments, soft_masking=soft_masking, perc_identity=perc_identity,
+                             cpu_count=cpu_count)
             iteration_data_dir = os.path.join(output_dir, 'iteration_data')
             os.makedirs(iteration_data_dir, exist_ok=True)
             alignment_score = check_consensus_alignment_with_ref(reference_file=reference_file,
@@ -174,8 +179,8 @@ def runner(input_dir, reference_file, output_dir, stages_range, max_basecall_ite
         log.info(f"Calculating linked mutations...")
         os.makedirs(linked_mutations_dir, exist_ok=True)
         # TODO: optimize part size
-        log.info(f"cpu_count: {mp.cpu_count()}")  # TODO: drop this
-        parallel_calc_linked_mutations(freqs_file_path=filenames['freqs_file_path'],
+        log.info(f"cpu_count: {cpu_count}")  # TODO: drop this
+        parallel_calc_linked_mutations(freqs_file_path=filenames['freqs_file_path'], cpu_count=cpu_count,
                                        mutation_read_list_path=filenames['mutation_read_list_path'],
                                        output_dir=linked_mutations_dir, max_read_length=max_read_size,
                                        part_size=100)  # TODO: drop low quality mutations?, set part_size as param.
@@ -230,6 +235,7 @@ def create_runner_parser():
     parser.add_argument("-smrs", "--stretches_max_read_size", type=int,
                         help="look this many positions forward for joint mutations (default: 350)")
     parser.add_argument("-c", "--cleanup", help="remove input folder when done (default: Y)", default="Y")
+    parser.add_argument("-cc", "--cpu_count", help="max number of cpus to use (default: all)", type=int)
     return parser
 
 
@@ -243,4 +249,5 @@ if __name__ == "__main__":
            mode=args.blast_mode, perc_identity=args.blast_perc_identity, soft_masking=args.blast_soft_masking,
            min_coverage=args.min_coverage, consolidate_consensus_with_indels=args.consolidate_consensus_with_indels,
            stretches_pvalue=args.stretches_pvalue, stretches_distance=args.stretches_distance, cleanup=args.cleanup,
-           stretches_to_plot=args.stretches_to_plot, max_read_size=args.stretches_max_read_size)
+           stretches_to_plot=args.stretches_to_plot, max_read_size=args.stretches_max_read_size,
+           cpu_count=args.cpu_count)

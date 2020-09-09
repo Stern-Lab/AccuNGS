@@ -38,7 +38,7 @@ def submit_cmdfile_to_pbs(cmdfile):
 def runner_cmd(input_dir, output_dir, reference_file, stages_range, max_basecall_iterations, part_size,
                quality_threshold, task, evalue, dust, num_alignments, mode, perc_identity, soft_masking, min_coverage,
                consolidate_consensus_with_indels, stretches_pvalue, stretches_distance, stretches_to_plot,
-               max_read_size, base_path):
+               max_read_size, base_path, cleanup, cpu_count):
     runner_path = os.path.join(base_path, 'runner.py')
     if not isinstance(stages_range, int):
         stages_range = f"{stages_range[0]} {stages_range[1]}"
@@ -75,6 +75,10 @@ def runner_cmd(input_dir, output_dir, reference_file, stages_range, max_basecall
         cmd += f" -stp {stretches_to_plot}"
     if max_read_size:
         cmd += f" -smrs {max_read_size}"
+    if cleanup:
+        cmd += f" -c {cleanup}"
+    if cpu_count:
+        cmd += f" -cc {cpu_count}"
     return cmd
 
 
@@ -149,9 +153,11 @@ def pbs_runner_experimental(input_dir, output_dir, reference_file, stages_range,
 def pbs_runner(input_dir, output_dir, reference_file, stages_range, max_basecall_iterations, part_size,
                quality_threshold, task, evalue, dust, num_alignments, mode, perc_identity, soft_masking, min_coverage,
                consolidate_consensus_with_indels, stretches_pvalue, stretches_distance, stretches_to_plot,
-               max_read_size, alias, queue):
+               max_read_size, alias, queue, cleanup, cpu_count):
     # TODO: move defaults to a config file
     # TODO: optimize part size depending on input size and number of CPUs
+    if not cpu_count:
+        cpu_count = 100
     base_path = os.path.dirname(os.path.abspath(__file__))
     pbs_logs_dir = os.path.join(output_dir, "pbs_logs")
     os.makedirs(pbs_logs_dir, exist_ok=True)
@@ -163,12 +169,12 @@ def pbs_runner(input_dir, output_dir, reference_file, stages_range, max_basecall
                      stages_range=stages_range, max_basecall_iterations=max_basecall_iterations,
                      part_size=part_size, quality_threshold=quality_threshold, task=task, evalue=evalue, dust=dust,
                      num_alignments=num_alignments, mode=mode, perc_identity=perc_identity,
-                     soft_masking=soft_masking, min_coverage=min_coverage,
+                     soft_masking=soft_masking, min_coverage=min_coverage, cleanup=cleanup, cpu_count=cpu_count,
                      consolidate_consensus_with_indels=consolidate_consensus_with_indels,
                      stretches_pvalue=stretches_pvalue, stretches_distance=stretches_distance,
                      stretches_to_plot=stretches_to_plot, max_read_size=max_read_size, base_path=base_path)
     create_pbs_cmd_file(cmd_path, alias, output_logs_dir=pbs_logs_dir, cmd=cmd, queue=queue, gmem=100,
-                        ncpus=50)  #todo: optimize ncpus and put it as a param
+                        ncpus=cpu_count)  # todo: optimize cpu_count
     job_id = submit_cmdfile_to_pbs(cmd_path)
     print(f"Job {job_id} submitted.")
     print(f"Output files will be in {output_dir}")
@@ -189,4 +195,5 @@ if __name__ == "__main__":
                mode=args.blast_mode, perc_identity=args.blast_perc_identity, soft_masking=args.blast_soft_masking,
                min_coverage=args.min_coverage, consolidate_consensus_with_indels=args.consolidate_consensus_with_indels,
                stretches_pvalue=args.stretches_pvalue, stretches_distance=args.stretches_distance, alias=args.alias,
-               stretches_to_plot=args.stretches_to_plot, max_read_size=args.stretches_max_read_size, queue=args.queue)
+               stretches_to_plot=args.stretches_to_plot, max_read_size=args.stretches_max_read_size, queue=args.queue,
+               cleanup=args.cleanup, cpu_count=args.cpu_count)
