@@ -148,7 +148,6 @@ def runner(input_dir, reference_file, output_dir, stages_range, max_basecall_ite
         for basecall_iteration_counter in range(1, max_basecall_iterations + 1):
             log.info(f"Processing fastq files iteration {basecall_iteration_counter}/{max_basecall_iterations}")
             # TODO: whats up with the different modes?!?
-            log.info(f"cpu_count: {cpu_count}")  # TODO: drop this
             parallel_process(processing_dir=processing_dir, fastq_files=fastq_files, reference_file=reference_file,
                              quality_threshold=quality_threshold, task=task, evalue=evalue, dust=dust, mode=mode,
                              num_alignments=num_alignments, soft_masking=soft_masking, perc_identity=perc_identity,
@@ -180,7 +179,6 @@ def runner(input_dir, reference_file, output_dir, stages_range, max_basecall_ite
         log.info(f"Calculating linked mutations...")
         os.makedirs(linked_mutations_dir, exist_ok=True)
         # TODO: optimize part size
-        log.info(f"cpu_count: {cpu_count}")  # TODO: drop this
         parallel_calc_linked_mutations(freqs_file_path=filenames['freqs_file_path'], cpu_count=cpu_count,
                                        mutation_read_list_path=filenames['mutation_read_list_path'],
                                        output_dir=linked_mutations_dir, max_read_length=max_read_size,
