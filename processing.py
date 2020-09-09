@@ -1,6 +1,5 @@
 import argparse
 import os
-import time
 
 import pandas as pd
 from Bio import SeqIO
@@ -110,9 +109,10 @@ def get_minus_values(data, values):
 
 def get_quality(fastq_file, alignments):
     quality = {}
-    for record in SeqIO.parse(fastq_file, "fastq"):
-        if record.id in alignments.read_id.values:
-            quality[record.id] = record.letter_annotations["phred_quality"]
+    with open(fastq_file, "r") as handle:
+        for record in SeqIO.parse(handle, "fastq"):
+            if record.id in alignments.read_id.values:
+                quality[record.id] = record.letter_annotations["phred_quality"]
     return quality
 
 
@@ -292,16 +292,12 @@ def basecall(blast_output_file, fastq_file, output_dir, quality_threshold, mode)
     outputs ignored_reads, ignored_bases, suspicious_alignments, called_bases
     """
     base_filename = os.path.basename(fastq_file)
-    start_time = time.time()
     alignments, ignored_reads, suspicious_reads, read_counter = get_alignments(blast_output_file, fastq_file=fastq_file)
-    #print('getting alignments took: ',  time.time() - start_time)
     read_counter.to_csv(os.path.join(output_dir, base_filename + ".read_counter"), sep="\t")
     suspicious_reads.to_csv(os.path.join(output_dir, base_filename+".suspicious_reads"), sep="\t")
     ignored_reads.to_csv(os.path.join(output_dir, base_filename+".ignored_reads"), sep="\t")
-    start_time = time.time()
     bases_object = alignments.apply(lambda row: basecall_on_read(row, quality_threshold=quality_threshold, mode=mode),
                                     axis=1, result_type="expand")
-    #print('getting bases object took: ', time.time() - start_time)
     called_bases = pd.concat(list(bases_object[0]))
     ignored_bases = pd.concat(list(bases_object[1]))
     ignored_bases.to_csv(os.path.join(output_dir, base_filename+".ignored_bases"), sep="\t", index_label='ref_pos')
@@ -311,7 +307,8 @@ def basecall(blast_output_file, fastq_file, output_dir, quality_threshold, mode)
 def convert_fastq_to_fasta(output_dir, fastq_file):
     reads_fasta_file_name = os.path.basename(fastq_file).replace('fastq', 'fasta')
     reads_fasta_file_path = os.path.join(output_dir, reads_fasta_file_name)
-    SeqIO.convert(fastq_file, "fastq", reads_fasta_file_path, "fasta")
+    with open(fastq_file, "r") as handle:
+        SeqIO.convert(handle, "fastq", reads_fasta_file_path, "fasta")
     return reads_fasta_file_path
 
 
@@ -338,20 +335,15 @@ def process_fastq(fastq_file, reference, output_dir, quality_threshold, task, ev
         perc_identity = 85
     if not mode:
         mode = "RefToSeq"  # TODO: test differences between modes.
-    start_time = time.time()
     run_blast(reads_fasta=reads_fasta_file_path, reference=reference, output=blast_output_file, mode=mode, task=task,
               evalue=evalue, num_alignments=num_alignments, dust=dust, soft_masking=soft_masking, log=log,
               perc_identity=perc_identity)
-    #print("blast took: ", time.time() - start_time)
     if not quality_threshold:
         quality_threshold = 30
     basecall_output = os.path.join(output_dir, 'basecall')
     os.makedirs(basecall_output, exist_ok=True)
-    start_time = time.time()
     basecall(blast_output_file=blast_output_file, fastq_file=fastq_file, output_dir=basecall_output,
              quality_threshold=quality_threshold, mode=mode)
-    #print("basecall took a total of: ", time.time() - start_time)
-
 
 
 if __name__ == "__main__":
