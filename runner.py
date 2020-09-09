@@ -19,11 +19,11 @@ from haplotypes.co_occurs_to_stretches import calculate_stretches
 
 def parallel_process(processing_dir, fastq_files, reference_file, quality_threshold, task, evalue, dust, num_alignments,
                      soft_masking, perc_identity, mode, cpu_count):
-    pool = mp.Pool(cpu_count)
-    parts = [pool.apply_async(process_fastq, args=(fastq_file, reference_file, processing_dir, quality_threshold, task,
-                                                   evalue, dust, num_alignments, soft_masking, perc_identity, mode,))
-             for fastq_file in fastq_files]
-    get_mp_results_and_report(parts)
+    with mp.Pool(cpu_count) as pool:
+        parts = [pool.apply_async(process_fastq, args=(fastq_file, reference_file, processing_dir, quality_threshold, task,
+                                                       evalue, dust, num_alignments, soft_masking, perc_identity, mode,))
+                 for fastq_file in fastq_files]
+        get_mp_results_and_report(parts)
 
 
 def get_stages_list(stages_range):
@@ -81,11 +81,11 @@ def parallel_calc_linked_mutations(freqs_file_path, output_dir, mutation_read_li
         end_position = positions[end_index-1]
         mutation_read_list_parts[f"{start_index}_{end_index}"] = mutation_read_list.loc[start_position:end_position]
         start_index += part_size
-    pool = mp.Pool(processes=cpu_count)
-    parts = [pool.apply_async(calculate_linked_mutations,
-                              args=(freqs_file_path, read_list, max_read_length, output_dir))
-             for read_list in mutation_read_list_parts.values()]
-    get_mp_results_and_report(parts)
+    with mp.Pool(cpu_count) as pool:
+        parts = [pool.apply_async(calculate_linked_mutations,
+                                  args=(freqs_file_path, read_list, max_read_length, output_dir))
+                 for read_list in mutation_read_list_parts.values()]
+        get_mp_results_and_report(parts)
 
 
 def check_consensus_alignment_with_ref(reference_file, with_indels, min_coverage, iteration_data_dir, basecall_dir,
