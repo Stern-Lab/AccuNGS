@@ -1,5 +1,5 @@
-import datetime
 import os
+from random import randint
 
 from runner import create_runner_parser
 
@@ -163,8 +163,9 @@ def pbs_runner(input_dir, output_dir, reference_file, stages_range, max_basecall
     os.makedirs(pbs_logs_dir, exist_ok=True)
     if isinstance(stages_range, int):
         stages_range = [stages_range, stages_range]
-    current_time = datetime.datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
-    cmd_path = os.path.join(pbs_logs_dir, f'AccuNGS_{current_time}.cmd')
+    cmd_identifier = randint(42, 777)  # so that we can easily connect cmdfile and job
+    cmd_path = os.path.join(pbs_logs_dir, f'AccuNGS_{cmd_identifier}.cmd')
+    alias += f"_{cmd_identifier}"
     cmd = runner_cmd(input_dir=input_dir, output_dir=output_dir, reference_file=reference_file,
                      stages_range=stages_range, max_basecall_iterations=max_basecall_iterations,
                      part_size=part_size, quality_threshold=quality_threshold, task=task, evalue=evalue, dust=dust,
