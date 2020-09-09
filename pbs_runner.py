@@ -157,7 +157,7 @@ def pbs_runner(input_dir, output_dir, reference_file, stages_range, max_basecall
     # TODO: move defaults to a config file
     # TODO: optimize part size depending on input size and number of CPUs
     if not cpu_count:
-        cpu_count = 100
+        cpu_count = 50  # todo: optimize this. a high number could get jobs queued. with 100 I could only run 2 jobs.
     base_path = os.path.dirname(os.path.abspath(__file__))
     pbs_logs_dir = os.path.join(output_dir, "pbs_logs")
     os.makedirs(pbs_logs_dir, exist_ok=True)
@@ -177,7 +177,7 @@ def pbs_runner(input_dir, output_dir, reference_file, stages_range, max_basecall
     create_pbs_cmd_file(cmd_path, alias, output_logs_dir=pbs_logs_dir, cmd=cmd, queue=queue, gmem=100,
                         ncpus=cpu_count)  # todo: optimize cpu_count
     job_id = submit_cmdfile_to_pbs(cmd_path)
-    print(f"Submitted jod '{alias}' with {job_id} .")
+    print(f"Submitted jod '{alias}' with id {job_id} .")
     print(f"Output files will be in {output_dir}")
     print(f"cmd file pbs log will be in {pbs_logs_dir}")
     print(f"runner log file will be in {os.path.join(output_dir, '.log')}")
