@@ -307,8 +307,9 @@ def basecall(blast_output_file, fastq_file, output_dir, quality_threshold, mode)
 def convert_fastq_to_fasta(output_dir, fastq_file):
     reads_fasta_file_name = os.path.basename(fastq_file).replace('fastq', 'fasta')
     reads_fasta_file_path = os.path.join(output_dir, reads_fasta_file_name)
-    with open(fastq_file, "r") as handle:
-        SeqIO.convert(handle, "fastq", reads_fasta_file_path, "fasta")
+    with open(fastq_file, "r") as input_handle:
+        with open(reads_fasta_file_path, "w") as output_handle:
+            SeqIO.convert(input_handle, "fastq", output_handle, "fasta")
     return reads_fasta_file_path
 
 
