@@ -1,5 +1,7 @@
 import argparse
 import os
+import shutil
+
 import numpy as np
 import pandas as pd
 
@@ -81,7 +83,7 @@ def aggregate_read_counters(read_counters, output_path):
     counters.groupby('read_id')['number_of_alignments'].sum().to_csv(output_path, sep='\t')
 
 
-def aggregate_processed_output(input_dir, output_dir, reference, min_coverage):
+def aggregate_processed_output(input_dir, output_dir, reference, min_coverage, cleanup):
     if not min_coverage:
         min_coverage = 10
     os.makedirs(output_dir, exist_ok=True)
@@ -105,6 +107,8 @@ def aggregate_processed_output(input_dir, output_dir, reference, min_coverage):
                               output_file=os.path.join(output_dir, "consensus_without_indels.fasta"), drop_indels=True)
     create_new_ref_with_freqs(reference_fasta_file=reference, freqs_file=freqs_file_path, min_coverage=min_coverage,
                               output_file=os.path.join(output_dir, "consensus_with_indels.fasta"), drop_indels=False)
+    if cleanup == "Y":
+        shutil.rmtree(input_dir)
 
 
 if __name__ == "__main__":
@@ -116,6 +120,8 @@ if __name__ == "__main__":
     parser.add_argument("-mc", "--min_coverage",
                         help="bases with less than this coverage will be excluded from affecting the consensus "
                              "(default: 10)")
+    parser.add_argument("-c", "--cleanup", help="remove input folder when done (default: Y)", default="Y")
+
     args = parser.parse_args()
     aggregate_processed_output(input_dir=args.input_dir, output_dir=args.output_dir, reference=args.reference,
-                               min_coverage=args.min_coverage)
+                               min_coverage=args.min_coverage, cleanup=args.cleanup)
