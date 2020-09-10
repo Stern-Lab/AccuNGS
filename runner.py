@@ -119,8 +119,6 @@ def runner(input_dir, reference_file, output_dir, stages_range, max_basecall_ite
            quality_threshold, task, evalue, dust, num_alignments, soft_masking, perc_identity, mode, max_read_size,
            consolidate_consensus_with_indels, stretches_pvalue, stretches_distance, stretches_to_plot, cleanup,
            cpu_count):
-
-    # TODO: trim read_ids to save ram
     if not cpu_count:
         cpu_count = mp.cpu_count()
     os.makedirs(output_dir, exist_ok=True)
@@ -197,7 +195,7 @@ def runner(input_dir, reference_file, output_dir, stages_range, max_basecall_ite
                          output_dir=output_dir)
         log.info(f"Done! Output files are in directory: {output_dir}")
 
-    #TODO: test everything, finish up, pbs_runner?
+    #TODO: test everything, finish up,
 
 
 def create_runner_parser():
