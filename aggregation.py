@@ -74,6 +74,9 @@ def create_mutation_read_list_file(called_bases_files, output_path):
             read_list = pd.DataFrame(this_read_list)
         else:
             read_list = append_read_lists(read_list=read_list, this_read_list=this_read_list)
+    read_list = read_list.reset_index()
+    read_list['ref_pos'] = round(read_list['ref_pos'], 3)
+    read_list.set_index(['ref_pos', 'read_base'], inplace=True)
     read_list.to_csv(output_path, sep='\t')
 
 
