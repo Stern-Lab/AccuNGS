@@ -115,7 +115,7 @@ def get_consensus_path(basecall_iteration_counter, consolidate_consensus_with_in
     return consensus
 
 
-def runner(input_dir, reference_file, output_dir, stages_range, max_basecall_iterations, part_size, min_coverage,
+def runner(input_dir, reference_file, output_dir, stages_range, max_basecall_iterations, min_coverage,
            quality_threshold, task, evalue, dust, num_alignments, soft_masking, perc_identity, mode, max_read_size,
            consolidate_consensus_with_indels, stretches_pvalue, stretches_distance, stretches_to_plot, cleanup,
            cpu_count):
@@ -135,7 +135,8 @@ def runner(input_dir, reference_file, output_dir, stages_range, max_basecall_ite
         data_dir = os.path.join(output_dir, "data")
         os.makedirs(data_dir, exist_ok=True)
         log.info("Preparing data")
-        prepare_data(input_dir=input_dir, output_dir=data_dir, part_size=part_size, opposing_strings=None)
+        prepare_data(input_dir=input_dir, output_dir=data_dir, opposing_strings=None,
+                     cpu_count=cpu_count)
     else:
         data_dir = input_dir
     if 'process data' in stages:
@@ -207,8 +208,6 @@ def create_runner_parser():
     parser.add_argument("-s", "--stages_range", nargs="+", type=int, help="start and end stages separated by spaces")
     parser.add_argument("-m", "--max_basecall_iterations", type=int,
                         help="number of times to run basecall before giving up equalizing reference with consensus")
-    parser.add_argument("-p", "--part_size", type=int,
-                        help="size of part of data file in string length")
     parser.add_argument("-bt", "--blast_task", help="blast's task parameter (default: blastn")
     parser.add_argument("-be", "--blast_evalue", help="blast's evalue parameter (default: 1e-7)", type=float)
     parser.add_argument("-bd", "--blast_dust", help="blast's dust parameter (default: on)")
@@ -241,7 +240,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     runner(input_dir=args.input_dir, output_dir=args.output_dir, reference_file=args.reference_file,
            stages_range=args.stages_range, max_basecall_iterations=args.max_basecall_iterations,
-           part_size=args.part_size, quality_threshold=args.quality_threshold, task=args.blast_task,
+           quality_threshold=args.quality_threshold, task=args.blast_task,
            evalue=args.blast_evalue, dust=args.blast_dust, num_alignments=args.blast_num_alignments,
            mode=args.blast_mode, perc_identity=args.blast_perc_identity, soft_masking=args.blast_soft_masking,
            min_coverage=args.min_coverage, consolidate_consensus_with_indels=args.consolidate_consensus_with_indels,

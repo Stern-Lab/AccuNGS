@@ -7,6 +7,7 @@ import os
 import gzip
 import argparse
 from functools import partial
+import multiprocessing as mp
 from Bio import SeqIO, Seq
 from Bio.SeqRecord import SeqRecord
 
@@ -60,7 +61,9 @@ def batch_iterator(iterator, batch_size):
             yield batch
 
 
-def split_fastq_file(fastq_file, output_dir, part_size):
+def split_fastq_file(fastq_file, output_dir, cpu_count):
+    file_size = os.stat(fastq_file).st_size / 1000  # in KB
+    part_size = file_size / (cpu_count - 1)
     record_iter = SeqIO.parse(open(fastq_file), "fastq")
     fastq_file_name = os.path.basename(fastq_file)
     for i, batch in enumerate(batch_iterator(record_iter, part_size)):  # TODO: parallelize this?
@@ -102,7 +105,7 @@ def are_opposing(files, opposing_strings=None):
         return False
 
 
-def prepare_data_in_dir(input_dir, output_dir, part_size, rep_length, opposing_strings, log):
+def prepare_data_in_dir(input_dir, output_dir, rep_length, opposing_strings, log, cpu_count):
     input_dir_name = os.path.basename(input_dir)
     if input_dir_name == "":
         input_dir_name = os.path.basename(input_dir[:-1])  # that last '/' confuses basename..
@@ -117,32 +120,32 @@ def prepare_data_in_dir(input_dir, output_dir, part_size, rep_length, opposing_s
             merged_reads = merge_opposing_reads(file1=files[0], file2=files[1], output_file=merged_reads,
                                                 rep_length=rep_length, file_type=file_type, log=log)
             if file_type == 'gz':
-                merged_reads = extract_gz(merged_reads, output_dir)
-            split_fastq_file(fastq_file=merged_reads, output_dir=output_dir, part_size=part_size)
+                merged_reads = extract_gz(merged_reads, output_dir=output_dir)
+            split_fastq_file(fastq_file=merged_reads, output_dir=output_dir, cpu_count=cpu_count)
         else:
             raise Exception(f"Found more than 2 files containing opposing_strings: {opposing_strings} !")
     else:
         for file in files:
             if file_type == 'gz':
-                file = extract_gz(file)
-            split_fastq_file(fastq_file=file, output_dir=output_dir, part_size=part_size)
+                file = extract_gz(file, output_dir=output_dir)
+            split_fastq_file(fastq_file=file, output_dir=output_dir, cpu_count=cpu_count)
 
 
-def prepare_data(input_dir, output_dir, rep_length=None, part_size=None, opposing_strings=None):
+def prepare_data(input_dir, output_dir, cpu_count, rep_length=None, opposing_strings=None):
     log = pipeline_logger(logger_name='Data-Preparation', log_folder=output_dir)
+    if cpu_count is None:
+        cpu_count = mp.cpu_count()
     if rep_length is None:
         rep_length = 60
-    if part_size is None:
-        part_size = 10000
     if opposing_strings is None:
         opposing_strings = ("_R1", "_R2")
     os.makedirs(output_dir, exist_ok=True)
-    prepare_data_in_dir(input_dir=input_dir, output_dir=output_dir, part_size=part_size, rep_length=rep_length,
-                        opposing_strings=opposing_strings, log=log)
+    prepare_data_in_dir(input_dir=input_dir, output_dir=output_dir, rep_length=rep_length,
+                        opposing_strings=opposing_strings, log=log, cpu_count=cpu_count)
     sub_dirs = [f.path for f in os.scandir(input_dir) if f.is_dir()]
     for dir_path in sub_dirs:
-        prepare_data_in_dir(input_dir=dir_path, output_dir=output_dir, part_size=part_size, rep_length=rep_length,
-                            opposing_strings=opposing_strings, log=log)
+        prepare_data_in_dir(input_dir=dir_path, output_dir=output_dir, rep_length=rep_length,
+                            opposing_strings=opposing_strings, log=log, cpu_count=cpu_count)
 
 
 if __name__ == "__main__":
@@ -150,13 +153,12 @@ if __name__ == "__main__":
     parser.add_argument("-i", "--input_dir", required=True,
                         help="Path to directory containing fastq or gz files of one specific sample")
     parser.add_argument("-o", "--output_dir", help="Where the output files go", required=True)
-    parser.add_argument("-p", "--part_size", type=int,
-                        help="Number of parts to split fastq file into as preparation for parallel execution. "
-                             "(default: 1000)")
     parser.add_argument("-r", "--rep_length", help="amount of N bases to repeat (default: 60)", type=int) #TODO: is this the right default?
     parser.add_argument("-op", "--opposing_strings", default=None, type=str,
                         help="A tuple with strings which represent the forward and backward reads "
                              "(default is: ('R1','R2'))")
+    parser.add_argument("-cc", "--cpu_count", default=None, type=int,
+                        help="How many cpu's you have will determine to how many parts to split the file")
     args = parser.parse_args()
     prepare_data(input_dir=args.input_dir, output_dir=args.output_dir, rep_length=args.rep_length,
-                 part_size=args.part_size, opposing_strings=args.opposing_strings)
+                 opposing_strings=args.opposing_strings, cpu_count=args.cpu_count)
