@@ -35,7 +35,7 @@ def submit_cmdfile_to_pbs(cmdfile):
     return result.split(".")[0]
 
 
-def runner_cmd(input_dir, output_dir, reference_file, stages_range, max_basecall_iterations, part_size,
+def runner_cmd(input_dir, output_dir, reference_file, stages_range, max_basecall_iterations,
                quality_threshold, task, evalue, dust, num_alignments, mode, perc_identity, soft_masking, min_coverage,
                consolidate_consensus_with_indels, stretches_pvalue, stretches_distance, stretches_to_plot,
                max_read_size, base_path, cleanup, cpu_count):
@@ -45,8 +45,6 @@ def runner_cmd(input_dir, output_dir, reference_file, stages_range, max_basecall
     cmd = f"python {runner_path} -i {input_dir} -o {output_dir} -r {reference_file} -s {stages_range}"
     if max_basecall_iterations:
         cmd += f" -m {max_basecall_iterations}"
-    if part_size:
-        cmd += f" -p {part_size}"
     if quality_threshold:
         cmd += f" -qt {quality_threshold}"
     if task:
@@ -150,7 +148,7 @@ def pbs_runner_experimental(input_dir, output_dir, reference_file, stages_range,
     print(f"runner log file will be in {output_dir}.log ")
 
 
-def pbs_runner(input_dir, output_dir, reference_file, stages_range, max_basecall_iterations, part_size,
+def pbs_runner(input_dir, output_dir, reference_file, stages_range, max_basecall_iterations,
                quality_threshold, task, evalue, dust, num_alignments, mode, perc_identity, soft_masking, min_coverage,
                consolidate_consensus_with_indels, stretches_pvalue, stretches_distance, stretches_to_plot,
                max_read_size, alias, queue, cleanup, cpu_count):
@@ -168,7 +166,7 @@ def pbs_runner(input_dir, output_dir, reference_file, stages_range, max_basecall
     cmd_path = os.path.join(pbs_logs_dir, f'{alias}.cmd')
     cmd = runner_cmd(input_dir=input_dir, output_dir=output_dir, reference_file=reference_file,
                      stages_range=stages_range, max_basecall_iterations=max_basecall_iterations,
-                     part_size=part_size, quality_threshold=quality_threshold, task=task, evalue=evalue, dust=dust,
+                     quality_threshold=quality_threshold, task=task, evalue=evalue, dust=dust,
                      num_alignments=num_alignments, mode=mode, perc_identity=perc_identity,
                      soft_masking=soft_masking, min_coverage=min_coverage, cleanup=cleanup, cpu_count=cpu_count,
                      consolidate_consensus_with_indels=consolidate_consensus_with_indels,
@@ -191,7 +189,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     pbs_runner(input_dir=args.input_dir, output_dir=args.output_dir, reference_file=args.reference_file,
                stages_range=args.stages_range, max_basecall_iterations=args.max_basecall_iterations,
-               part_size=args.part_size, quality_threshold=args.quality_threshold, task=args.blast_task,
+               quality_threshold=args.quality_threshold, task=args.blast_task,
                evalue=args.blast_evalue, dust=args.blast_dust, num_alignments=args.blast_num_alignments,
                mode=args.blast_mode, perc_identity=args.blast_perc_identity, soft_masking=args.blast_soft_masking,
                min_coverage=args.min_coverage, consolidate_consensus_with_indels=args.consolidate_consensus_with_indels,
