@@ -1,11 +1,12 @@
 import argparse
+import json
 import os
 import shutil
 
 import numpy as np
 import pandas as pd
 
-from utils import get_files_by_extension, concatenate_files_by_extension, create_new_ref_with_freqs
+from utils import get_files_by_extension, concatenate_files_by_extension, create_new_ref_with_freqs, get_files_in_dir
 
 
 def convert_called_bases_to_freqs(called_bases):
@@ -83,6 +84,38 @@ def aggregate_read_counters(read_counters, output_path):
     counters.groupby('read_id')['number_of_alignments'].sum().to_csv(output_path, sep='\t')
 
 
+def update_prefix_dict(json_file, prefixes):
+    if os.path.isfile(json_file):
+        with open(json_file) as read_handle:
+            read_id_prefix_dict = json.load(read_handle)
+            next_prefix_value = max(read_id_prefix_dict.values()) + 1
+    else:
+        read_id_prefix_dict = {}
+        next_prefix_value = 1
+    for prefix in prefixes:
+        if prefix not in read_id_prefix_dict.keys():
+            read_id_prefix_dict[prefix] = next_prefix_value
+            next_prefix_value += 1
+    with open(json_file, 'w') as write_handle:
+        json.dump(read_id_prefix_dict, write_handle)
+    return read_id_prefix_dict
+
+
+def trim_read_id_prefixes(files, read_id_prefix_file):
+    prefix_length = 31
+    for file in files:
+        df = pd.read_table(file)
+        prefixes = df.read_id.str[:prefix_length].unique()
+        prefix_dict = update_prefix_dict(read_id_prefix_file, prefixes)
+    for file in files:
+        df = pd.read_table(file)
+        df['read_id'] = df.read_id.map(lambda x: str(prefix_dict[x[:prefix_length]]) + x[prefix_length:])
+        if file.endswith("bases"):
+            df.to_csv(file, sep='\t', index=False, index_label='ref_pos')
+        else:
+            df.to_csv(file, sep='\t', index=False)
+
+
 def aggregate_processed_output(input_dir, output_dir, reference, min_coverage, cleanup):
     if not min_coverage:
         min_coverage = 10
@@ -94,6 +127,9 @@ def aggregate_processed_output(input_dir, output_dir, reference, min_coverage, c
     called_bases_files = get_files_by_extension(basecall_dir, "called_bases")
     if len(called_bases_files) == 0:
         raise Exception(f"Could not find files of type *.called_bases in {input_dir}")
+    basecall_files = get_files_in_dir(basecall_dir)
+    read_id_prefix_file = os.path.join(output_dir, "read_id_prefixes.json")
+    trim_read_id_prefixes(files=basecall_files, read_id_prefix_file=read_id_prefix_file)
     create_freqs_file(called_bases_files=called_bases_files, output_path=freqs_file_path)
     create_mutation_read_list_file(called_bases_files=called_bases_files, output_path=mutation_read_list_path)
     read_counters = get_files_by_extension(basecall_dir, "read_counter")

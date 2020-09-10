@@ -2,7 +2,6 @@ import argparse
 import os
 import multiprocessing as mp
 import pandas as pd
-import psutil
 from Bio import pairwise2
 
 from data_preparation import prepare_data
@@ -149,8 +148,6 @@ def runner(input_dir, reference_file, output_dir, stages_range, max_basecall_ite
         for basecall_iteration_counter in range(1, max_basecall_iterations + 1):
             log.info(f"Processing fastq files iteration {basecall_iteration_counter}/{max_basecall_iterations}")
             # TODO: whats up with the different modes?!?
-            proc = psutil.Process()
-            log.info(f"number of open files: {len(proc.open_files())}")
             parallel_process(processing_dir=processing_dir, fastq_files=fastq_files, reference_file=reference_file,
                              quality_threshold=quality_threshold, task=task, evalue=evalue, dust=dust, mode=mode,
                              num_alignments=num_alignments, soft_masking=soft_masking, perc_identity=perc_identity,

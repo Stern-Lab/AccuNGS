@@ -51,7 +51,7 @@ def get_alignments(blast_output, fastq_file):
     ignored_reads = pd.DataFrame()
     suspicious_reads = pd.DataFrame()
     alignments, single_reads, multi_mapped_alignments, read_counter = filter_reads_by_alignment_count(alignments)
-    ignored_reads['read'] = single_reads
+    ignored_reads['read_id'] = single_reads
     ignored_reads['dropped_because'] = "single read"
     multi_mapped_alignments['suspicious_because'] = "multiple alignments"
     suspicious_reads = suspicious_reads.append(multi_mapped_alignments)

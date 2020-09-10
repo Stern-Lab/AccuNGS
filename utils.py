@@ -9,6 +9,7 @@ import pandas as pd
 
 from Bio import SeqIO, Seq
 
+
 def get_files_by_extension(dir_path, extension):
     files = []
     for filename in os.listdir(dir_path):
