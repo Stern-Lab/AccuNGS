@@ -204,11 +204,11 @@ def fix_insertions_index(df, ref_start):
     df_index = [float(i) for i in df.index.to_list()]
     insertion_counter = 0
     for insertion in insertions:
-        insertion = insertion - insertion_counter  # each insertion moves the other insertions
+        insertion = insertion - insertion_counter                   # each insertion moves the other insertions
         insertion_position = df_index.index(insertion)
-        insertion_value = float(insertion + Decimal('0.001'))  # fix floating point nonsense
+        insertion_value = float(insertion + Decimal('0.001'))       # fix floating point nonsense
         while insertion_value-1 in df_index:
-            insertion_value += 0.1
+            insertion_value += float(insertion + Decimal('0.001'))  # fix floating point nonsense
         df_index[insertion_position] = insertion_value
         df_index = [x - 1 if x > insertion else x for x in df_index]
         insertion_counter += 1
