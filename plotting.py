@@ -97,7 +97,8 @@ def graph_summary(freqs_file, blast_file, read_counter_file, stretches_file, out
     plt.suptitle("Pipeline Statistics", fontsize=18)
     plt.subplots_adjust(wspace=0.2, hspace=0.25)
     freqs = pd.read_csv(freqs_file, sep="\t")
-    mutation_data = freqs[(freqs['base_rank'] != 0) & (freqs['base_count'] > min_coverage)].copy()  # TODO: should base_count be coverage?
+    mutation_data = freqs[(freqs['base_rank'] != 0) & (freqs['coverage'] > min_coverage) &
+                          (freqs['base_count'] > 0)].copy()  # TODO: in the old pipeline theres also a probability thing here
     axes[0][0] = graph_blast_length_distribution(blast_file, axes[0][0])
     axes[0][1] = graph_read_counter(read_counter_file, axes[0][1])
     axes[0][2] = graph_coverage(freqs, axes[0][2])

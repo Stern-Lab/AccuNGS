@@ -124,8 +124,6 @@ def runner(input_dir, reference_file, output_dir, stages_range, max_basecall_ite
     os.makedirs(output_dir, exist_ok=True)
     log = pipeline_logger(logger_name='AccuNGS-Runner', log_folder=output_dir)
     log.debug(f"runner params: {locals()}")
-    if max_basecall_iterations is None:
-        max_basecall_iterations = 2   # TODO: what should this be?!
     filenames = set_filenames(output_dir)
     stages = get_stages_list(stages_range)
     log.info(f"Running stages: {stages}")
@@ -206,7 +204,7 @@ def create_runner_parser():
     parser.add_argument("-o", "--output_dir", required=True)
     parser.add_argument("-r", "--reference_file", required=True)
     parser.add_argument("-s", "--stages_range", nargs="+", type=int, help="start and end stages separated by spaces")
-    parser.add_argument("-m", "--max_basecall_iterations", type=int,
+    parser.add_argument("-m", "--max_basecall_iterations", type=int, default=1,
                         help="number of times to run basecall before giving up equalizing reference with consensus")
     parser.add_argument("-bt", "--blast_task", help="blast's task parameter (default: blastn")
     parser.add_argument("-be", "--blast_evalue", help="blast's evalue parameter (default: 1e-7)", type=float)
