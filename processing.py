@@ -1,5 +1,6 @@
 import argparse
 import os
+from decimal import Decimal
 
 import pandas as pd
 from Bio import SeqIO
@@ -197,7 +198,7 @@ def get_max_insertion_value(df_index, insertion):
 
 
 def fix_insertions_index(df, ref_start):
-    # change insertions index to original index + 0.1 realign bases to ref index
+    # change insertions index to original index + 0.001
     df.index = df.index + ref_start
     insertions = df[df.ref_seq == "-"].index.to_list()
     df_index = [float(i) for i in df.index.to_list()]
@@ -205,7 +206,7 @@ def fix_insertions_index(df, ref_start):
     for insertion in insertions:
         insertion = insertion - insertion_counter  # each insertion moves the other insertions
         insertion_position = df_index.index(insertion)
-        insertion_value = insertion + 0.1
+        insertion_value = float(insertion + Decimal('0.001'))  # fix floating point nonsense
         while insertion_value-1 in df_index:
             insertion_value += 0.1
         df_index[insertion_position] = insertion_value
