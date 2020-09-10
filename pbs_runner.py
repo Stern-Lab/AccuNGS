@@ -177,7 +177,7 @@ def pbs_runner(input_dir, output_dir, reference_file, stages_range, max_basecall
     create_pbs_cmd_file(cmd_path, alias, output_logs_dir=pbs_logs_dir, cmd=cmd, queue=queue, gmem=100,
                         ncpus=cpu_count)  # todo: optimize cpu_count
     job_id = submit_cmdfile_to_pbs(cmd_path)
-    print(f"Submitted jod '{alias}' with id {job_id} .")
+    print(f"Submitted jod '{alias}' with id {job_id}")
     print(f"Output files will be in {output_dir}")
     print(f"cmd file pbs log will be in {pbs_logs_dir}")
     print(f"runner log file will be in {os.path.join(output_dir, '.log')}")
