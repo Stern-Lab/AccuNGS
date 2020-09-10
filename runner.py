@@ -221,7 +221,7 @@ def create_runner_parser():
     parser.add_argument("-bm", "--blast_mode", help="RefToSeq or SeqToRef (default: RefToSeq)")  # TODO: docs
     parser.add_argument("-qt", "--quality_threshold", type=int,
                         help="phred score must be higher than this to be included (default: 30)")
-    parser.add_argument("-mc", "--min_coverage", type=int,
+    parser.add_argument("-mc", "--min_coverage", type=int, default=10,
                         help="minimal coverage to plot in summary graphs (default: 10)")  # TODO: different default?
     parser.add_argument("-ccwi", "--consolidate_consensus_with_indels", type=str, default="Y",
                         help="Y/N where N means we consolidate consensus without indels (default: Y)")
