@@ -222,7 +222,7 @@ def main(args):
                                    reference_file=reference_file, mode="RefToSeq", evalue=pipeline_arguments['evalue'],
                                    quality_threshold=pipeline_arguments['q_score'], stages_range=1,
                                    perc_identity=pipeline_arguments['blast'], max_basecall_iterations=1, dust="no",
-                                   num_alignments=1000000, task="blastn")
+                                   num_alignments=1000000, task="blastn", after_jobid=None)
     if 'perl' in stages:
         perl_runner_cmd = create_perl_runner_cmdfile(data_dir=data_dir,
                                                      output_folder=output_folder, merge_job_id=merge_job_id,
