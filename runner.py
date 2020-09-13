@@ -212,7 +212,7 @@ def create_runner_parser():
     parser.add_argument("-bn", "--blast_num_alignments", type=int,
                         help="blast's num_alignments parameter (default: 1000000)")
     parser.add_argument("-bp", "--blast_perc_identity", type=int, help="blast's perc_identity parameter (default: 85)")
-    parser.add_argument("-bs", "--blast_soft_masking", type=int, help="blast's soft_masking parameter (default: F)")
+    parser.add_argument("-bs", "--blast_soft_masking", help="blast's soft_masking parameter (default: F)")
     parser.add_argument("-bm", "--blast_mode", help="RefToSeq or SeqToRef (default: RefToSeq)")  # TODO: docs
     parser.add_argument("-qt", "--quality_threshold", type=int,
                         help="phred score must be higher than this to be included (default: 30)")

@@ -149,9 +149,10 @@ def pbs_runner_experimental(input_dir, output_dir, reference_file, stages_range,
 
 
 def pbs_runner(input_dir, output_dir, reference_file, stages_range, max_basecall_iterations,
-               quality_threshold, task, evalue, dust, num_alignments, mode, perc_identity, soft_masking, min_coverage,
-               consolidate_consensus_with_indels, stretches_pvalue, stretches_distance, stretches_to_plot,
-               max_read_size, alias, queue, cleanup, cpu_count):
+               quality_threshold, task, evalue, dust, num_alignments, mode, perc_identity, soft_masking="F",
+               min_coverage=10, consolidate_consensus_with_indels=True, stretches_pvalue=1e-7, stretches_distance=10,
+               stretches_to_plot=5,
+               max_read_size=350, alias="AccuNGS", queue="adistzachi@power9", cleanup=True, cpu_count=None):
     # TODO: move defaults to a config file
     # TODO: optimize part size depending on input size and number of CPUs
     if not cpu_count:
@@ -179,6 +180,7 @@ def pbs_runner(input_dir, output_dir, reference_file, stages_range, max_basecall
     print(f"Output files will be in {output_dir}")
     print(f"cmd file pbs log will be in {pbs_logs_dir}")
     print(f"runner log file will be in {os.path.join(output_dir, '.log')}")
+    return job_id
 
 
 if __name__ == "__main__":
