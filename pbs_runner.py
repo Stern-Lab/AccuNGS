@@ -48,7 +48,7 @@ def runner_cmd(input_dir, output_dir, reference_file, stages_range, max_basecall
     if quality_threshold:
         cmd += f" -qt {quality_threshold}"
     if task:
-        cmd += f" -bt task"
+        cmd += f" -bt {task}"
     if evalue:
         cmd += f" -be {evalue}"
     if dust:
