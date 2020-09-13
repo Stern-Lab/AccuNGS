@@ -80,8 +80,8 @@ def get_single_freq_file_path(path, freq_file_suffix):
 
 
 def get_python_freqs(python_output_path):
-    freq_file_path = get_single_freq_file_path(python_output_path, "merge.freqs.csv")
-    return pd.read_csv(freq_file_path).set_index(['ref_position', 'base'], drop=True)
+    freq_file_path = get_single_freq_file_path(python_output_path, "freqs.tsv")
+    return pd.read_csv(freq_file_path).set_index(['ref_position', 'base'], drop=True, sep='\t')
 
 
 def get_perl_freqs(perl_output_path):
@@ -220,10 +220,10 @@ def main(args):
     if 'perl' in stages or 'python' in stages:
         """ Merge fastq files using the python_runner """
         merge_job_id = pbs_runner(input_dir=input_data_folder, output_dir=output_folder,
-                                   reference_file=reference_file, mode="RefToSeq", evalue=pipeline_arguments['evalue'],
-                                   quality_threshold=pipeline_arguments['q_score'], stages_range=1,
-                                   perc_identity=pipeline_arguments['blast'], max_basecall_iterations=1, dust="no",
-                                   num_alignments=1000000, task="blastn", after_jobid=None)
+                                  reference_file=reference_file, mode="RefToSeq", evalue=pipeline_arguments['evalue'],
+                                  quality_threshold=pipeline_arguments['q_score'], stages_range=1,
+                                  perc_identity=pipeline_arguments['blast'], max_basecall_iterations=1, dust="no",
+                                  num_alignments=1000000, task="blastn", after_jobid=None)
     if 'perl' in stages:
         perl_runner_cmd = create_perl_runner_cmdfile(data_dir=data_dir,
                                                      output_folder=output_folder, merge_job_id=merge_job_id,
