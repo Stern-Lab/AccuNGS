@@ -36,18 +36,14 @@ def wrangle_freqs_df(data):
 
 def _create_python_output_folder(output_folder):
     python_output_path = os.path.join(output_folder, 'python_output')
-    if not os.path.exists(python_output_path):
-        os.mkdir(python_output_path)
+    os.makedirs(python_output_path, exist_ok=True)
     return python_output_path
 
 
 def _create_perl_output_folder(output_folder):
     perl_output_path = os.path.join(output_folder, 'perl_output')
-    if not os.path.exists(perl_output_path):
-        os.mkdir(perl_output_path)
-        perl_tmp_folder = os.path.join(perl_output_path, 'tmp')
-        if not os.path.exists(perl_tmp_folder):
-            os.mkdir(perl_tmp_folder)  # seems like this is required by the pipeline..
+    perl_tmp_folder = os.path.join(perl_output_path, 'tmp')
+    os.makedirs(perl_tmp_folder, exist_ok=True)
     return perl_output_path
 
 
