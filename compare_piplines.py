@@ -62,8 +62,6 @@ def create_perl_runner_cmdfile(input_data_folder, output_folder, reference_file,
                       f"-r {reference_file} -NGS_or_Cirseq 1 -rep {pipeline_arguments['repeats']} " \
                       f"-ev {pipeline_arguments['evalue']} -b {pipeline_arguments['blast']} " \
                       f"-q {pipeline_arguments['q_score']}"
-    if len(get_files_by_extension(input_data_folder, 'gz')) > 0:
-        perl_runner_cmd = perl_runner_cmd + " -t z"
     """
     the input for perl_runner_cmd is the output of python_runner_cmd because the python pipeline first created
     the fastq files which both pipelines use.
