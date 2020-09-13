@@ -81,7 +81,7 @@ def get_single_freq_file_path(path, freq_file_suffix):
 
 def get_python_freqs(python_output_path):
     freq_file_path = get_single_freq_file_path(python_output_path, "freqs.tsv")
-    return pd.read_csv(freq_file_path).set_index(['ref_position', 'base'], drop=True, sep='\t')
+    return pd.read_csv(freq_file_path, sep='\t').set_index(['ref_position', 'base'], drop=True)
 
 
 def get_perl_freqs(perl_output_path):
