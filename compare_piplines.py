@@ -14,7 +14,6 @@ from matplotlib import pyplot as plt
 
 from pbs_runner import create_pbs_cmd_file, submit_cmdfile_to_pbs, pbs_runner
 from plotting import set_plots_size_params
-from utils import get_files_by_extension
 STERNLAB_PATH = "/sternadi/home/volume2/ita/AccuNGS-private"
 
 
@@ -54,11 +53,10 @@ def _get_python_runner_flags(output_folder):
     return ret
 
 
-def create_perl_runner_cmdfile(input_data_folder, output_folder, reference_file, alias, pipeline_arguments,
-                               python_runner_flags):
+def create_perl_runner_cmdfile(data_dir, output_folder, reference_file, alias, pipeline_arguments, merge_job_id):
     perl_output_path = _create_perl_output_folder(output_folder)
     perl_runner_path = os.path.join(STERNLAB_PATH, 'pipeline_runner.py')
-    perl_runner_cmd = f"python {perl_runner_path} -i {python_runner_flags['o']} -o {perl_output_path} " \
+    perl_runner_cmd = f"python {perl_runner_path} -i {data_dir} -o {perl_output_path} " \
                       f"-r {reference_file} -NGS_or_Cirseq 1 -rep {pipeline_arguments['repeats']} " \
                       f"-ev {pipeline_arguments['evalue']} -b {pipeline_arguments['blast']} " \
                       f"-q {pipeline_arguments['q_score']}"
@@ -67,7 +65,8 @@ def create_perl_runner_cmdfile(input_data_folder, output_folder, reference_file,
     the fastq files which both pipelines use.
     """
     cmd_file_path = os.path.join(output_folder, 'compare_pipelines.cmd')
-    create_pbs_cmd_file(path=cmd_file_path, alias=alias, cmd=perl_runner_cmd, output_logs_dir=output_folder)
+    create_pbs_cmd_file(path=cmd_file_path, alias=alias, cmd=perl_runner_cmd, output_logs_dir=output_folder,
+                        run_after_job_id=merge_job_id)
     return cmd_file_path
 
 
@@ -206,15 +205,6 @@ def analyze_data(output_folder):
     df.to_csv(os.path.join(analysis_folder, 'data.csv'))
 
 
-def merge_fastq_files(input_data_folder, output_folder, reference_file, pipeline_arguments):
-    """ Merge fastq files using the python_runner """
-    pbs_runner(input_dir=input_data_folder, output_dir=output_folder,
-               reference_file=reference_file, mode="RefToSeq", evalue=pipeline_arguments['evalue'],
-               quality_threshold=pipeline_arguments['q_score'], stages_range=1,
-               perc_identity=pipeline_arguments['blast'], max_basecall_iterations=1, dust="no",
-               num_alignments=1000000, task="blastn")
-
-
 def main(args):
     input_data_folder = args.input_data_folder
     output_folder = args.output_folder
@@ -224,23 +214,27 @@ def main(args):
                           'evalue': args.evalue,
                           'repeats': args.repeats,
                           'q_score': args.q_score}
+    python_runner_flags = _get_python_runner_flags(output_folder=output_folder)
+    data_dir = os.path.join(output_folder, 'data')
     if 'perl' in stages or 'python' in stages:
-        python_runner_flags = _get_python_runner_flags(output_folder=output_folder)
-        merge_fastq_files(input_data_folder=input_data_folder, output_folder=output_folder,
-                          reference_file=reference_file, pipeline_arguments=pipeline_arguments)
+        """ Merge fastq files using the python_runner """
+        merge_job_id = pbs_runner(input_dir=input_data_folder, output_dir=output_folder,
+                                   reference_file=reference_file, mode="RefToSeq", evalue=pipeline_arguments['evalue'],
+                                   quality_threshold=pipeline_arguments['q_score'], stages_range=1,
+                                   perc_identity=pipeline_arguments['blast'], max_basecall_iterations=1, dust="no",
+                                   num_alignments=1000000, task="blastn")
     if 'perl' in stages:
-        perl_runner_cmd = create_perl_runner_cmdfile(input_data_folder=python_runner_flags['i'],
-                                                     output_folder=output_folder,
+        perl_runner_cmd = create_perl_runner_cmdfile(data_dir=data_dir,
+                                                     output_folder=output_folder, merge_job_id=merge_job_id,
                                                      reference_file=reference_file, alias='CmpPLPRL',
-                                                     pipeline_arguments=pipeline_arguments,
-                                                     python_runner_flags=python_runner_flags)
+                                                     pipeline_arguments=pipeline_arguments)
         perl_job_id = submit_cmdfile_to_pbs(perl_runner_cmd)
     if 'python' in stages:
         python_job_id = pbs_runner(input_dir=python_runner_flags['i'], output_dir=python_runner_flags['o'],
                                    reference_file=reference_file, mode="RefToSeq", evalue=pipeline_arguments['evalue'],
-                                   quality_threshold=pipeline_arguments['q_score'], stages_range=[1, 3],
+                                   quality_threshold=pipeline_arguments['q_score'], stages_range=[2, 3],
                                    perc_identity=pipeline_arguments['blast'], max_basecall_iterations=1, dust="no",
-                                   num_alignments=1000000, task="blastn", alias="CmpPLPY")
+                                   num_alignments=1000000, task="blastn", alias="CmpPLPY", after_jobid=merge_job_id)
     if 'analysis' in stages:
         # note that this will only work if both perl and python output already exist.
         # There is no guarantee that the perl command is done except for the fact that the python is way slower...!

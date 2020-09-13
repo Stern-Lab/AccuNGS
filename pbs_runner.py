@@ -149,7 +149,7 @@ def pbs_runner_experimental(input_dir, output_dir, reference_file, stages_range,
 
 
 def pbs_runner(input_dir, output_dir, reference_file, stages_range, max_basecall_iterations,
-               quality_threshold, task, evalue, dust, num_alignments, mode, perc_identity, soft_masking="F",
+               quality_threshold, task, evalue, dust, num_alignments, mode, perc_identity,  after_jobid, soft_masking="F",
                min_coverage=10, consolidate_consensus_with_indels=True, stretches_pvalue=1e-7, stretches_distance=10,
                stretches_to_plot=5,
                max_read_size=350, alias="AccuNGS", queue="adistzachi@power9", cleanup=True, cpu_count=None):
@@ -174,7 +174,7 @@ def pbs_runner(input_dir, output_dir, reference_file, stages_range, max_basecall
                      stretches_pvalue=stretches_pvalue, stretches_distance=stretches_distance,
                      stretches_to_plot=stretches_to_plot, max_read_size=max_read_size, base_path=base_path)
     create_pbs_cmd_file(cmd_path, alias, output_logs_dir=pbs_logs_dir, cmd=cmd, queue=queue, gmem=100,
-                        ncpus=cpu_count)  # todo: optimize cpu_count
+                        ncpus=cpu_count, run_after_job_id=after_jobid)  # todo: optimize cpu_count
     job_id = submit_cmdfile_to_pbs(cmd_path)
     print(f"Submitted jod '{alias}' with id {job_id}")
     print(f"Output files will be in {output_dir}")
@@ -188,6 +188,8 @@ if __name__ == "__main__":
     parser.add_argument("-a", "--alias", default="AccuNGS", help="job alias visible in qstat (default: AccuNGS)")
     parser.add_argument("-q", "--queue", default="adistzachi@power9",
                         help="PBS queue to run on (default: adistzachi@power9)")
+    parser.add_argument("-j", "--after_jobid",
+                        help="Run after successfully completing this jobid")
     args = parser.parse_args()
     pbs_runner(input_dir=args.input_dir, output_dir=args.output_dir, reference_file=args.reference_file,
                stages_range=args.stages_range, max_basecall_iterations=args.max_basecall_iterations,
@@ -197,4 +199,4 @@ if __name__ == "__main__":
                min_coverage=args.min_coverage, consolidate_consensus_with_indels=args.consolidate_consensus_with_indels,
                stretches_pvalue=args.stretches_pvalue, stretches_distance=args.stretches_distance, alias=args.alias,
                stretches_to_plot=args.stretches_to_plot, max_read_size=args.stretches_max_read_size, queue=args.queue,
-               cleanup=args.cleanup, cpu_count=args.cpu_count)
+               cleanup=args.cleanup, cpu_count=args.cpu_count, after_jobid=args.after_jobid)
