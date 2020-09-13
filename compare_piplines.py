@@ -81,7 +81,10 @@ def get_single_freq_file_path(path, freq_file_suffix):
 
 def get_python_freqs(python_output_path):
     freq_file_path = get_single_freq_file_path(python_output_path, "freqs.tsv")
-    return pd.read_csv(freq_file_path, sep='\t').set_index(['ref_position', 'base'], drop=True)
+
+    return pd.read_csv(freq_file_path, sep='\t').rename(columns={
+        'ref_pos': 'ref_position', 'read_base': 'base', 'base_count': 'base_counter', 'base_rank': 'rank'}).set_index(
+        ['ref_position', 'base'], drop=True)
 
 
 def get_perl_freqs(perl_output_path):
@@ -104,6 +107,7 @@ def get_freqs_data(output_folder):
     py_df = get_python_freqs(python_output_path)
     perl_output_path = _create_perl_output_folder(output_folder)
     pe_df = get_perl_freqs(perl_output_path)
+
     data = {'py': py_df, 'pe': pe_df}
     return data
 
@@ -240,7 +244,7 @@ def main(args):
         # note that this will only work if both perl and python output already exist.
         # There is no guarantee that the perl command is done except for the fact that the python is way slower...!
         analyze_cmd_path = create_analyze_data_cmdfile(output_folder, alias='CmpPL-Analyze',
-                                                       previous_jobid=f"{python_job_id}:{perl_job_id}")
+                                                       previous_jobid=python_job_id)
         submit_cmdfile_to_pbs(analyze_cmd_path)
 
 
