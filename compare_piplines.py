@@ -110,9 +110,10 @@ def get_freqs_data(output_folder):
 
 def create_analyze_data_cmdfile(output_folder, alias, previous_jobid):
     cmd_file_path = os.path.join(output_folder, 'analyze_data.cmd')
+    this_dir = os.path.dirname(os.path.abspath(__file__))
     this_module = os.path.basename(os.path.normpath(os.path.abspath(__file__)))[:-3]
     output_folder_string = '"' + output_folder + '"'
-    cmd = f"cd {os.path.join(STERNLAB_PATH, 'Python_pipeline')}; python -c " \
+    cmd = f"cd {this_dir}; python -c " \
           f"'from {this_module} import analyze_data; analyze_data({output_folder_string})'"  # <- dirty hack for PBS
     create_pbs_cmd_file(cmd=cmd, alias=alias, path=cmd_file_path, output_logs_dir=output_folder,
                         run_after_job_id=previous_jobid)
@@ -212,7 +213,7 @@ def main(args):
     stages = args.stages
     pipeline_arguments = {'blast': args.blast,
                           'evalue': args.evalue,
-                          'repeats': args.repeats,
+                          'repeats': 2,
                           'q_score': args.q_score}
     python_runner_flags = _get_python_runner_flags(output_folder=output_folder)
     data_dir = os.path.join(output_folder, 'data')
@@ -258,10 +259,6 @@ if __name__ == '__main__':
     parser.add_argument("-b", "--blast", type=int, help=" percent blast id, default=85", default=85)
     parser.add_argument("-ev", "--evalue", type=float, help="E value for blast, default=1e-7", required=False,
                         default=1e-7)
-    parser.add_argument("-x", "--repeats", type=int, help="number of repeats, default=1", required=False, default=1)
     parser.add_argument("-q", "--q_score", type=int, help="Q-score cutoff, default=30", required=False, default=30)
-    parser.add_argument("-pr", "--please_remove_double_mapping", default='Y', help='Experimental feature to stop double'
-                                                                                   ' mapping. Input can be Y or N, '
-                                                                                   'default is Y which means it is off')
     args = parser.parse_args()
     main(args)
