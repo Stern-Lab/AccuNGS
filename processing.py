@@ -173,7 +173,7 @@ def _get_multimapped_bases(this_row, start_col, end_col, df):
 
 
 def get_multi_mapped_bases_wrapper(data):
-    "ignore bases which were align to more than one pair"
+    """ignore bases which were aligned to more than one pair"""
     int_cols = data[['read_start_plus', 'read_end_plus', 'read_start_minus', 'read_end_minus']].astype(int)
     rel_cols = int_cols.join(data['read_id'])
     multi_mapped_bases_per_row = rel_cols.groupby('read_id').apply(
@@ -252,8 +252,8 @@ def create_plus_minus_dfs(data, mode):
 
 def filter_mismatching_bases(df):
     mismatching_bases = df[df['read_seq_plus'] != df['read_seq_minus']].copy()
-    df = df[df['read_seq_plus'] == df['read_seq_minus']].copy()
     mismatching_bases['dropped_because'] = "paired end bases mismatch"
+    df = df[~df.index.isin(mismatching_bases.index)].copy()
     return df, mismatching_bases
 
 
@@ -261,7 +261,7 @@ def filter_overlapping_bases(df, multimapped_bases):
     multi_mapped_bases = df[df.read_pos_minus.isin(multimapped_bases) |
                             df.read_pos_plus.isin(multimapped_bases)].copy()
     multi_mapped_bases['dropped_because'] = "multimapped bases"
-    df = df[~df.index.isin(multi_mapped_bases)].copy()
+    df = df[~df.index.isin(multi_mapped_bases.index)].copy()
     return df, multi_mapped_bases
 
 
