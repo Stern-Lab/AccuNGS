@@ -26,8 +26,7 @@ def parallel_process(processing_dir, fastq_files, reference_file, quality_thresh
 
 
 def get_stages_list(stages_range):
-    stages_dict = {1: 'prepare data', 2: 'process data', 3: 'aggregate output', 4: 'compute haplotypes',
-                   5: 'graph haplotypes'}
+    stages_dict = {1: 'prepare data', 2: 'process data', 3: 'infer haplotypes'}
     if len(stages_range) == 2:
         stages = range(stages_range[0], stages_range[1] + 1)
     elif len(stages_range) == 1:
@@ -163,16 +162,16 @@ def runner(input_dir, reference_file, output_dir, stages_range, max_basecall_ite
             consensus_path = get_consensus_path(basecall_iteration_counter, consolidate_consensus_with_indels,
                                                 iteration_data_dir)
             reference_file = consensus_path
-    if 'aggregate output' in stages:
         log.info("Aggregating processed fastq files outputs...")
         aggregate_processed_output(input_dir=processing_dir, output_dir=output_dir, cleanup=cleanup,
                                    reference=reference_file, min_coverage=min_coverage)
+        log.info("Generating graphs...")
         graph_summary(freqs_file=filenames['freqs_file_path'], blast_file=filenames['blast_file'],
                       read_counter_file=filenames['read_counter_file'], stretches_file=filenames['stretches'],
                       output_file=filenames['summary_graphs'], min_coverage=min_coverage,
                       stretches_to_plot=stretches_to_plot)  # TODO: drop low quality mutations?
         log.info(f"Most outputs are ready in {output_dir} !")
-    if 'compute haplotypes' in stages:
+    if 'infer haplotypes' in stages:
         log.info(f"Calculating linked mutations...")
         os.makedirs(linked_mutations_dir, exist_ok=True)
         # TODO: optimize part size
@@ -180,7 +179,6 @@ def runner(input_dir, reference_file, output_dir, stages_range, max_basecall_ite
                                        mutation_read_list_path=filenames['mutation_read_list_path'],
                                        output_dir=linked_mutations_dir, max_read_length=max_read_size,
                                        part_size=100)  # TODO: drop low quality mutations?, set part_size as param.
-    if 'graph haplotypes' in stages:
         log.info(f"Aggregating linked mutations to stretches...")
         concatenate_files_by_extension(input_dir=linked_mutations_dir, extension='tsv',
                                        output_path=filenames['linked_mutations_path'])
@@ -192,7 +190,7 @@ def runner(input_dir, reference_file, output_dir, stages_range, max_basecall_ite
                       stretches_to_plot=stretches_to_plot)  # TODO: drop low quality mutations?
         graph_haplotypes(input_file=filenames['stretches'], number_of_stretches=stretches_to_plot,
                          output_dir=output_dir)
-        log.info(f"Done! Output files are in directory: {output_dir}")
+    log.info(f"Done!")
 
     #TODO: test everything, finish up,
 
