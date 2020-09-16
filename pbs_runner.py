@@ -152,7 +152,7 @@ def pbs_runner_experimental(input_dir, output_dir, reference_file, stages_range,
 
 def pbs_runner(input_dir, output_dir, reference_file, stages_range, max_basecall_iterations,
                quality_threshold, task, evalue, dust, num_alignments, mode, perc_identity, overlap_notation,
-               after_jobid, soft_masking="F",
+               after_jobid=None, soft_masking="F",
                min_coverage=10, consolidate_consensus_with_indels=True, stretches_pvalue=1e-7, stretches_distance=10,
                stretches_to_plot=5,
                max_read_size=350, alias="AccuNGS", queue="adistzachi@power9", cleanup=True, cpu_count=None):
