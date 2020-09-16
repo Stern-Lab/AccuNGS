@@ -16,7 +16,6 @@ from utils import get_files_by_extension, extract_gz
 
 
 def merger_generator(forward_handle,reverse_handle, rep_length, log):
-    # TODO: why not replace mismatching bases with N?
     for a, b in zip(SeqIO.parse(forward_handle, "fastq"), SeqIO.parse(reverse_handle, "fastq")):
         if a.id.split(" ")[0] != b.id.split(" ")[0]:
             # TODO: what does this mean and shouldnt it be an exception?
@@ -66,7 +65,7 @@ def split_fastq_file(fastq_file, output_dir, cpu_count):
     part_size = file_size / (cpu_count - 1)  # TODO: make sure this works properly on PBS!
     record_iter = SeqIO.parse(open(fastq_file), "fastq")
     fastq_file_name = os.path.basename(fastq_file)
-    for i, batch in enumerate(batch_iterator(record_iter, part_size)):  # TODO: parallelize this?
+    for i, batch in enumerate(batch_iterator(record_iter, part_size)):
         filename = os.path.join(output_dir, f"{fastq_file_name}.part_{i+1}")
         with open(filename, "w") as handler:
             SeqIO.write(batch, handler, "fastq")
@@ -98,11 +97,11 @@ def merge_opposing_reads(file1, file2, output_file, rep_length, file_type, log):
 
 
 def are_opposing(files, opposing_strings=None):
-    if (opposing_strings[0] in files[0] and opposing_strings[1] in files[1]) or (
-            opposing_strings[1] in files[0] and opposing_strings[0] in files[1]):
-        return True
-    else:
-        return False
+    if len(opposing_strings) != 1:
+        if (opposing_strings[0] in files[0] and opposing_strings[1] in files[1]) or (
+                opposing_strings[1] in files[0] and opposing_strings[0] in files[1]):
+            return True
+    return False
 
 
 def prepare_data_in_dir(input_dir, output_dir, rep_length, opposing_strings, log, cpu_count):
@@ -131,21 +130,21 @@ def prepare_data_in_dir(input_dir, output_dir, rep_length, opposing_strings, log
             split_fastq_file(fastq_file=file, output_dir=output_dir, cpu_count=cpu_count)
 
 
-def prepare_data(input_dir, output_dir, cpu_count, rep_length=None, opposing_strings=None):
+def prepare_data(input_dir, output_dir, cpu_count, rep_length=None, overlap_notation=None):
     log = pipeline_logger(logger_name='Data-Preparation', log_folder=output_dir)
     if cpu_count is None:
         cpu_count = mp.cpu_count()
     if rep_length is None:
         rep_length = 60
-    if opposing_strings is None:
-        opposing_strings = ("_R1", "_R2")
+    if overlap_notation is None:
+        overlap_notation = ("_R1", "_R2")
     os.makedirs(output_dir, exist_ok=True)
     prepare_data_in_dir(input_dir=input_dir, output_dir=output_dir, rep_length=rep_length,
-                        opposing_strings=opposing_strings, log=log, cpu_count=cpu_count)
+                        opposing_strings=overlap_notation, log=log, cpu_count=cpu_count)
     sub_dirs = [f.path for f in os.scandir(input_dir) if f.is_dir()]
     for dir_path in sub_dirs:
         prepare_data_in_dir(input_dir=dir_path, output_dir=output_dir, rep_length=rep_length,
-                            opposing_strings=opposing_strings, log=log, cpu_count=cpu_count)
+                            opposing_strings=overlap_notation, log=log, cpu_count=cpu_count)
 
 
 if __name__ == "__main__":
@@ -153,12 +152,12 @@ if __name__ == "__main__":
     parser.add_argument("-i", "--input_dir", required=True,
                         help="Path to directory containing fastq or gz files of one specific sample")
     parser.add_argument("-o", "--output_dir", help="Where the output files go", required=True)
-    parser.add_argument("-r", "--rep_length", help="amount of N bases to repeat (default: 60)", type=int) #TODO: is this the right default?
-    parser.add_argument("-op", "--opposing_strings", default=None, type=str,
-                        help="A tuple with strings which represent the forward and backward reads "
-                             "(default is: ('R1','R2'))")
+    parser.add_argument("-r", "--rep_length", help="amount of N bases to repeat (default: 60)", type=int)
+    parser.add_argument("-on", "--overlap_notation", default=None, nargs="+", type=str,
+                        help="Notation of overlapping reads in the same directory to merge. Passing N would run without"
+                             " considering overlapping reads (default is: '_R1 _R2')")
     parser.add_argument("-cc", "--cpu_count", default=None, type=int,
                         help="How many cpu's you have will determine to how many parts to split the file")
     args = parser.parse_args()
     prepare_data(input_dir=args.input_dir, output_dir=args.output_dir, rep_length=args.rep_length,
-                 opposing_strings=args.opposing_strings, cpu_count=args.cpu_count)
+                 overlap_notation=args.overlap_notation, cpu_count=args.cpu_count)

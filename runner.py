@@ -17,10 +17,10 @@ from haplotypes.co_occurs_to_stretches import calculate_stretches
 
 
 def parallel_process(processing_dir, fastq_files, reference_file, quality_threshold, task, evalue, dust, num_alignments,
-                     soft_masking, perc_identity, mode, cpu_count):
+                     soft_masking, perc_identity, mode, cpu_count, reads_overlap):
     with mp.Pool(cpu_count) as pool:
         parts = [pool.apply_async(process_fastq, args=(fastq_file, reference_file, processing_dir, quality_threshold, task,
-                                                       evalue, dust, num_alignments, soft_masking, perc_identity, mode,))
+                                                       evalue, dust, num_alignments, soft_masking, perc_identity, mode,reads_overlap))
                  for fastq_file in fastq_files]
         get_mp_results_and_report(parts)
 
@@ -117,7 +117,7 @@ def get_consensus_path(basecall_iteration_counter, consolidate_consensus_with_in
 def runner(input_dir, reference_file, output_dir, stages_range, max_basecall_iterations, min_coverage,
            quality_threshold, task, evalue, dust, num_alignments, soft_masking, perc_identity, mode, max_read_size,
            consolidate_consensus_with_indels, stretches_pvalue, stretches_distance, stretches_to_plot, cleanup,
-           cpu_count):
+           cpu_count, opposing_strings):
     if not cpu_count:
         cpu_count = mp.cpu_count()
     os.makedirs(output_dir, exist_ok=True)
@@ -132,11 +132,15 @@ def runner(input_dir, reference_file, output_dir, stages_range, max_basecall_ite
         data_dir = os.path.join(output_dir, "data")
         os.makedirs(data_dir, exist_ok=True)
         log.info("Preparing data")
-        prepare_data(input_dir=input_dir, output_dir=data_dir, opposing_strings=None,
+        prepare_data(input_dir=input_dir, output_dir=data_dir, overlap_notation=opposing_strings,
                      cpu_count=cpu_count)
     else:
         data_dir = input_dir
     if 'process data' in stages:
+        if len(opposing_strings) == 1:
+            reads_overlap = False
+        else:
+            reads_overlap = True
         os.makedirs(processing_dir, exist_ok=True)
         data_files = get_files_in_dir(data_dir)
         fastq_files = [file_path for file_path in data_files if "fastq.part_" in os.path.basename(file_path)]
@@ -147,7 +151,7 @@ def runner(input_dir, reference_file, output_dir, stages_range, max_basecall_ite
             parallel_process(processing_dir=processing_dir, fastq_files=fastq_files, reference_file=reference_file,
                              quality_threshold=quality_threshold, task=task, evalue=evalue, dust=dust, mode=mode,
                              num_alignments=num_alignments, soft_masking=soft_masking, perc_identity=perc_identity,
-                             cpu_count=cpu_count)
+                             cpu_count=cpu_count, reads_overlap=reads_overlap)
             iteration_data_dir = os.path.join(output_dir, 'iteration_data')
             os.makedirs(iteration_data_dir, exist_ok=True)
             alignment_score = check_consensus_alignment_with_ref(reference_file=reference_file,
@@ -204,6 +208,9 @@ def create_runner_parser():
     parser.add_argument("-s", "--stages_range", nargs="+", type=int, help="start and end stages separated by spaces")
     parser.add_argument("-m", "--max_basecall_iterations", type=int, default=1,
                         help="number of times to run basecall before giving up equalizing reference with consensus")
+    parser.add_argument("-on", "--overlap_notation", default=['_R1', '_R2'], nargs="+", type=str,
+                        help="Notation of overlapping reads in the same directory to merge. Passing N would run without"
+                             " considering overlapping reads (default is: '_R1 _R2')")
     parser.add_argument("-bt", "--blast_task", help="blast's task parameter (default: blastn")
     parser.add_argument("-be", "--blast_evalue", help="blast's evalue parameter (default: 1e-7)", type=float)
     parser.add_argument("-bd", "--blast_dust", help="blast's dust parameter (default: on)")
@@ -242,4 +249,4 @@ if __name__ == "__main__":
            min_coverage=args.min_coverage, consolidate_consensus_with_indels=args.consolidate_consensus_with_indels,
            stretches_pvalue=args.stretches_pvalue, stretches_distance=args.stretches_distance, cleanup=args.cleanup,
            stretches_to_plot=args.stretches_to_plot, max_read_size=args.stretches_max_read_size,
-           cpu_count=args.cpu_count)
+           cpu_count=args.cpu_count, opposing_strings=args.overlap_notation)
