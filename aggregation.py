@@ -111,15 +111,17 @@ def trim_read_id_prefixes(files, read_id_prefix_file):
     prefix_length = 31
     for file in files:
         df = pd.read_table(file)
-        prefixes = df.read_id.str[:prefix_length].unique()
-        prefix_dict = update_prefix_dict(read_id_prefix_file, prefixes)
+        if not df.empty:
+            prefixes = df.read_id.str[:prefix_length].unique()
+            prefix_dict = update_prefix_dict(read_id_prefix_file, prefixes)
     for file in files:
         df = pd.read_table(file)
-        df['read_id'] = df.read_id.map(lambda x: str(prefix_dict[x[:prefix_length]]) + x[prefix_length:])
-        if file.endswith("bases"):
-            df.to_csv(file, sep='\t', index=False, index_label='ref_pos')
-        else:
-            df.to_csv(file, sep='\t', index=False)
+        if not df.empty:
+            df['read_id'] = df.read_id.map(lambda x: str(prefix_dict[x[:prefix_length]]) + x[prefix_length:])
+            if file.endswith("bases"):
+                df.to_csv(file, sep='\t', index=False, index_label='ref_pos')
+            else:
+                df.to_csv(file, sep='\t', index=False)
 
 
 def aggregate_processed_output(input_dir, output_dir, reference, min_coverage, cleanup):
