@@ -217,15 +217,15 @@ def main(args):
     stages = args.stages
     pipeline_arguments = {'blast': args.blast,
                           'evalue': args.evalue,
-                          'repeats': 2,
+                          'repeats': 1,
                           'q_score': args.q_score}
     python_runner_flags = _get_python_runner_flags(output_folder=output_folder)
     data_dir = os.path.join(output_folder, 'data')
     if 'perl' in stages or 'python' in stages:
-        """ Merge fastq files using the python_runner """
+        """ Split fastq files using the python_runner """
         merge_job_id = pbs_runner(input_dir=input_data_folder, output_dir=output_folder,
                                   reference_file=reference_file, mode="RefToSeq", evalue=pipeline_arguments['evalue'],
-                                  quality_threshold=pipeline_arguments['q_score'], stages_range=1,
+                                  quality_threshold=pipeline_arguments['q_score'], stages_range=1, overlap_notation="N",
                                   perc_identity=pipeline_arguments['blast'], max_basecall_iterations=1, dust="no",
                                   num_alignments=1000000, task="blastn", after_jobid=None)
     if 'perl' in stages:
@@ -239,7 +239,8 @@ def main(args):
                                    reference_file=reference_file, mode="RefToSeq", evalue=pipeline_arguments['evalue'],
                                    quality_threshold=pipeline_arguments['q_score'], stages_range=[2, 3],
                                    perc_identity=pipeline_arguments['blast'], max_basecall_iterations=1, dust="no",
-                                   num_alignments=1000000, task="blastn", alias="CmpPLPY", after_jobid=merge_job_id)
+                                   num_alignments=1000000, task="blastn", alias="CmpPLPY", after_jobid=merge_job_id,
+                                   overlap_notation="N")
     if 'analysis' in stages:
         # note that this will only work if both perl and python output already exist.
         # There is no guarantee that the perl command is done except for the fact that the python is way slower...!
