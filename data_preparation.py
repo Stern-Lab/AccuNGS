@@ -60,9 +60,17 @@ def batch_iterator(iterator, batch_size):
             yield batch
 
 
+def get_fastq_records_num(fastq_file):
+    i = 0
+    with open(fastq_file) as f:
+        for i, l in enumerate(f, 1):
+            pass
+    return i / 4
+
+
 def split_fastq_file(fastq_file, output_dir, cpu_count):
-    file_size = os.stat(fastq_file).st_size / 1000  # in KB
-    part_size = file_size / (cpu_count - 1)  # TODO: make sure this works properly on PBS!
+    fastq_records_num = get_fastq_records_num(fastq_file)
+    part_size = fastq_records_num / cpu_count  # TODO: make sure this works properly on PBS!
     record_iter = SeqIO.parse(open(fastq_file), "fastq")
     fastq_file_name = os.path.basename(fastq_file)
     for i, batch in enumerate(batch_iterator(record_iter, part_size)):

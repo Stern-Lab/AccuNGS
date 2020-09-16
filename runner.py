@@ -1,6 +1,8 @@
 import argparse
 import os
 import multiprocessing as mp
+import shutil
+
 import pandas as pd
 from Bio import pairwise2
 
@@ -9,7 +11,7 @@ from graph_haplotypes import graph_haplotypes
 from mutations_linking import get_variants_list, get_mutations_linked_with_position
 from plotting import graph_summary
 from processing import process_fastq
-from aggregation import aggregate_processed_output, create_freqs_file
+from aggregation import aggregate_processed_output, create_freqs_file, create_mutation_read_list_file
 from logger import pipeline_logger
 from utils import get_files_in_dir, get_sequence_from_fasta, get_mp_results_and_report, create_new_ref_with_freqs, \
     get_files_by_extension, concatenate_files_by_extension
@@ -179,6 +181,10 @@ def runner(input_dir, reference_file, output_dir, stages_range, max_basecall_ite
         log.info(f"Calculating linked mutations...")
         os.makedirs(linked_mutations_dir, exist_ok=True)
         # TODO: optimize part size
+        basecall_dir = os.path.join(processing_dir, 'basecall')
+        called_bases_files = get_files_by_extension(basecall_dir, "called_bases")
+        mutation_read_list_path = os.path.join(output_dir, "mutation_read_list.tsv")
+        create_mutation_read_list_file(called_bases_files=called_bases_files, output_path=mutation_read_list_path)
         parallel_calc_linked_mutations(freqs_file_path=filenames['freqs_file_path'], cpu_count=cpu_count,
                                        mutation_read_list_path=filenames['mutation_read_list_path'],
                                        output_dir=linked_mutations_dir, max_read_length=max_read_size,
@@ -194,6 +200,8 @@ def runner(input_dir, reference_file, output_dir, stages_range, max_basecall_ite
                       stretches_to_plot=stretches_to_plot)  # TODO: drop low quality mutations?
         graph_haplotypes(input_file=filenames['stretches'], number_of_stretches=stretches_to_plot,
                          output_dir=output_dir)
+    if cleanup == "Y":
+        shutil.rmtree(processing_dir)
     log.info(f"Done!")
 
     #TODO: test everything, finish up,

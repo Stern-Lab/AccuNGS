@@ -1,8 +1,6 @@
 import argparse
 import json
 import os
-import shutil
-
 import numpy as np
 import pandas as pd
 
@@ -129,7 +127,6 @@ def aggregate_processed_output(input_dir, output_dir, reference, min_coverage, c
         min_coverage = 10
     os.makedirs(output_dir, exist_ok=True)
     freqs_file_path = os.path.join(output_dir, "freqs.tsv")
-    mutation_read_list_path = os.path.join(output_dir, "mutation_read_list.tsv")
     basecall_dir = os.path.join(input_dir, 'basecall')
     blast_dir = os.path.join(input_dir, 'blast')
     called_bases_files = get_files_by_extension(basecall_dir, "called_bases")
@@ -139,7 +136,6 @@ def aggregate_processed_output(input_dir, output_dir, reference, min_coverage, c
     read_id_prefix_file = os.path.join(output_dir, "read_id_prefixes.json")
     trim_read_id_prefixes(files=basecall_files, read_id_prefix_file=read_id_prefix_file)
     create_freqs_file(called_bases_files=called_bases_files, output_path=freqs_file_path)
-    create_mutation_read_list_file(called_bases_files=called_bases_files, output_path=mutation_read_list_path)
     read_counters = get_files_by_extension(basecall_dir, "read_counter")
     aggregate_read_counters(read_counters=read_counters, output_path=os.path.join(output_dir, "read_counter.tsv"))
     concatenate_files_by_extension(input_dir=blast_dir, extension="blast",
@@ -151,8 +147,6 @@ def aggregate_processed_output(input_dir, output_dir, reference, min_coverage, c
                               output_file=os.path.join(output_dir, "consensus_without_indels.fasta"), drop_indels=True)
     create_new_ref_with_freqs(reference_fasta_file=reference, freqs_file=freqs_file_path, min_coverage=min_coverage,
                               output_file=os.path.join(output_dir, "consensus_with_indels.fasta"), drop_indels=False)
-    if cleanup == "Y":
-        shutil.rmtree(input_dir)
 
 
 if __name__ == "__main__":
