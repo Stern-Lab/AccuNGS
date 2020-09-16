@@ -14,6 +14,8 @@ from matplotlib import pyplot as plt
 
 from pbs_runner import create_pbs_cmd_file, submit_cmdfile_to_pbs, pbs_runner
 from plotting import set_plots_size_params
+from utils import get_files_in_dir
+
 STERNLAB_PATH = "/sternadi/home/volume2/ita/AccuNGS-private"
 
 
@@ -54,12 +56,18 @@ def _get_python_runner_flags(output_folder):
 
 
 def create_perl_runner_cmdfile(data_dir, output_folder, reference_file, alias, pipeline_arguments, merge_job_id=None):
+    data_files = get_files_in_dir(data_dir)
+    file_type = 'f'
+    for file in data_files:
+        if ".gz" in file:
+            file_type = 'z'
+            break
     perl_output_path = _create_perl_output_folder(output_folder)
     perl_runner_path = os.path.join(STERNLAB_PATH, 'pipeline_runner.py')
     perl_runner_cmd = f"python {perl_runner_path} -i {data_dir} -o {perl_output_path} " \
                       f"-r {reference_file} -NGS_or_Cirseq 1 -rep {pipeline_arguments['repeats']} " \
                       f"-ev {pipeline_arguments['evalue']} -b {pipeline_arguments['blast']} " \
-                      f"-q {pipeline_arguments['q_score']}"
+                      f"-q {pipeline_arguments['q_score']} -t {file_type}"
     """
     the input for perl_runner_cmd is the output of python_runner_cmd because the python pipeline first created
     the fastq files which both pipelines use.
