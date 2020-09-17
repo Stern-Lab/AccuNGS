@@ -314,8 +314,7 @@ def filter_multimapped_bases(called_bases, ignored_bases, reads_overlap):
     return called_bases, ignored_bases
 
 
-def filter_target_mean_by(data, target_column, by, min_mean):
-    df = data.copy()
+def filter_target_mean_by(df, target_column, by, min_mean):
     target_nunique_values = df.groupby(by)[target_column].mean()
     target_nunique_values.name = 'tmpCol'
     target_nunique_values = target_nunique_values.reset_index()
@@ -325,8 +324,7 @@ def filter_target_mean_by(data, target_column, by, min_mean):
     return df_with_high_mean, df_with_low_mean
 
 
-def filter_target_nunique_by(data, target_column, by, required_value=1):
-    df = data.copy()
+def filter_target_nunique_by(df, target_column, by, required_value=1):
     target_nunique_values = df.groupby(by)[target_column].nunique()
     target_nunique_values.name = 'tmpCol'
     target_nunique_values = target_nunique_values.reset_index()
