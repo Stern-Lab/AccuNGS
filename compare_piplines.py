@@ -236,7 +236,7 @@ def main(args):
         perl_job_id = submit_cmdfile_to_pbs(perl_runner_cmd)
     if 'python' in stages:
         python_job_id = pbs_runner(input_dir=input_data_folder, output_dir=python_runner_flags['o'],
-                                   reference_file=reference_file, mode="RefToSeq", evalue=pipeline_arguments['evalue'],
+                                   reference_file=reference_file, mode="SeqToRef", evalue=pipeline_arguments['evalue'],
                                    quality_threshold=pipeline_arguments['q_score'], stages_range=[1, 2],
                                    perc_identity=pipeline_arguments['blast'], max_basecall_iterations=1, dust="no",
                                    num_alignments=1000000, task="blastn", alias="CmpPLPY", overlap_notation="N")
