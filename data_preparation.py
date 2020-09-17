@@ -68,9 +68,9 @@ def get_fastq_records_num(fastq_file):
     return i / 4
 
 
-def split_fastq_file(fastq_file, output_dir, cpu_count):
+def split_fastq_file(fastq_file, output_dir, cpu_count, number_of_fastq_files=1):
     fastq_records_num = get_fastq_records_num(fastq_file)
-    part_size = fastq_records_num / cpu_count  # TODO: make sure this works properly on PBS!
+    part_size = fastq_records_num * number_of_fastq_files / cpu_count
     record_iter = SeqIO.parse(open(fastq_file), "fastq")
     fastq_file_name = os.path.basename(fastq_file)
     for i, batch in enumerate(batch_iterator(record_iter, part_size)):
@@ -135,7 +135,8 @@ def prepare_data_in_dir(input_dir, output_dir, rep_length, opposing_strings, log
         for file in files:
             if file_type == 'gz':
                 file = extract_gz(file, output_dir=output_dir)
-            split_fastq_file(fastq_file=file, output_dir=output_dir, cpu_count=cpu_count)
+            split_fastq_file(fastq_file=file, output_dir=output_dir, cpu_count=cpu_count,
+                             number_of_fastq_files=len(files))
 
 
 def prepare_data(input_dir, output_dir, cpu_count, rep_length=None, overlap_notation=None):
