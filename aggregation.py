@@ -33,7 +33,7 @@ def aggregate_called_bases(called_bases_files):
     freqs.name = 'base_count'
     freqs = pd.DataFrame(freqs).reset_index()
     freqs = freqs.merge(ref_df, on=['ref_pos'], how='left')
-    freqs['ref_pos'] = round(freqs['ref_pos'], 3)                         # drop that floating point non sense
+    freqs['ref_pos'] = round(freqs['ref_pos'], 3)                         # fix that floating point nonsense
     return freqs
 
 

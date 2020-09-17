@@ -1,7 +1,5 @@
 import argparse
 import os
-from decimal import Decimal
-
 import pandas as pd
 from Bio import SeqIO
 from Bio.Blast.Applications import NcbiblastnCommandline, NcbimakeblastdbCommandline
@@ -54,14 +52,8 @@ def get_alignments(blast_output, fastq_file, reads_overlap):
                                                                                                        reads_overlap)
     multi_mapped_alignments['suspicious_because'] = "multiple alignments"
     suspicious_reads = suspicious_reads.append(multi_mapped_alignments)
-    if reads_overlap:
-        alignments, multi_paired_alignments = align_pairs(alignments)
-        multi_paired_alignments['suspicious_because'] = "aligned with more than one pair"
-        suspicious_reads = suspicious_reads.append(multi_paired_alignments)
     quality = get_quality(fastq_file, alignments)
     alignments['quality'] = alignments.read_id.map(lambda r: quality[r])
-
-    #TODO: drop multi aligned bases without overlap
     return alignments, ignored_reads.reset_index(drop=True), suspicious_reads.reset_index(drop=True), read_counter
 
 
@@ -292,16 +284,18 @@ def basecall_on_overlapping_reads(read_data, quality_threshold, mode):
     return bases, dropped_bases
 
 
-def basecall_on_read_no_overlap(read_data, quality_threshold, mode):
+def get_read_df(alignment_data, mode):
     minus_seq = False
-    if read_data['plus_or_minus'] == 'minus':
+    if alignment_data['plus_or_minus'] == 'minus':
         minus_seq = True
-    bases = create_read_df(read_data, read_seq='read_seq', ref_seq='ref_seq', read_start='read_start',
+    bases = create_read_df(alignment_data, read_seq='read_seq', ref_seq='ref_seq', read_start='read_start',
                            ref_start='ref_start', mode=mode, minus_seq=minus_seq)
-    bases['read_id'] = read_data['read_id']
-    bases, dropped_bases = filter_low_quality_bases(bases, quality_threshold, quality_column='quality')
+    bases['read_id'] = alignment_data['read_id']
+    bases['alignment_id'] = alignment_data.name
+    bases['ref_pos'] = bases.index
+    bases['plus_or_minus'] = alignment_data['plus_or_minus']
     bases = bases.rename(columns={'read_seq': 'read_base', 'ref_seq': 'ref_base'})
-    return bases, dropped_bases
+    return bases.reset_index(drop=True)
 
 
 def filter_multimapped_bases(called_bases, ignored_bases, reads_overlap):
@@ -320,6 +314,28 @@ def filter_multimapped_bases(called_bases, ignored_bases, reads_overlap):
     return called_bases, ignored_bases
 
 
+def filter_target_mean_by(data, target_column, by, min_mean):
+    df = data.copy()
+    target_nunique_values = df.groupby(by)[target_column].mean()
+    target_nunique_values.name = 'tmpCol'
+    target_nunique_values = target_nunique_values.reset_index()
+    df = df.merge(target_nunique_values, on=by)
+    df_with_high_mean = df[df['tmpCol'] >= min_mean].drop(columns=['tmpCol']).copy()
+    df_with_low_mean = df[df['tmpCol'] < min_mean].drop(columns=['tmpCol']).copy()
+    return df_with_high_mean, df_with_low_mean
+
+
+def filter_target_nunique_by(data, target_column, by, required_value=1):
+    df = data.copy()
+    target_nunique_values = df.groupby(by)[target_column].nunique()
+    target_nunique_values.name = 'tmpCol'
+    target_nunique_values = target_nunique_values.reset_index()
+    df = df.merge(target_nunique_values, on=by)
+    df_with_right_number_of_targets = df[df['tmpCol'] == required_value].drop(columns=['tmpCol']).copy()
+    df_with_wrong_number_of_targets = df[df['tmpCol'] != required_value].drop(columns=['tmpCol']).copy()
+    return df_with_right_number_of_targets, df_with_wrong_number_of_targets
+
+
 def basecall(blast_output_file, fastq_file, output_dir, quality_threshold, mode, reads_overlap):
     """
     outputs ignored_reads, ignored_bases, suspicious_alignments, called_bases
@@ -329,19 +345,26 @@ def basecall(blast_output_file, fastq_file, output_dir, quality_threshold, mode,
     read_counter.to_csv(os.path.join(output_dir, base_filename + ".read_counter"), sep="\t")
     suspicious_reads.to_csv(os.path.join(output_dir, base_filename+".suspicious_reads"), sep="\t")
     ignored_reads.to_csv(os.path.join(output_dir, base_filename+".ignored_reads"), sep="\t")
+    bases_dfs_list = list(alignments.apply(lambda row: get_read_df(row, mode=mode), axis=1))
+    called_bases = pd.concat(bases_dfs_list).reset_index(drop=True)
+    called_bases, multi_aligned_bases = filter_target_nunique_by(called_bases, by=['read_id', 'read_pos'],
+                                                                 target_column='ref_pos')
+    multi_aligned_bases['dropped_because'] = "read position aligned to more than one ref position"
+    called_bases, mismatching_bases = filter_target_nunique_by(called_bases, by=['read_id', 'ref_pos'],
+                                                               target_column='read_base')
+    mismatching_bases['dropped_because'] = "overlapping reads mismatch"
+    called_bases, low_quality_bases = filter_target_mean_by(called_bases, by=['read_id', 'ref_pos'],
+                                                            target_column='quality', min_mean=quality_threshold)
+    low_quality_bases['dropped_because'] = f"base phred score lower than threshold: {quality_threshold}"
+    ignored_bases = [multi_aligned_bases, mismatching_bases, low_quality_bases]
     if reads_overlap:
-        bases_object = alignments.apply(
-            lambda row: basecall_on_overlapping_reads(row, quality_threshold=quality_threshold, mode=mode),
-            axis=1, result_type="expand")
-    else:
-        bases_object = alignments.apply(
-            lambda row: basecall_on_read_no_overlap(row, quality_threshold=quality_threshold, mode=mode),
-            axis=1, result_type="expand")
-    called_bases = pd.concat(list(bases_object[0]))
-    ignored_bases = pd.concat(list(bases_object[1]))
-    called_bases, ignored_bases = filter_multimapped_bases(called_bases, ignored_bases, reads_overlap)
-    ignored_bases.to_csv(os.path.join(output_dir, base_filename+".ignored_bases"), sep="\t", index_label='ref_pos')
-    called_bases.to_csv(os.path.join(output_dir, base_filename+".called_bases"), sep="\t", index_label='ref_pos')
+        called_bases, no_plus_minus_bases = filter_target_nunique_by(called_bases, by=['read_id', 'ref_pos'],
+                                                                     target_column='plus_or_minus', required_value=2)
+        no_plus_minus_bases['dropped_because'] = "did not align with both plus and minus"
+        ignored_bases.append(no_plus_minus_bases)
+    ignored_bases = pd.concat(ignored_bases)
+    ignored_bases.to_csv(os.path.join(output_dir, base_filename+".ignored_bases"), sep="\t", index=False)
+    called_bases.to_csv(os.path.join(output_dir, base_filename+".called_bases"), sep="\t", index=False)
 
 
 def convert_fastq_to_fasta(output_dir, fastq_file):
