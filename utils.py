@@ -109,3 +109,8 @@ def get_mp_results_and_report(async_objects_list):
         i = i + 1
     sys.stdout.write("\n")
     return results
+
+
+def reverse_string(string):
+    # From here: https://stackoverflow.com/questions/931092/reverse-a-string-in-python
+    return string[::-1]
