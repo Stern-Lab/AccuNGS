@@ -171,17 +171,7 @@ def filter_target_nunique_by(df, target_column, by, required_value=1):
     return df_with_right_number_of_targets, df_with_wrong_number_of_targets
 
 
-def basecall(blast_output_file, fastq_file, output_dir, quality_threshold, mode, reads_overlap):
-    """
-    outputs ignored_reads, ignored_bases, suspicious_alignments, called_bases
-    """
-    base_filename = os.path.basename(fastq_file)
-    alignments, ignored_reads, suspicious_reads, read_counter = get_alignments(blast_output_file, fastq_file=fastq_file, reads_overlap=reads_overlap)
-    read_counter.to_csv(os.path.join(output_dir, base_filename + ".read_counter"), sep="\t")
-    suspicious_reads.to_csv(os.path.join(output_dir, base_filename+".suspicious_reads"), sep="\t")
-    ignored_reads.to_csv(os.path.join(output_dir, base_filename+".ignored_reads"), sep="\t")
-    bases_dfs_list = list(alignments.apply(lambda row: get_alignment_df(row, mode=mode), axis=1))
-    called_bases = pd.concat(bases_dfs_list).reset_index(drop=True)
+def filter_bases(called_bases, quality_threshold, reads_overlap):
     called_bases, multi_aligned_bases = filter_target_nunique_by(called_bases, by=['read_id', 'read_pos'],
                                                                  target_column='ref_pos')
     multi_aligned_bases['dropped_because'] = "read position aligned to more than one ref position"
@@ -198,6 +188,23 @@ def basecall(blast_output_file, fastq_file, output_dir, quality_threshold, mode,
         no_plus_minus_bases['dropped_because'] = "did not align with both plus and minus"
         ignored_bases.append(no_plus_minus_bases)
     ignored_bases = pd.concat(ignored_bases)
+    return called_bases, ignored_bases
+
+
+def basecall(blast_output_file, fastq_file, output_dir, quality_threshold, mode, reads_overlap):
+    """
+    outputs ignored_reads, ignored_bases, suspicious_alignments, called_bases
+    """
+    base_filename = os.path.basename(fastq_file)
+    # read alignments from blast file and do preliminary filtering
+    alignments, ignored_reads, suspicious_reads, read_counter = get_alignments(blast_output_file, fastq_file=fastq_file,
+                                                                               reads_overlap=reads_overlap)
+    read_counter.to_csv(os.path.join(output_dir, base_filename + ".read_counter"), sep="\t")
+    suspicious_reads.to_csv(os.path.join(output_dir, base_filename+".suspicious_reads"), sep="\t")
+    ignored_reads.to_csv(os.path.join(output_dir, base_filename+".ignored_reads"), sep="\t")
+    called_bases = alignments.apply(lambda row: get_alignment_df(row, mode=mode), axis=1)
+    called_bases = pd.concat(list(called_bases)).reset_index(drop=True)
+    called_bases, ignored_bases = filter_bases(called_bases, quality_threshold, reads_overlap)
     ignored_bases.to_csv(os.path.join(output_dir, base_filename+".ignored_bases"), sep="\t", index=False)
     called_bases.to_csv(os.path.join(output_dir, base_filename+".called_bases"), sep="\t", index=False)
 
@@ -220,7 +227,7 @@ def process_fastq(fastq_file, reference, output_dir, quality_threshold, task, ev
     blast_output_file = reads_fasta_file_path + ".blast"
     # TODO: test all these blast defaults.
     # Set blast defaults:
-    if not task:
+    if task is None:
         task = "blastn"
     if evalue is None:
         evalue = 1e-7
@@ -228,11 +235,11 @@ def process_fastq(fastq_file, reference, output_dir, quality_threshold, task, ev
         dust = "no"
     if num_alignments is None:
         num_alignments = 1000000
-    if not soft_masking:
+    if soft_masking is None:
         soft_masking = "F"
     if perc_identity is None:
         perc_identity = 85
-    if not mode:
+    if mode is None:
         mode = "RefToSeq"  # TODO: test differences between modes.
     run_blast(reads_fasta=reads_fasta_file_path, reference=reference, output=blast_output_file, mode=mode, task=task,
               evalue=evalue, num_alignments=num_alignments, dust=dust, soft_masking=soft_masking, log=log,
