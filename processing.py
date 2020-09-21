@@ -1,5 +1,7 @@
 import argparse
 import os
+import subprocess
+
 import pandas as pd
 from Bio import SeqIO
 from Bio.Blast.Applications import NcbiblastnCommandline, NcbimakeblastdbCommandline
@@ -9,25 +11,33 @@ from utils import reverse_string
 
 
 def run_blast(reads_fasta, reference, output, mode, task, evalue, perc_identity, num_alignments, dust, soft_masking, log):
+    blast_dir = "/sternadi/home/volume1/shared/tools/ncbi-blast-2.2.30+/bin"
     if mode == "SeqToRef":
         query = reads_fasta
         subject = reference
     elif mode == "RefToSeq":
-        make_db = NcbimakeblastdbCommandline(input_file=reads_fasta, dbtype='nucl')
-        stdout, stderr = make_db()
+        #make_db = NcbimakeblastdbCommandline(input_file=reads_fasta, dbtype='nucl')
+        create_db_cmd = f"{blast_dir}/makeblastdb -in {reads_fasta} -dbtype nucl"
+        subprocess.run(create_db_cmd.split(" "))
+        """stdout, stderr = make_db()
         for output_string in [stdout, stderr]:
             if output_string:
-                log.debug(output_string)
+                log.debug(output_string)"""
         query = reference
         subject = reads_fasta
     else:
         raise ValueError(f"parameter mode must be one of ['RefToSeq', 'SeqToRef'] and not '{mode}' ! ")
     outfmt = '6 qseqid sseqid qstart qend qstrand sstart send sstrand length btop qseq sseq'  # defines blast output
-    blast_instance = NcbiblastnCommandline(query=query, subject=subject, task=task, out=output, dust=dust,
-                                           num_alignments=num_alignments, soft_masking=soft_masking,
-                                           perc_identity=perc_identity, evalue=evalue, outfmt=outfmt)
-    stdout, stderr = blast_instance()
-    return stdout, stderr
+    #blast_instance = NcbiblastnCommandline(query=query, subject=subject, task=task, out=output, dust=dust,
+     #                                      num_alignments=num_alignments, soft_masking=soft_masking,
+      #                                     perc_identity=perc_identity, evalue=evalue, outfmt=outfmt)
+    #stdout, stderr = blast_instance()
+    blast_cmd = f"{blast_dir}/blastn -query {query} -task {task} -db {subject} -outfmt {outfmt} " \
+                f"-num_alignments {num_alignments} -dust {dust} -soft_masking {soft_masking} " \
+                f"-perc_identity {perc_identity} -evalue {evalue} -out {output}"
+    subprocess.run(blast_cmd.split(" "))
+    #TODO: FIX THIS MESS!
+    #return stdout, stderr
 
 
 def _rename_columns(df):
