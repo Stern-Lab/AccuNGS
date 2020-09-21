@@ -35,7 +35,7 @@ def run_blast(reads_fasta, reference, output, mode, task, evalue, perc_identity,
     blast_cmd = f"{blast_dir}/blastn -query {query} -task {task} -db {subject} -outfmt {outfmt} " \
                 f"-num_alignments {num_alignments} -dust {dust} -soft_masking {soft_masking} " \
                 f"-perc_identity {perc_identity} -evalue {evalue} -out {output}"
-    subprocess.run(blast_cmd.split(" "))
+    subprocess.run(blast_cmd)
     #TODO: FIX THIS MESS!
     #return stdout, stderr
 
