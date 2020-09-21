@@ -151,8 +151,8 @@ def runner(input_dir, reference_file, output_dir, stages_range, max_basecall_ite
             log.info(f"Processing fastq files iteration {basecall_iteration_counter}/{max_basecall_iterations}")
             # TODO: whats up with the different modes?!?
             # TODO: remove the next 2 lines here!!!!
-            blast_files_dir = "/sternadi/home/volume2/ita/cmpPLnew/dbg_blast/perl_blast_omer74"
-            fastq_files = get_files_in_dir(blast_files_dir)
+            fasta_files = "/sternadi/home/volume2/ita/cmpPLnew/dbg_blast/perl_blast_parts"
+            fastq_files = get_files_in_dir(fasta_files)
             parallel_process(processing_dir=processing_dir, fastq_files=fastq_files, reference_file=reference_file,
                              quality_threshold=quality_threshold, task=task, evalue=evalue, dust=dust, mode=mode,
                              num_alignments=num_alignments, soft_masking=soft_masking, perc_identity=perc_identity,
