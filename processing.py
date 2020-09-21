@@ -234,8 +234,7 @@ def process_fastq(fastq_file, reference, output_dir, quality_threshold, task, ev
     log = pipeline_logger(logger_name=f"Computation_{os.path.basename(fastq_file)}", log_folder=output_dir)
     blast_output = os.path.join(output_dir, 'blast')
     os.makedirs(blast_output, exist_ok=True)
-    #reads_fasta_file_path = convert_fastq_to_fasta(fastq_file=fastq_file, output_dir=blast_output)
-    reads_fasta_file_path = fastq_file  # TODO: remove this line!!!!
+    reads_fasta_file_path = convert_fastq_to_fasta(fastq_file=fastq_file, output_dir=blast_output)
     blast_output_file = reads_fasta_file_path + ".blast"
     # TODO: test all these blast defaults.
     # Set blast defaults:
