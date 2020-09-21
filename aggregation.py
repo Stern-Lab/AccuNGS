@@ -40,6 +40,7 @@ def aggregate_called_bases(called_bases_files):
 def create_freqs_file(called_bases_files, output_path):
     freqs = aggregate_called_bases(called_bases_files)
     coverage = freqs.groupby('ref_pos').base_count.sum()
+    # TODO: fix insertions coverage
     freqs['coverage'] = freqs.ref_pos.map(lambda pos: coverage[pos])
     freqs['frequency'] = freqs['base_count'] / freqs['coverage']
     freqs['base_rank'] = 5 - freqs.groupby('ref_pos').base_count.rank('min')
@@ -138,7 +139,7 @@ def aggregate_processed_output(input_dir, output_dir, reference, min_coverage, c
     create_freqs_file(called_bases_files=called_bases_files, output_path=freqs_file_path)
     read_counters = get_files_by_extension(basecall_dir, "read_counter")
     aggregate_read_counters(read_counters=read_counters, output_path=os.path.join(output_dir, "read_counter.tsv"))
-    concatenate_files_by_extension(input_dir=blast_dir, extension="blast",
+    concatenate_files_by_extension(input_dir=blast_dir, extension="blast", remove_headers=False,
                                    output_path=os.path.join(output_dir, "blast.tsv"))
     for file_type in ['called_bases', 'ignored_bases', 'suspicious_reads', 'ignored_reads']:
         concatenate_files_by_extension(input_dir=basecall_dir, extension=file_type,

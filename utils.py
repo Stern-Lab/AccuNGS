@@ -46,7 +46,7 @@ def drange(x, y, jump):
         x += decimal.Decimal(jump)
 
 
-def concatenate_files_by_extension(input_dir, extension, output_path, remove_duplicate_headers=True):
+def concatenate_files_by_extension(input_dir, extension, output_path, remove_headers=True):
     """
     Concatenates all files in a directory without loading them all into memory.
     By default skip first line of all files except the first one to avoid multiple headers.
@@ -58,7 +58,7 @@ def concatenate_files_by_extension(input_dir, extension, output_path, remove_dup
             with open(input_file, "r") as input_handle:
                 is_first_line = True
                 for line in input_handle:
-                    if is_first_line and not is_first_file and remove_duplicate_headers:
+                    if is_first_line and not is_first_file and remove_headers:
                         # skip the first line
                         is_first_line = False
                     else:
