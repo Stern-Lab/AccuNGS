@@ -27,7 +27,7 @@ def run_blast(reads_fasta, reference, output, mode, task, evalue, perc_identity,
         subject = reads_fasta
     else:
         raise ValueError(f"parameter mode must be one of ['RefToSeq', 'SeqToRef'] and not '{mode}' ! ")
-    outfmt = "6 qseqid sseqid qstart qend qstrand sstart send sstrand length btop qseq sseq"  # defines blast output
+    outfmt = "'6 qseqid sseqid qstart qend qstrand sstart send sstrand length btop qseq sseq'"  # defines blast output
     """blast_instance = NcbiblastnCommandline(query=query, subject=subject, task=task, out=output, dust=dust,
                                            num_alignments=num_alignments, soft_masking=soft_masking,
                                            perc_identity=perc_identity, evalue=evalue, outfmt=outfmt)
