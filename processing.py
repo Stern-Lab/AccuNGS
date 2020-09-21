@@ -27,17 +27,17 @@ def run_blast(reads_fasta, reference, output, mode, task, evalue, perc_identity,
         subject = reads_fasta
     else:
         raise ValueError(f"parameter mode must be one of ['RefToSeq', 'SeqToRef'] and not '{mode}' ! ")
-    outfmt = "'6 qseqid sseqid qstart qend qstrand sstart send sstrand length btop qseq sseq'"  # defines blast output
-    #blast_instance = NcbiblastnCommandline(query=query, subject=subject, task=task, out=output, dust=dust,
-     #                                      num_alignments=num_alignments, soft_masking=soft_masking,
-      #                                     perc_identity=perc_identity, evalue=evalue, outfmt=outfmt)
-    #stdout, stderr = blast_instance()
+    outfmt = "6 qseqid sseqid qstart qend qstrand sstart send sstrand length btop qseq sseq"  # defines blast output
+    """blast_instance = NcbiblastnCommandline(query=query, subject=subject, task=task, out=output, dust=dust,
+                                           num_alignments=num_alignments, soft_masking=soft_masking,
+                                           perc_identity=perc_identity, evalue=evalue, outfmt=outfmt)
+    stdout, stderr = blast_instance()"""
     blast_cmd = f"{blast_dir}/blastn -query {query} -task {task} -db {subject} -outfmt {outfmt} " \
                 f"-num_alignments {num_alignments} -dust {dust} -soft_masking {soft_masking} " \
                 f"-perc_identity {perc_identity} -evalue {evalue} -out {output}"
     log.info(f"blast_cmd: {blast_cmd}")
     os.system(blast_cmd)
-    #TODO: FIX THIS MESS!
+    # TODO: FIX THIS MESS!
     #return stdout, stderr
 
 
@@ -142,7 +142,7 @@ def parse_alignment_data(data, read_seq, ref_seq, read_start, ref_start, mode, m
     if len(deletions) > 0:
         deletions = df[df.read_seq == "-"].read_pos
         for deletion in deletions.values:         # deletions have no quality...!
-            quality.insert(deletion - 1, np.inf)  # set deletions quality to be inf so that we dont filter them later
+            quality.insert(deletion - 1, np.inf)  # set deletions quality to be inf so that we don't filter them later
     df['quality'] = df.read_pos.map(lambda pos: quality[pos - 1])
     df = fix_insertions_index(df, data[ref_start])
     return df
