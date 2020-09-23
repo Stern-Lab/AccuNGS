@@ -1,7 +1,10 @@
 import argparse
+import json
 import os
 import multiprocessing as mp
 import shutil
+import subprocess
+from datetime import datetime
 
 import pandas as pd
 from Bio import pairwise2
@@ -14,7 +17,7 @@ from processing import process_fastq
 from aggregation import aggregate_processed_output, create_freqs_file, create_mutation_read_list_file
 from logger import pipeline_logger
 from utils import get_files_in_dir, get_sequence_from_fasta, get_mp_results_and_report, create_new_ref_with_freqs, \
-    get_files_by_extension, concatenate_files_by_extension
+    get_files_by_extension, concatenate_files_by_extension, read_config_value
 from haplotypes.co_occurs_to_stretches import calculate_stretches
 
 
@@ -116,10 +119,43 @@ def get_consensus_path(basecall_iteration_counter, consolidate_consensus_with_in
     return consensus
 
 
+def update_meta_data(output_dir, status, params=None):
+    json_file = os.path.join(output_dir, 'meta_data.json')
+    if params is not None:
+        meta_data = params
+    else:
+        with open(json_file) as read_handle:
+            meta_data = json.load(read_handle)
+    meta_data['status'] = status
+    with open(json_file, 'w') as write_handle:
+        json.dump(meta_data, write_handle)
+
+
+def build_db():
+    db_dir = read_config_value('db_dir')
+    db_path = read_config_value('db_path')
+    sub_dirs = [f.path for f in os.scandir(db_dir) if f.is_dir()]
+    db_rows = []
+    for dir in sub_dirs:
+        json_file = os.path.join(dir, "meta_data.json")
+        with open(json_file) as read_handle:
+            meta_data = json.load(read_handle)
+        db_rows.append(meta_data)
+    db = pd.DataFrame.from_dict(db_rows)
+    db.to_csv(db_path, sep='\t')
+
+
 def runner(input_dir, reference_file, output_dir, stages_range, max_basecall_iterations, min_coverage,
            quality_threshold, task, evalue, dust, num_alignments, soft_masking, perc_identity, mode, max_read_size,
            consolidate_consensus_with_indels, stretches_pvalue, stretches_distance, stretches_to_plot, cleanup,
            cpu_count, opposing_strings):
+    if not output_dir:
+        db_dir = read_config_value('db_dir')
+        user_name = os.environ.get('USERNAME')
+        current_time = datetime.now().strftime('%Y-%m-%d-%H-%M-%S-%f')[:-2]  # for separate runs in  separate dirs
+        output_dir_name = user_name + "_" + current_time
+        output_dir = os.path.join(db_dir, output_dir_name)
+    update_meta_data(params=locals(), output_dir=output_dir, status='In progress...')
     if not cpu_count:
         cpu_count = mp.cpu_count()
     os.makedirs(output_dir, exist_ok=True)
@@ -202,6 +238,8 @@ def runner(input_dir, reference_file, output_dir, stages_range, max_basecall_ite
                          output_dir=output_dir)
     if cleanup == "Y":
         shutil.rmtree(processing_dir)
+    update_meta_data(output_dir=output_dir, status='Done')
+    build_db()
     log.info(f"Done!")
 
     #TODO: test everything, finish up,

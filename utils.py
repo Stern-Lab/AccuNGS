@@ -1,3 +1,4 @@
+import json
 import os
 import gzip
 import shutil
@@ -114,3 +115,23 @@ def get_mp_results_and_report(async_objects_list):
 def reverse_string(string):
     # From here: https://stackoverflow.com/questions/931092/reverse-a-string-in-python
     return string[::-1]
+
+
+def create_default_config_file(accungs_dir, config_file):
+    default_db_dir = os.path.join(accungs_dir, 'db')
+    default_db_path = os.path.join(default_db_dir, 'db.tsv')
+    os.makedirs(default_db_dir, exist_ok=True)
+    default_config = {'db_dir': default_db_dir, 'db_path': default_db_path}
+    with open(config_file, 'w') as write_handle:
+        json.dump(default_config, write_handle)
+
+
+def read_config_value(value):
+    home = os.path.expanduser("~")
+    accungs_dir = os.path.join(home, '.AccuNGS')
+    config_file = os.path.join(accungs_dir, 'config.json')
+    if not os.path.isfile(config_file):
+        create_default_config_file(accungs_dir, config_file)
+    with open(config_file) as read_handle:
+        config_data = json.load(read_handle)
+    return config_data[value]
