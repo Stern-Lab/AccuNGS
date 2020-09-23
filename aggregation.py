@@ -91,9 +91,9 @@ def update_prefix_dict(json_file, prefixes):
     if os.path.isfile(json_file):
         with open(json_file) as read_handle:
             read_id_prefix_dict = json.load(read_handle)
-            next_prefix_value = 1
-            if len(read_id_prefix_dict) > 1:
-                next_prefix_value = max(read_id_prefix_dict.values()) + 1
+        next_prefix_value = 1
+        if len(read_id_prefix_dict) > 0:
+            next_prefix_value = max(read_id_prefix_dict.values()) + 1
     else:
         read_id_prefix_dict = {}
         next_prefix_value = 1
