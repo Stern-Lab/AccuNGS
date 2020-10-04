@@ -1,10 +1,14 @@
 import argparse
+import concurrent.futures
 import json
 import os
 import multiprocessing as mp
 import shutil
 import subprocess
 from datetime import datetime
+from functools import partial
+
+from coolname import generate_slug
 
 import pandas as pd
 from Bio import pairwise2
@@ -17,17 +21,22 @@ from processing import process_fastq
 from aggregation import aggregate_processed_output, create_freqs_file, create_mutation_read_list_file
 from logger import pipeline_logger
 from utils import get_files_in_dir, get_sequence_from_fasta, get_mp_results_and_report, create_new_ref_with_freqs, \
-    get_files_by_extension, concatenate_files_by_extension, read_config_value
+    get_files_by_extension, concatenate_files_by_extension, get_config
 from haplotypes.co_occurs_to_stretches import calculate_stretches
 
 
 def parallel_process(processing_dir, fastq_files, reference_file, quality_threshold, task, evalue, dust, num_alignments,
-                     soft_masking, perc_identity, mode, cpu_count, reads_overlap):
-    with mp.Pool(cpu_count) as pool:
-        parts = [pool.apply_async(process_fastq, args=(fastq_file, reference_file, processing_dir, quality_threshold, task,
-                                                       evalue, dust, num_alignments, soft_masking, perc_identity, mode,reads_overlap))
-                 for fastq_file in fastq_files]
-        get_mp_results_and_report(parts)
+                     soft_masking, perc_identity, mode, reads_overlap):
+    process_fastq_partial = partial(process_fastq,  reference=reference_file, output_dir=processing_dir,
+                                    quality_threshold=quality_threshold, task=task, evalue=evalue, dust=dust,
+                                    num_alignments=num_alignments, soft_masking=soft_masking,
+                                    perc_identity=perc_identity, mode=mode, reads_overlap=reads_overlap)
+    try:
+        with concurrent.futures.ProcessPoolExecutor() as executor:
+            executor.map(process_fastq_partial, fastq_files)
+    except:
+        raise Exception("Processing failed. This may be due to RAM overload."
+                        "To avoid this try running with --max_memory max_available_RAM_in_MB")
 
 
 def get_stages_list(stages_range):
@@ -64,6 +73,7 @@ def calculate_linked_mutations(freqs_file_path, mutation_read_list, max_read_len
 
 def parallel_calc_linked_mutations(freqs_file_path, output_dir, mutation_read_list_path, max_read_length, part_size,
                                    cpu_count):
+    #TODO: optimize memory usage and proper exceptions.
     mutation_read_list = pd.read_csv(mutation_read_list_path, sep="\t").set_index(['ref_pos', 'read_base'], drop=True)
     positions = mutation_read_list.index.get_level_values(0).astype(int).unique()
     if max_read_length is None:
@@ -119,7 +129,7 @@ def get_consensus_path(basecall_iteration_counter, consolidate_consensus_with_in
     return consensus
 
 
-def update_meta_data(output_dir, status, params=None):
+def update_meta_data(output_dir, status, db_path, params=None):
     json_file = os.path.join(output_dir, 'meta_data.json')
     if params is not None:
         meta_data = params
@@ -129,36 +139,37 @@ def update_meta_data(output_dir, status, params=None):
     meta_data['status'] = status
     with open(json_file, 'w') as write_handle:
         json.dump(meta_data, write_handle)
+    build_db(db_path)
 
 
-def build_db():
-    db_dir = read_config_value('db_dir')
-    db_path = read_config_value('db_path')
-    sub_dirs = [f.path for f in os.scandir(db_dir) if f.is_dir()]
+
+def build_db(db_path):
+    outputs = [f.path for f in os.scandir(db_path) if f.is_dir()]
     db_rows = []
-    for dir in sub_dirs:
+    for dir in outputs:
         json_file = os.path.join(dir, "meta_data.json")
-        with open(json_file) as read_handle:
-            meta_data = json.load(read_handle)
-        db_rows.append(meta_data)
+        if os.path.isfile(json_file):
+            with open(json_file) as read_handle:
+                meta_data = json.load(read_handle)
+            db_rows.append(meta_data)
     db = pd.DataFrame.from_dict(db_rows)
-    db.to_csv(db_path, sep='\t')
+    db.to_csv(os.path.join(db_path, 'db.tsv'), sep='\t')
 
 
 def runner(input_dir, reference_file, output_dir, stages_range, max_basecall_iterations, min_coverage,
            quality_threshold, task, evalue, dust, num_alignments, soft_masking, perc_identity, mode, max_read_size,
            consolidate_consensus_with_indels, stretches_pvalue, stretches_distance, stretches_to_plot, cleanup,
-           cpu_count, opposing_strings):
+           cpu_count, opposing_strings, db_path, max_memory):
     if not output_dir:
-        db_dir = read_config_value('db_dir')
         user_name = os.environ.get('USERNAME')
-        current_time = datetime.now().strftime('%Y-%m-%d-%H-%M-%S-%f')[:-2]  # for separate runs in  separate dirs
-        output_dir_name = user_name + "_" + current_time
-        output_dir = os.path.join(db_dir, output_dir_name)
-    update_meta_data(params=locals(), output_dir=output_dir, status='In progress...')
+        today = datetime.now().strftime('%Y-%m-%d')
+        random_name = generate_slug(2)
+        output_dir_name = random_name + "_" + user_name + "_" + today
+        output_dir = os.path.join(db_path, output_dir_name)
+    os.makedirs(output_dir, exist_ok=True)
     if not cpu_count:
         cpu_count = mp.cpu_count()
-    os.makedirs(output_dir, exist_ok=True)
+    update_meta_data(params=locals().copy(), output_dir=output_dir, status='In progress...', db_path=db_path)
     log = pipeline_logger(logger_name='AccuNGS-Runner', log_folder=output_dir)
     log.debug(f"runner params: {locals()}")
     filenames = set_filenames(output_dir)
@@ -171,7 +182,7 @@ def runner(input_dir, reference_file, output_dir, stages_range, max_basecall_ite
         os.makedirs(data_dir, exist_ok=True)
         log.info("Preparing data")
         prepare_data(input_dir=input_dir, output_dir=data_dir, overlap_notation=opposing_strings,
-                     cpu_count=cpu_count)
+                     cpu_count=cpu_count, max_memory=max_memory)
     else:
         data_dir = input_dir
     if 'process data' in stages:
@@ -189,7 +200,7 @@ def runner(input_dir, reference_file, output_dir, stages_range, max_basecall_ite
             parallel_process(processing_dir=processing_dir, fastq_files=fastq_files, reference_file=reference_file,
                              quality_threshold=quality_threshold, task=task, evalue=evalue, dust=dust, mode=mode,
                              num_alignments=num_alignments, soft_masking=soft_masking, perc_identity=perc_identity,
-                             cpu_count=cpu_count, reads_overlap=reads_overlap)
+                             reads_overlap=reads_overlap)
             iteration_data_dir = os.path.join(output_dir, 'iteration_data')
             os.makedirs(iteration_data_dir, exist_ok=True)
             alignment_score = check_consensus_alignment_with_ref(reference_file=reference_file,
@@ -238,18 +249,18 @@ def runner(input_dir, reference_file, output_dir, stages_range, max_basecall_ite
                          output_dir=output_dir)
     if cleanup == "Y":
         shutil.rmtree(processing_dir)
-    update_meta_data(output_dir=output_dir, status='Done')
-    build_db()
+    update_meta_data(output_dir=output_dir, status='Done', db_path=db_path)
     log.info(f"Done!")
 
-    #TODO: test everything, finish up,
+    #TODO: test everything, finish up, drop cpu_count?
 
 
 def create_runner_parser():
+    # TODO: present dynamic defaults from config file
     parser = argparse.ArgumentParser()
     parser.add_argument("-i", "--input_dir", required=True,
                         help="Path to directory containing basecall files")
-    parser.add_argument("-o", "--output_dir", required=True)
+    parser.add_argument("-o", "--output_dir")
     parser.add_argument("-r", "--reference_file", required=True)
     parser.add_argument("-s", "--stages_range", nargs="+", type=int, help="start and end stages separated by spaces")
     parser.add_argument("-m", "--max_basecall_iterations", type=int, default=1,
@@ -281,18 +292,23 @@ def create_runner_parser():
                         help="look this many positions forward for joint mutations (default: 350)")
     parser.add_argument("-c", "--cleanup", help="remove input folder when done (default: Y)", default="Y")
     parser.add_argument("-cc", "--cpu_count", help="max number of cpus to use (default: all)", type=int)
+    parser.add_argument("-db", "--db_path", help='path to db directory')
+    parser.add_argument("-mm", "--max_memory", help='limit memory usage to this many megabytes (default: None)')
     return parser
 
 
 if __name__ == "__main__":
     parser = create_runner_parser()
-    args = parser.parse_args()
-    runner(input_dir=args.input_dir, output_dir=args.output_dir, reference_file=args.reference_file,
-           stages_range=args.stages_range, max_basecall_iterations=args.max_basecall_iterations,
-           quality_threshold=args.quality_threshold, task=args.blast_task,
-           evalue=args.blast_evalue, dust=args.blast_dust, num_alignments=args.blast_num_alignments,
-           mode=args.blast_mode, perc_identity=args.blast_perc_identity, soft_masking=args.blast_soft_masking,
-           min_coverage=args.min_coverage, consolidate_consensus_with_indels=args.consolidate_consensus_with_indels,
-           stretches_pvalue=args.stretches_pvalue, stretches_distance=args.stretches_distance, cleanup=args.cleanup,
-           stretches_to_plot=args.stretches_to_plot, max_read_size=args.stretches_max_read_size,
-           cpu_count=args.cpu_count, opposing_strings=args.overlap_notation)
+    parser_args = vars(parser.parse_args())
+    args = dict(get_config()['runner_defaults'])
+    args.update({key: value for key, value in parser_args.items() if value is not None})
+    runner(input_dir=args['input_dir'], output_dir=args['output_dir'], reference_file=args['reference_file'],
+           stages_range=args['stages_range'], max_basecall_iterations=int(args['max_basecall_iterations']),
+           quality_threshold=int(args['quality_threshold']), task=args['blast_task'], max_memory=args['max_memory'],
+           evalue=float(args['blast_evalue']), dust=args['blast_dust'], num_alignments=int(args['blast_num_alignments']),
+           mode=args['blast_mode'], perc_identity=float(args['blast_perc_identity']), soft_masking=args['blast_soft_masking'],
+           min_coverage=int(args['min_coverage']), consolidate_consensus_with_indels=args['consolidate_consensus_with_indels'],
+           stretches_pvalue=float(args['stretches_pvalue']), stretches_distance=float(args['stretches_distance']), cleanup=args['cleanup'],
+           stretches_to_plot=int(args['stretches_to_plot']), max_read_size=int(args['stretches_max_read_size']),
+           cpu_count=args['cpu_count'], opposing_strings=args['overlap_notation'], db_path=args['db_path'])
+
