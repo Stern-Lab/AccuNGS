@@ -1,3 +1,4 @@
+import configparser
 import json
 import os
 import gzip
@@ -104,7 +105,12 @@ def get_mp_results_and_report(async_objects_list):
     i = 1
     results = []
     for async_object in async_objects_list:
-        results.append(async_object.get())
+        try:
+            res = async_object.get()
+        except:
+            print("Unexpected error:", sys.exc_info()[0])
+            raise
+        results.append(res)
         sys.stdout.write(f"\rDone {i}/{len(async_objects_list)} parts.")
         sys.stdout.flush()
         i = i + 1
@@ -118,20 +124,39 @@ def reverse_string(string):
 
 
 def create_default_config_file(accungs_dir, config_file):
-    default_db_dir = os.path.join(accungs_dir, 'db')
-    default_db_path = os.path.join(default_db_dir, 'db.tsv')
-    os.makedirs(default_db_dir, exist_ok=True)
-    default_config = {'db_dir': default_db_dir, 'db_path': default_db_path}
-    with open(config_file, 'w') as write_handle:
-        json.dump(default_config, write_handle)
+    config = configparser.ConfigParser()
+    db_path = os.path.join(accungs_dir, 'db')
+    os.makedirs(db_path, exist_ok=True)
+    config['pbs_defaults'] = {}
+    config['runner_defaults'] = {'max_basecall_iterations': 1,
+                                 'output_dir': "",
+                                 'cpu_count': "",
+                                 'max_memory': "",
+                                 'min_coverage': 10,
+                                 'quality_threshold': 30,
+                                 'blast_task': 'blastn',
+                                 'blast_evalue': 1e-7,
+                                 'blast_dust': 'no',
+                                 'blast_num_alignments': 1000000,
+                                 'blast_soft_masking': 'F',
+                                 'blast_perc_identity': 0.85,
+                                 'blast_mode': 'SeqToRef',
+                                 'stretches_max_read_size': 350,
+                                 'consolidate_consensus_with_indels': 'Y',
+                                 'stretches_pvalue': 1e-9,
+                                 'stretches_distance': 10,
+                                 'stretches_to_plot': 5,
+                                 'cleanup': 'Y',
+                                 'db_path': db_path}
+    with open(config_file, 'w') as configfile:
+        config.write(configfile)
 
 
-def read_config_value(value):
-    home = os.path.expanduser("~")
-    accungs_dir = os.path.join(home, '.AccuNGS')
-    config_file = os.path.join(accungs_dir, 'config.json')
+def get_config():
+    accungs_dir = os.path.dirname(os.path.abspath(__file__))
+    config_file = os.path.join(accungs_dir, 'config.ini')
     if not os.path.isfile(config_file):
         create_default_config_file(accungs_dir, config_file)
-    with open(config_file) as read_handle:
-        config_data = json.load(read_handle)
-    return config_data[value]
+    config = configparser.ConfigParser()
+    config.read(config_file)
+    return config
