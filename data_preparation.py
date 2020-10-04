@@ -8,6 +8,8 @@ import gzip
 import argparse
 from functools import partial
 import multiprocessing as mp
+
+import psutil
 from Bio import SeqIO, Seq
 from Bio.SeqRecord import SeqRecord
 
@@ -68,9 +70,15 @@ def get_fastq_records_num(fastq_file):
     return i / 4
 
 
-def split_fastq_file(fastq_file, output_dir, cpu_count, number_of_fastq_files=1):
+def split_fastq_file(fastq_file, output_dir, cpu_count, max_memory):
     fastq_records_num = get_fastq_records_num(fastq_file)
-    part_size = fastq_records_num * number_of_fastq_files / cpu_count
+    part_size = fastq_records_num / cpu_count
+    if not max_memory:
+        max_memory = 0.9 * psutil.virtual_memory().available / 1000000  # 90% of currently available RAM.
+    approx_memory_usage = part_size * cpu_count / 4  # rough estimate derived from testing
+    while approx_memory_usage > max_memory:
+        part_size /= 2
+        approx_memory_usage = part_size * cpu_count / 4
     record_iter = SeqIO.parse(open(fastq_file), "fastq")
     fastq_file_name = os.path.basename(fastq_file)
     for i, batch in enumerate(batch_iterator(record_iter, part_size)):
@@ -112,7 +120,7 @@ def are_opposing(files, opposing_strings=None):
     return False
 
 
-def prepare_data_in_dir(input_dir, output_dir, rep_length, opposing_strings, log, cpu_count):
+def prepare_data_in_dir(input_dir, output_dir, rep_length, opposing_strings, log, cpu_count, max_memory):
     input_dir_name = os.path.basename(input_dir)
     if input_dir_name == "":
         input_dir_name = os.path.basename(input_dir[:-1])  # that last '/' confuses basename..
@@ -128,31 +136,30 @@ def prepare_data_in_dir(input_dir, output_dir, rep_length, opposing_strings, log
                                                 rep_length=rep_length, file_type=file_type, log=log)
             if file_type == 'gz':
                 merged_reads = extract_gz(merged_reads, output_dir=output_dir)
-            split_fastq_file(fastq_file=merged_reads, output_dir=output_dir, cpu_count=cpu_count)
+            split_fastq_file(fastq_file=merged_reads, output_dir=output_dir, cpu_count=cpu_count, max_memory=max_memory)
         else:
             raise Exception(f"Found more than 2 files containing opposing_strings: {opposing_strings} !")
     else:
         for file in files:
             if file_type == 'gz':
                 file = extract_gz(file, output_dir=output_dir)
-            split_fastq_file(fastq_file=file, output_dir=output_dir, cpu_count=cpu_count,
-                             number_of_fastq_files=len(files))
+            split_fastq_file(fastq_file=file, output_dir=output_dir, cpu_count=cpu_count, max_memory=max_memory)
 
 
-def prepare_data(input_dir, output_dir, cpu_count, rep_length=None, overlap_notation=None):
+def prepare_data(input_dir, output_dir, cpu_count, max_memory, rep_length=None, overlap_notation=None):
     log = pipeline_logger(logger_name='Data-Preparation', log_folder=output_dir)
-    if cpu_count is None:
+    if not cpu_count:
         cpu_count = mp.cpu_count()
     if rep_length is None:
         rep_length = 60
     if overlap_notation is None:
         overlap_notation = ("_R1", "_R2")
     os.makedirs(output_dir, exist_ok=True)
-    prepare_data_in_dir(input_dir=input_dir, output_dir=output_dir, rep_length=rep_length,
+    prepare_data_in_dir(input_dir=input_dir, output_dir=output_dir, rep_length=rep_length, max_memory=max_memory,
                         opposing_strings=overlap_notation, log=log, cpu_count=cpu_count)
     sub_dirs = [f.path for f in os.scandir(input_dir) if f.is_dir()]
     for dir_path in sub_dirs:
-        prepare_data_in_dir(input_dir=dir_path, output_dir=output_dir, rep_length=rep_length,
+        prepare_data_in_dir(input_dir=dir_path, output_dir=output_dir, rep_length=rep_length, max_memory=max_memory,
                             opposing_strings=overlap_notation, log=log, cpu_count=cpu_count)
 
 
