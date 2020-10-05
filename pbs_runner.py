@@ -87,7 +87,6 @@ def runner_cmd(input_dir, output_dir, reference_file, stages_range, max_basecall
         cmd += f" -on {overlap_notation}"
     if db_path:
         cmd += f" -db {db_path}"
-    breakpoint()
     return cmd
 
 
