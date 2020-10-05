@@ -1,3 +1,4 @@
+import ast
 import os
 from random import randint
 
@@ -82,7 +83,7 @@ def runner_cmd(input_dir, output_dir, reference_file, stages_range, max_basecall
         cmd += f" -cc {cpu_count}"
     if overlap_notation:
         if isinstance(overlap_notation, str):
-            overlap_notation = eval(overlap_notation)
+            overlap_notation = ast.literal_eval(overlap_notation)
         overlap_notation = ' '.join(overlap_notation)
         cmd += f" -on {overlap_notation}"
     if db_path:
