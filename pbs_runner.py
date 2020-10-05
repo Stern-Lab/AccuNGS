@@ -132,7 +132,8 @@ if __name__ == "__main__":
     parser.add_argument("-j", "--after_jobid",
                         help="Run after successfully completing this jobid")
     parser_args = vars(parser.parse_args())
-    args = dict(get_config()['pbs_defaults'])
+    args = dict(get_config()['runner_defaults'])
+    args.update({key: value for key, value in dict(get_config()['pbs_defaults']).items() if value is not None})
     args.update({key: value for key, value in parser_args.items() if value is not None})
     pbs_runner(input_dir=args['input_dir'], output_dir=args['output_dir'], reference_file=args['reference_file'],
                stages_range=args['stages_range'], max_basecall_iterations=args['max_basecall_iterations'],
