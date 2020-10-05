@@ -4,7 +4,7 @@ from random import randint
 from runner import create_runner_parser
 from utils import get_config
 
-# TODO: fix defaults
+
 def create_pbs_cmd_file(path, alias, output_logs_dir, cmd, queue, gmem=10, ncpus=50, nodes=1, custom_command=None,
                         jnums=None, run_after_job_id=None, job_suffix=None, default_command=None):
     with open(path, 'w') as o:
@@ -23,7 +23,7 @@ def create_pbs_cmd_file(path, alias, output_logs_dir, cmd, queue, gmem=10, ncpus
         if run_after_job_id is not None:
             if job_suffix:
                 run_after_job_id = str(run_after_job_id) + job_suffix
-            o.write("#PBS -W depend=afterok:" + str(run_after_job_id))
+            o.write("#PBS -W depend=afterok:" + str(run_after_job_id) + "\n")
         if default_command:
             o.write(default_command)
         if custom_command:
