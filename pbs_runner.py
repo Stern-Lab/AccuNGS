@@ -20,7 +20,7 @@ def create_pbs_cmd_file(path, alias, output_logs_dir, cmd, queue, gmem=10, ncpus
                 o.write(f"#PBS -J 1-{str(jnums)} \n\n")
             else:
                 o.write(f"#PBS -J {str(jnums[0])}-{str(jnums[1])} \n\n")
-        if run_after_job_id is not None:
+        if run_after_job_id:
             if job_suffix:
                 run_after_job_id = str(run_after_job_id) + job_suffix
             o.write("#PBS -W depend=afterok:" + str(run_after_job_id) + "\n")
