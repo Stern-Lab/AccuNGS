@@ -1,7 +1,7 @@
 import os
 from random import randint
 
-from runner import create_runner_parser
+from runner import create_runner_parser, assign_output_dir
 from utils import get_config
 
 
@@ -87,13 +87,13 @@ def runner_cmd(input_dir, output_dir, reference_file, stages_range, max_basecall
     return cmd
 
 
-def pbs_runner(input_dir, output_dir, reference_file, stages_range, max_basecall_iterations,db_path,
+def pbs_runner(input_dir, output_dir, reference_file, stages_range, max_basecall_iterations, db_path,
                quality_threshold, task, evalue, dust, num_alignments, mode, perc_identity, overlap_notation,
                soft_masking, min_coverage, consolidate_consensus_with_indels, stretches_pvalue, stretches_distance,
                stretches_to_plot, max_read_size, alias, queue, cleanup, cpu_count, custom_command=None, after_jobid=None,
-               job_suffix=None):
-    config = get_config()
-    defaults = config['pbs_defaults']
+               job_suffix=None, default_command=None):
+    if not output_dir:
+        output_dir = assign_output_dir(db_path)
     base_path = os.path.dirname(os.path.abspath(__file__))
     pbs_logs_dir = os.path.join(output_dir, "pbs_logs")
     os.makedirs(pbs_logs_dir, exist_ok=True)
@@ -111,7 +111,6 @@ def pbs_runner(input_dir, output_dir, reference_file, stages_range, max_basecall
                      stretches_pvalue=stretches_pvalue, stretches_distance=stretches_distance,
                      stretches_to_plot=stretches_to_plot, max_read_size=max_read_size, base_path=base_path,
                      overlap_notation=overlap_notation)
-    default_command = defaults.get('default_command', fallback=None)
     create_pbs_cmd_file(cmd_path, alias, output_logs_dir=pbs_logs_dir, cmd=cmd, queue=queue, gmem=100,
                         ncpus=cpu_count, run_after_job_id=after_jobid, job_suffix=job_suffix, custom_command=custom_command,
                         default_command=default_command)  # todo: optimize cpu_count
@@ -132,9 +131,9 @@ if __name__ == "__main__":
     parser.add_argument("-j", "--after_jobid",
                         help="Run after successfully completing this jobid")
     parser_args = vars(parser.parse_args())
-    args = dict(get_config()['runner_defaults'])
-    args.update({key: value for key, value in dict(get_config()['pbs_defaults']).items() if value is not None})
-    args.update({key: value for key, value in parser_args.items() if value is not None})
+    args = dict(get_config()['runner_defaults'])  # get runner defaults
+    args.update({key: value for key, value in dict(get_config()['pbs_defaults']).items()})  # overide with pbs defaults
+    args.update({key: value for key, value in parser_args.items() if value is not None})  # overide with cli args
     pbs_runner(input_dir=args['input_dir'], output_dir=args['output_dir'], reference_file=args['reference_file'],
                stages_range=args['stages_range'], max_basecall_iterations=args['max_basecall_iterations'],
                quality_threshold=args['quality_threshold'], task=args['blast_task'],
@@ -145,4 +144,4 @@ if __name__ == "__main__":
                stretches_to_plot=args['stretches_to_plot'], max_read_size=args['stretches_max_read_size'],
                cpu_count=args['cpu_count'], overlap_notation=args['overlap_notation'], db_path=args['db_path'],
                after_jobid=args['after_jobid'], job_suffix=args['job_suffix'], alias=args['alias'],
-               custom_command=args['custom_command'], queue=args['queue'])
+               custom_command=args['custom_command'], queue=args['queue'], default_command=args['default_command'])

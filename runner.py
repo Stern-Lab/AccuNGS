@@ -142,7 +142,6 @@ def update_meta_data(output_dir, status, db_path, params=None):
     build_db(db_path)
 
 
-
 def build_db(db_path):
     outputs = [f.path for f in os.scandir(db_path) if f.is_dir()]
     db_rows = []
@@ -156,16 +155,21 @@ def build_db(db_path):
     db.to_csv(os.path.join(db_path, 'db.tsv'), sep='\t')
 
 
+def assign_output_dir(db_path):
+    user_name = os.environ.get('USERNAME')
+    today = datetime.now().strftime('%Y-%m-%d')
+    random_name = generate_slug(2)
+    output_dir_name = random_name + "_" + user_name + "_" + today
+    output_dir = os.path.join(db_path, output_dir_name)
+    return output_dir
+
+
 def runner(input_dir, reference_file, output_dir, stages_range, max_basecall_iterations, min_coverage,
            quality_threshold, task, evalue, dust, num_alignments, soft_masking, perc_identity, mode, max_read_size,
            consolidate_consensus_with_indels, stretches_pvalue, stretches_distance, stretches_to_plot, cleanup,
            cpu_count, opposing_strings, db_path, max_memory):
     if not output_dir:
-        user_name = os.environ.get('USERNAME')
-        today = datetime.now().strftime('%Y-%m-%d')
-        random_name = generate_slug(2)
-        output_dir_name = random_name + "_" + user_name + "_" + today
-        output_dir = os.path.join(db_path, output_dir_name)
+        output_dir = assign_output_dir(db_path)
     os.makedirs(output_dir, exist_ok=True)
     if not cpu_count:
         cpu_count = mp.cpu_count()
@@ -253,7 +257,6 @@ def runner(input_dir, reference_file, output_dir, stages_range, max_basecall_ite
     log.info(f"Done!")
 
     #TODO: test everything, finish up, drop cpu_count?
-
 
 def create_runner_parser():
     # TODO: present dynamic defaults from config file
