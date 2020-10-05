@@ -40,17 +40,6 @@ def parallel_process(processing_dir, fastq_files, reference_file, quality_thresh
                         "To avoid this try running with --max_memory max_available_RAM_in_MB")
 
 
-def get_stages_list(stages_range):
-    stages_dict = {1: 'prepare data', 2: 'process data', 3: 'infer haplotypes'}
-    if len(stages_range) == 2:
-        stages = range(stages_range[0], stages_range[1] + 1)
-    elif len(stages_range) == 1:
-        stages = stages_range
-    else:
-        raise Exception("Parameter stages_range must be 1 or 2 numbers.")
-    return [stages_dict[stage] for stage in stages]
-
-
 def set_filenames(output_dir):
     filenames = {"freqs_file_path": os.path.join(output_dir, 'freqs.tsv'),
                  "linked_mutations_path": os.path.join(output_dir, 'linked_mutations.tsv'),
@@ -166,7 +155,7 @@ def assign_output_dir(db_path):
     return output_dir
 
 
-def runner(input_dir, reference_file, output_dir, stages_range, max_basecall_iterations, min_coverage, db_comment,
+def runner(input_dir, reference_file, output_dir, max_basecall_iterations, min_coverage, db_comment,
            quality_threshold, task, evalue, dust, num_alignments, soft_masking, perc_identity, mode, max_read_size,
            consolidate_consensus_with_indels, stretches_pvalue, stretches_distance, stretches_to_plot, cleanup,
            cpu_count, opposing_strings, db_path, max_memory):
@@ -180,81 +169,74 @@ def runner(input_dir, reference_file, output_dir, stages_range, max_basecall_ite
     log = pipeline_logger(logger_name='AccuNGS-Runner', log_folder=output_dir)
     log.debug(f"runner params: {locals()}")
     filenames = set_filenames(output_dir)
-    stages = get_stages_list(stages_range)
-    log.info(f"Running stages: {stages}")
     processing_dir = os.path.join(output_dir, "processing")
     linked_mutations_dir = os.path.join(output_dir, "linked_mutations")
-    if 'prepare data' in stages:
-        data_dir = os.path.join(output_dir, "data")
-        os.makedirs(data_dir, exist_ok=True)
-        log.info("Preparing data")
-        prepare_data(input_dir=input_dir, output_dir=data_dir, overlap_notation=opposing_strings,
-                     cpu_count=cpu_count, max_memory=max_memory)
+    data_dir = os.path.join(output_dir, "data")
+    os.makedirs(data_dir, exist_ok=True)
+    log.info("Preparing data")
+    prepare_data(input_dir=input_dir, output_dir=data_dir, overlap_notation=opposing_strings,
+                 cpu_count=cpu_count, max_memory=max_memory)
+    if len(opposing_strings) == 1:
+        reads_overlap = False
     else:
-        data_dir = input_dir
-    if 'process data' in stages:
-        if len(opposing_strings) == 1:
-            reads_overlap = False
-        else:
-            reads_overlap = True
-        os.makedirs(processing_dir, exist_ok=True)
-        data_files = get_files_in_dir(data_dir)
-        fastq_files = [file_path for file_path in data_files if "fastq.part_" in os.path.basename(file_path)]
-        log.info(f"Processing {len(fastq_files)} fastq files.")
-        for basecall_iteration_counter in range(1, max_basecall_iterations + 1):
-            log.info(f"Processing fastq files iteration {basecall_iteration_counter}/{max_basecall_iterations}")
-            # TODO: whats up with the different modes?!?
-            parallel_process(processing_dir=processing_dir, fastq_files=fastq_files, reference_file=reference_file,
-                             quality_threshold=quality_threshold, task=task, evalue=evalue, dust=dust, mode=mode,
-                             num_alignments=num_alignments, soft_masking=soft_masking, perc_identity=perc_identity,
-                             reads_overlap=reads_overlap)
-            iteration_data_dir = os.path.join(output_dir, 'iteration_data')
-            os.makedirs(iteration_data_dir, exist_ok=True)
-            alignment_score = check_consensus_alignment_with_ref(reference_file=reference_file,
-                                                                 iteration_counter=basecall_iteration_counter,
-                                                                 basecall_dir=os.path.join(processing_dir, 'basecall'),
-                                                                 with_indels=consolidate_consensus_with_indels,
-                                                                 iteration_data_dir=iteration_data_dir,
-                                                                 min_coverage=min_coverage)
-            log.info(f'Iteration alignment score: {round(alignment_score,4)}')
-            if alignment_score == 1:
-                break
-            consensus_path = get_consensus_path(basecall_iteration_counter, consolidate_consensus_with_indels,
-                                                iteration_data_dir)
-            reference_file = consensus_path
-        log.info("Aggregating processed fastq files outputs...")
-        aggregate_processed_output(input_dir=processing_dir, output_dir=output_dir, cleanup=cleanup,
-                                   reference=reference_file, min_coverage=min_coverage)
-        log.info("Generating graphs...")
-        graph_summary(freqs_file=filenames['freqs_file_path'], blast_file=filenames['blast_file'],
-                      read_counter_file=filenames['read_counter_file'], stretches_file=filenames['stretches'],
-                      output_file=filenames['summary_graphs'], min_coverage=min_coverage,
-                      stretches_to_plot=stretches_to_plot)  # TODO: drop low quality mutations?
-        log.info(f"Most outputs are ready in {output_dir} !")
-    if 'infer haplotypes' in stages:
-        log.info(f"Calculating linked mutations...")
-        update_meta_data(output_dir=output_dir, status='Inferring haplotypes...', db_path=db_path)
-        os.makedirs(linked_mutations_dir, exist_ok=True)
-        # TODO: optimize part size
-        basecall_dir = os.path.join(processing_dir, 'basecall')
-        called_bases_files = get_files_by_extension(basecall_dir, "called_bases")
-        mutation_read_list_path = os.path.join(output_dir, "mutation_read_list.tsv")
-        create_mutation_read_list_file(called_bases_files=called_bases_files, output_path=mutation_read_list_path)
-        parallel_calc_linked_mutations(freqs_file_path=filenames['freqs_file_path'], cpu_count=cpu_count,
-                                       mutation_read_list_path=filenames['mutation_read_list_path'],
-                                       output_dir=linked_mutations_dir, max_read_length=max_read_size,
-                                       part_size=100)  # TODO: drop low quality mutations?, set part_size as param.
-        log.info(f"Aggregating linked mutations to stretches...")
-        concatenate_files_by_extension(input_dir=linked_mutations_dir, extension='tsv',
-                                       output_path=filenames['linked_mutations_path'])
-        calculate_stretches(filenames['linked_mutations_path'], max_pval=stretches_pvalue, distance=stretches_distance,
-                            output=filenames['stretches'])  #TODO: refactor that function
-        graph_summary(freqs_file=filenames['freqs_file_path'], blast_file=filenames['blast_file'],
-                      read_counter_file=filenames['read_counter_file'], stretches_file=filenames['stretches'],
-                      output_file=filenames['summary_graphs'], min_coverage=min_coverage,
-                      stretches_to_plot=stretches_to_plot)  # TODO: drop low quality mutations?
-        graph_haplotypes(input_file=filenames['stretches'], number_of_stretches=stretches_to_plot,
-                         output_dir=output_dir)
+        reads_overlap = True
+    os.makedirs(processing_dir, exist_ok=True)
+    data_files = get_files_in_dir(data_dir)
+    fastq_files = [file_path for file_path in data_files if "fastq.part_" in os.path.basename(file_path)]
+    log.info(f"Processing {len(fastq_files)} fastq files.")
+    for basecall_iteration_counter in range(1, max_basecall_iterations + 1):
+        log.info(f"Processing fastq files iteration {basecall_iteration_counter}/{max_basecall_iterations}")
+        # TODO: whats up with the different modes?!?
+        parallel_process(processing_dir=processing_dir, fastq_files=fastq_files, reference_file=reference_file,
+                         quality_threshold=quality_threshold, task=task, evalue=evalue, dust=dust, mode=mode,
+                         num_alignments=num_alignments, soft_masking=soft_masking, perc_identity=perc_identity,
+                         reads_overlap=reads_overlap)
+        iteration_data_dir = os.path.join(output_dir, 'iteration_data')
+        os.makedirs(iteration_data_dir, exist_ok=True)
+        alignment_score = check_consensus_alignment_with_ref(reference_file=reference_file,
+                                                             iteration_counter=basecall_iteration_counter,
+                                                             basecall_dir=os.path.join(processing_dir, 'basecall'),
+                                                             with_indels=consolidate_consensus_with_indels,
+                                                             iteration_data_dir=iteration_data_dir,
+                                                             min_coverage=min_coverage)
+        log.info(f'Iteration alignment score: {round(alignment_score,4)}')
+        if alignment_score == 1:
+            break
+        consensus_path = get_consensus_path(basecall_iteration_counter, consolidate_consensus_with_indels,
+                                            iteration_data_dir)
+        reference_file = consensus_path
+    log.info("Aggregating processed fastq files outputs...")
+    aggregate_processed_output(input_dir=processing_dir, output_dir=output_dir, cleanup=cleanup,
+                               reference=reference_file, min_coverage=min_coverage)
+    log.info("Generating graphs...")
+    graph_summary(freqs_file=filenames['freqs_file_path'], blast_file=filenames['blast_file'],
+                  read_counter_file=filenames['read_counter_file'], stretches_file=filenames['stretches'],
+                  output_file=filenames['summary_graphs'], min_coverage=min_coverage,
+                  stretches_to_plot=stretches_to_plot)  # TODO: drop low quality mutations?
+    log.info(f"Most outputs are ready in {output_dir} !")
+    log.info(f"Calculating linked mutations...")
+    update_meta_data(output_dir=output_dir, status='Inferring haplotypes...', db_path=db_path)
+    os.makedirs(linked_mutations_dir, exist_ok=True)
+    # TODO: optimize part size
+    basecall_dir = os.path.join(processing_dir, 'basecall')
+    called_bases_files = get_files_by_extension(basecall_dir, "called_bases")
+    mutation_read_list_path = os.path.join(output_dir, "mutation_read_list.tsv")
+    create_mutation_read_list_file(called_bases_files=called_bases_files, output_path=mutation_read_list_path)
+    parallel_calc_linked_mutations(freqs_file_path=filenames['freqs_file_path'], cpu_count=cpu_count,
+                                   mutation_read_list_path=filenames['mutation_read_list_path'],
+                                   output_dir=linked_mutations_dir, max_read_length=max_read_size,
+                                   part_size=100)  # TODO: drop low quality mutations?, set part_size as param.
+    log.info(f"Aggregating linked mutations to stretches...")
+    concatenate_files_by_extension(input_dir=linked_mutations_dir, extension='tsv',
+                                   output_path=filenames['linked_mutations_path'])
+    calculate_stretches(filenames['linked_mutations_path'], max_pval=stretches_pvalue, distance=stretches_distance,
+                        output=filenames['stretches'])  #TODO: refactor that function
+    graph_summary(freqs_file=filenames['freqs_file_path'], blast_file=filenames['blast_file'],
+                  read_counter_file=filenames['read_counter_file'], stretches_file=filenames['stretches'],
+                  output_file=filenames['summary_graphs'], min_coverage=min_coverage,
+                  stretches_to_plot=stretches_to_plot)  # TODO: drop low quality mutations?
+    graph_haplotypes(input_file=filenames['stretches'], number_of_stretches=stretches_to_plot,
+                     output_dir=output_dir)
     if cleanup == "Y":
         shutil.rmtree(processing_dir)
     update_meta_data(output_dir=output_dir, status='Done', db_path=db_path)
@@ -269,7 +251,6 @@ def create_runner_parser():
                         help="Path to directory containing basecall files")
     parser.add_argument("-o", "--output_dir")
     parser.add_argument("-r", "--reference_file", required=True)
-    parser.add_argument("-s", "--stages_range", nargs="+", type=int, help="start and end stages separated by spaces")
     parser.add_argument("-m", "--max_basecall_iterations", type=int, default=1,
                         help="number of times to run basecall before giving up equalizing reference with consensus")
     parser.add_argument("-on", "--overlap_notation", nargs="+", type=str,
@@ -311,7 +292,7 @@ if __name__ == "__main__":
     args = dict(get_config()['runner_defaults'])
     args.update({key: value for key, value in parser_args.items() if value is not None})
     runner(input_dir=args['input_dir'], output_dir=args['output_dir'], reference_file=args['reference_file'],
-           stages_range=args['stages_range'], max_basecall_iterations=int(args['max_basecall_iterations']),
+           max_basecall_iterations=int(args['max_basecall_iterations']),
            quality_threshold=int(args['quality_threshold']), task=args['blast_task'], max_memory=args['max_memory'],
            evalue=float(args['blast_evalue']), dust=args['blast_dust'], num_alignments=int(args['blast_num_alignments']),
            mode=args['blast_mode'], perc_identity=float(args['blast_perc_identity']),
