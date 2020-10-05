@@ -25,9 +25,9 @@ def create_pbs_cmd_file(path, alias, output_logs_dir, cmd, queue, gmem=10, ncpus
                 run_after_job_id = str(run_after_job_id) + job_suffix
             o.write("#PBS -W depend=afterok:" + str(run_after_job_id) + "\n")
         if default_command:
-            o.write(default_command)
+            o.write(default_command + "\n")
         if custom_command:
-            o.write(custom_command)
+            o.write(custom_command + "\n")
         o.write(cmd)
     o.close()
 
@@ -112,8 +112,8 @@ def pbs_runner(input_dir, output_dir, reference_file, stages_range, max_basecall
                      stretches_to_plot=stretches_to_plot, max_read_size=max_read_size, base_path=base_path,
                      overlap_notation=overlap_notation)
     create_pbs_cmd_file(cmd_path, alias, output_logs_dir=pbs_logs_dir, cmd=cmd, queue=queue, gmem=100,
-                        ncpus=cpu_count, run_after_job_id=after_jobid, job_suffix=job_suffix, custom_command=custom_command,
-                        default_command=default_command)  # todo: optimize cpu_count
+                        ncpus=cpu_count, run_after_job_id=after_jobid, job_suffix=job_suffix,
+                        custom_command=custom_command, default_command=default_command)  # todo: optimize cpu_count
     job_id = submit_cmdfile_to_pbs(cmd_path)
     print(f"Submitted jod '{alias}' with id {job_id}")
     print(f"Output files will be in {output_dir}")
