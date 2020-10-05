@@ -152,6 +152,7 @@ def create_default_config_file(accungs_dir, config_file):
                                  'stretches_distance': 10,
                                  'stretches_to_plot': 5,
                                  'cleanup': 'Y',
+                                 'overlap_notation': ['_R1', '_R2'],
                                  'db_path': db_path}
     with open(config_file, 'w') as configfile:
         config.write(configfile)

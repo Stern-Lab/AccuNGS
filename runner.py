@@ -170,6 +170,7 @@ def runner(input_dir, reference_file, output_dir, stages_range, max_basecall_ite
            quality_threshold, task, evalue, dust, num_alignments, soft_masking, perc_identity, mode, max_read_size,
            consolidate_consensus_with_indels, stretches_pvalue, stretches_distance, stretches_to_plot, cleanup,
            cpu_count, opposing_strings, db_path, max_memory):
+    # TODO: catch exceptions and put them in the db status
     if not output_dir:
         output_dir = assign_output_dir(db_path)
     os.makedirs(output_dir, exist_ok=True)
@@ -271,7 +272,7 @@ def create_runner_parser():
     parser.add_argument("-s", "--stages_range", nargs="+", type=int, help="start and end stages separated by spaces")
     parser.add_argument("-m", "--max_basecall_iterations", type=int, default=1,
                         help="number of times to run basecall before giving up equalizing reference with consensus")
-    parser.add_argument("-on", "--overlap_notation", default=['_R1', '_R2'], nargs="+", type=str,
+    parser.add_argument("-on", "--overlap_notation", nargs="+", type=str,
                         help="Notation of overlapping reads in the same directory to merge. Passing N would run without"
                              " considering overlapping reads (default is: '_R1 _R2')")
     parser.add_argument("-bt", "--blast_task", help="blast's task parameter (default: blastn")
@@ -308,6 +309,8 @@ if __name__ == "__main__":
     parser_args = vars(parser.parse_args())
     args = dict(get_config()['runner_defaults'])
     args.update({key: value for key, value in parser_args.items() if value is not None})
+    if args['overlap_notation'].startswith('['):
+        args['overlap_notation'] = eval(args['overlap_notation'])  # ugly hack!
     runner(input_dir=args['input_dir'], output_dir=args['output_dir'], reference_file=args['reference_file'],
            stages_range=args['stages_range'], max_basecall_iterations=int(args['max_basecall_iterations']),
            quality_threshold=int(args['quality_threshold']), task=args['blast_task'], max_memory=args['max_memory'],
