@@ -309,9 +309,6 @@ if __name__ == "__main__":
     parser_args = vars(parser.parse_args())
     args = dict(get_config()['runner_defaults'])
     args.update({key: value for key, value in parser_args.items() if value is not None})
-    if isinstance(args['overlap_notation'], str):  # ugly parsing hack...
-        if args['overlap_notation'].startswith('['):
-            args['overlap_notation'] = eval(args['overlap_notation'])
     runner(input_dir=args['input_dir'], output_dir=args['output_dir'], reference_file=args['reference_file'],
            stages_range=args['stages_range'], max_basecall_iterations=int(args['max_basecall_iterations']),
            quality_threshold=int(args['quality_threshold']), task=args['blast_task'], max_memory=args['max_memory'],

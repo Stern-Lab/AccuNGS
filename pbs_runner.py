@@ -81,9 +81,13 @@ def runner_cmd(input_dir, output_dir, reference_file, stages_range, max_basecall
     if cpu_count:
         cmd += f" -cc {cpu_count}"
     if overlap_notation:
+        if isinstance(overlap_notation, str):
+            overlap_notation = eval(overlap_notation)
+        overlap_notation = ' '.join(overlap_notation)
         cmd += f" -on {overlap_notation}"
     if db_path:
         cmd += f" -db {db_path}"
+    breakpoint()
     return cmd
 
 
