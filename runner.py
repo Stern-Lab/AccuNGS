@@ -1,5 +1,6 @@
 import argparse
 import concurrent.futures
+import getpass
 import json
 import os
 import multiprocessing as mp
@@ -133,6 +134,8 @@ def update_meta_data(output_dir, status, db_path, params=None):
     json_file = os.path.join(output_dir, 'meta_data.json')
     if params is not None:
         meta_data = params
+        meta_data['username'] = getpass.getuser()
+        meta_data['start_time'] = datetime.now().strftime('%Y-%m-%d-%H:%M')
     else:
         with open(json_file) as read_handle:
             meta_data = json.load(read_handle)
@@ -156,13 +159,9 @@ def build_db(db_path):
 
 
 def assign_output_dir(db_path):
-    user_name = os.environ.get('USERNAME')
-    today = datetime.now().strftime('%Y-%m-%d')
+    now = datetime.now().strftime('%Y-%m-%d-%H:%M')
     random_name = generate_slug(2)
-    print(random_name)
-    print(f"username: {user_name}")
-    print(today)
-    output_dir_name = random_name + "_" + user_name + "_" + today
+    output_dir_name = random_name + "_" + now
     output_dir = os.path.join(db_path, output_dir_name)
     return output_dir
 
@@ -176,7 +175,7 @@ def runner(input_dir, reference_file, output_dir, stages_range, max_basecall_ite
     os.makedirs(output_dir, exist_ok=True)
     if not cpu_count:
         cpu_count = mp.cpu_count()
-    update_meta_data(params=locals().copy(), output_dir=output_dir, status='In progress...', db_path=db_path)
+    update_meta_data(params=locals().copy(), output_dir=output_dir, status='Running...', db_path=db_path)
     log = pipeline_logger(logger_name='AccuNGS-Runner', log_folder=output_dir)
     log.debug(f"runner params: {locals()}")
     filenames = set_filenames(output_dir)
@@ -233,6 +232,7 @@ def runner(input_dir, reference_file, output_dir, stages_range, max_basecall_ite
         log.info(f"Most outputs are ready in {output_dir} !")
     if 'infer haplotypes' in stages:
         log.info(f"Calculating linked mutations...")
+        update_meta_data(output_dir=output_dir, status='Inferring haplotypes...', db_path=db_path)
         os.makedirs(linked_mutations_dir, exist_ok=True)
         # TODO: optimize part size
         basecall_dir = os.path.join(processing_dir, 'basecall')
