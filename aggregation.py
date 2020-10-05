@@ -39,9 +39,10 @@ def aggregate_called_bases(called_bases_files):
 
 def create_freqs_file(called_bases_files, output_path):
     freqs = aggregate_called_bases(called_bases_files)
-    coverage = freqs.groupby('ref_pos').base_count.sum()
-    # TODO: fix insertions coverage
-    freqs['coverage'] = freqs.ref_pos.map(lambda pos: coverage[pos])
+    freqs['round_ref_pos'] = round(freqs['ref_pos'])                   # to fix insertion coverage
+    coverage = freqs.groupby('round_ref_pos').base_count.sum()
+    freqs.drop(columns=['round_ref_pos'], inplace=True)
+    freqs['coverage'] = freqs.ref_pos.map(lambda pos: coverage[round(pos)])
     freqs['frequency'] = freqs['base_count'] / freqs['coverage']
     freqs['base_rank'] = 5 - freqs.groupby('ref_pos').base_count.rank('min')
     freqs['probability'] = 1 - 10**(np.log10(1 - freqs["frequency"] + 1e-07) * (freqs["coverage"] + 1))
