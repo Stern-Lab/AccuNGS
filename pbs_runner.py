@@ -39,7 +39,7 @@ def submit_cmdfile_to_pbs(cmdfile):
     return result.split(".")[0]
 
 
-def runner_cmd(input_dir, output_dir, reference_file, stages_range, max_basecall_iterations, db_path,
+def runner_cmd(input_dir, output_dir, reference_file, stages_range, max_basecall_iterations, db_path, db_comment,
                quality_threshold, task, evalue, dust, num_alignments, mode, perc_identity, soft_masking, min_coverage,
                consolidate_consensus_with_indels, stretches_pvalue, stretches_distance, stretches_to_plot,
                max_read_size, base_path, cleanup, cpu_count, overlap_notation):
@@ -88,10 +88,12 @@ def runner_cmd(input_dir, output_dir, reference_file, stages_range, max_basecall
         cmd += f" -on {overlap_notation}"
     if db_path:
         cmd += f" -db {db_path}"
+    if db_comment:
+        cmd += f" -dbc {db_comment}"
     return cmd
 
 
-def pbs_runner(input_dir, output_dir, reference_file, stages_range, max_basecall_iterations, db_path,
+def pbs_runner(input_dir, output_dir, reference_file, stages_range, max_basecall_iterations, db_path, db_comment,
                quality_threshold, task, evalue, dust, num_alignments, mode, perc_identity, overlap_notation,
                soft_masking, min_coverage, consolidate_consensus_with_indels, stretches_pvalue, stretches_distance,
                stretches_to_plot, max_read_size, alias, queue, cleanup, cpu_count, custom_command=None, after_jobid=None,
@@ -109,7 +111,7 @@ def pbs_runner(input_dir, output_dir, reference_file, stages_range, max_basecall
     cmd = runner_cmd(input_dir=input_dir, output_dir=output_dir, reference_file=reference_file,
                      stages_range=stages_range, max_basecall_iterations=max_basecall_iterations,
                      quality_threshold=quality_threshold, task=task, evalue=evalue, dust=dust,
-                     num_alignments=num_alignments, mode=mode, perc_identity=perc_identity,
+                     num_alignments=num_alignments, mode=mode, perc_identity=perc_identity, db_comment=db_comment,
                      soft_masking=soft_masking, min_coverage=min_coverage, cleanup=cleanup, cpu_count=cpu_count,
                      consolidate_consensus_with_indels=consolidate_consensus_with_indels, db_path=db_path,
                      stretches_pvalue=stretches_pvalue, stretches_distance=stretches_distance,
@@ -128,19 +130,16 @@ def pbs_runner(input_dir, output_dir, reference_file, stages_range, max_basecall
 
 if __name__ == "__main__":
     parser = create_runner_parser()
-    # TODO: pbs-runner defaults, run with config file
     parser.add_argument("-a", "--alias", default="AccuNGS", help="job alias visible in qstat (default: AccuNGS)")
-    parser.add_argument("-q", "--queue", default="adistzachi@power9",
-                        help="PBS queue to run on (default: adistzachi@power9)")
-    parser.add_argument("-j", "--after_jobid",
-                        help="Run after successfully completing this jobid")
+    parser.add_argument("-q", "--queue", help="PBS queue to run on")
+    parser.add_argument("-j", "--after_jobid", help="Run after successfully completing this jobid")
     parser_args = vars(parser.parse_args())
     args = dict(get_config()['runner_defaults'])  # get runner defaults
     args.update({key: value for key, value in dict(get_config()['pbs_defaults']).items()})  # overide with pbs defaults
     args.update({key: value for key, value in parser_args.items() if value is not None})  # overide with cli args
     pbs_runner(input_dir=args['input_dir'], output_dir=args['output_dir'], reference_file=args['reference_file'],
                stages_range=args['stages_range'], max_basecall_iterations=args['max_basecall_iterations'],
-               quality_threshold=args['quality_threshold'], task=args['blast_task'],
+               quality_threshold=args['quality_threshold'], task=args['blast_task'], db_comment=args['db_comment'],
                evalue=args['blast_evalue'], dust=args['blast_dust'], num_alignments=args['blast_num_alignments'],
                mode=args['blast_mode'], perc_identity=args['blast_perc_identity'], soft_masking=args['blast_soft_masking'],
                min_coverage=args['min_coverage'], consolidate_consensus_with_indels=args['consolidate_consensus_with_indels'],

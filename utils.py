@@ -137,6 +137,7 @@ def create_default_config_file(accungs_dir, config_file):
                                  'output_dir': "",
                                  'cpu_count': "",
                                  'max_memory': "",
+                                 'db_comment': "",
                                  'min_coverage': 10,
                                  'quality_threshold': 30,
                                  'blast_task': 'blastn',

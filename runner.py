@@ -166,7 +166,7 @@ def assign_output_dir(db_path):
     return output_dir
 
 
-def runner(input_dir, reference_file, output_dir, stages_range, max_basecall_iterations, min_coverage,
+def runner(input_dir, reference_file, output_dir, stages_range, max_basecall_iterations, min_coverage, db_comment,
            quality_threshold, task, evalue, dust, num_alignments, soft_masking, perc_identity, mode, max_read_size,
            consolidate_consensus_with_indels, stretches_pvalue, stretches_distance, stretches_to_plot, cleanup,
            cpu_count, opposing_strings, db_path, max_memory):
@@ -300,6 +300,7 @@ def create_runner_parser():
     parser.add_argument("-c", "--cleanup", help="remove input folder when done (default: Y)", default="Y")
     parser.add_argument("-cc", "--cpu_count", help="max number of cpus to use (default: all)", type=int)
     parser.add_argument("-db", "--db_path", help='path to db directory')
+    parser.add_argument("-dbc", "--db_comment", help='comment to store in db')
     parser.add_argument("-mm", "--max_memory", help='limit memory usage to this many megabytes (default: None)')
     return parser
 
@@ -313,9 +314,10 @@ if __name__ == "__main__":
            stages_range=args['stages_range'], max_basecall_iterations=int(args['max_basecall_iterations']),
            quality_threshold=int(args['quality_threshold']), task=args['blast_task'], max_memory=args['max_memory'],
            evalue=float(args['blast_evalue']), dust=args['blast_dust'], num_alignments=int(args['blast_num_alignments']),
-           mode=args['blast_mode'], perc_identity=float(args['blast_perc_identity']), soft_masking=args['blast_soft_masking'],
-           min_coverage=int(args['min_coverage']), consolidate_consensus_with_indels=args['consolidate_consensus_with_indels'],
-           stretches_pvalue=float(args['stretches_pvalue']), stretches_distance=float(args['stretches_distance']), cleanup=args['cleanup'],
+           mode=args['blast_mode'], perc_identity=float(args['blast_perc_identity']),
+           min_coverage=int(args['min_coverage']), db_comment=args['db_comment'], soft_masking=args['blast_soft_masking'],
+           stretches_pvalue=float(args['stretches_pvalue']), stretches_distance=float(args['stretches_distance']),
+           cleanup=args['cleanup'], consolidate_consensus_with_indels=args['consolidate_consensus_with_indels'],
            stretches_to_plot=int(args['stretches_to_plot']), max_read_size=int(args['stretches_max_read_size']),
            cpu_count=args['cpu_count'], opposing_strings=args['overlap_notation'], db_path=args['db_path'])
 
