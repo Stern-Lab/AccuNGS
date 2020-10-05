@@ -7,7 +7,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-p", "--params_file", required=True, help="Path to config file containing run parameters")
     params_file = parser.parse_args().params_file
-    params_dict = json.loads(params_file)
+    with open(params_file) as jsonfile:
+        json_string = jsonfile.read()
+        params_dict = json.loads(json_string)
     for alias, parameters in params_dict.items():
         args = dict(get_config()['runner_defaults'])  # get runner defaults
         args.update({key: value for key, value in dict(get_config()['pbs_defaults']).items()})  # overide with pbs defaults
