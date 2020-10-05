@@ -127,15 +127,17 @@ def create_default_config_file(accungs_dir, config_file):
     config = configparser.ConfigParser()
     db_path = os.path.join(accungs_dir, 'db')
     os.makedirs(db_path, exist_ok=True)
-    config['pbs_defaults'] = {"after_jobid": "",
+    config['pbs_defaults'] = {
                               "job_suffix": "",
                               "alias": "AccuNGS",
-                              "custom_command": "",
                               "queue": "",
-                              "default_command": ""}
+                              "default_command": "",
+                              "after_jobid": "",
+                              "custom_command": "",
+                              }
     config['runner_defaults'] = {'max_basecall_iterations': 1,
                                  'output_dir': "",
-                                 'cpu_count': "",
+                                 'cpu_count': 50,
                                  'max_memory': "",
                                  'db_comment': "",
                                  'min_coverage': 10,

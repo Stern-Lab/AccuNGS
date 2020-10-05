@@ -87,7 +87,7 @@ def runner_cmd(input_dir, output_dir, reference_file, max_basecall_iterations, d
     if db_path:
         cmd += f" -db {db_path}"
     if db_comment:
-        cmd += f" -dbc {db_comment}"
+        cmd += f" -dbc '{db_comment}'"
     return cmd
 
 
