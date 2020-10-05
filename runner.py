@@ -159,6 +159,9 @@ def assign_output_dir(db_path):
     user_name = os.environ.get('USERNAME')
     today = datetime.now().strftime('%Y-%m-%d')
     random_name = generate_slug(2)
+    print(random_name)
+    print(f"username: {user_name}")
+    print(today)
     output_dir_name = random_name + "_" + user_name + "_" + today
     output_dir = os.path.join(db_path, output_dir_name)
     return output_dir
