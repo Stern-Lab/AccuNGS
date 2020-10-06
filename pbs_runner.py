@@ -81,7 +81,8 @@ def runner_cmd(input_dir, output_dir, reference_file, max_basecall_iterations, d
         cmd += f" -cc {cpu_count}"
     if overlap_notation:
         if isinstance(overlap_notation, str):
-            overlap_notation = ast.literal_eval(overlap_notation)
+            if overlap_notation.startswith('['):
+                overlap_notation = ast.literal_eval(overlap_notation)
         overlap_notation = ' '.join(overlap_notation)
         cmd += f" -on {overlap_notation}"
     if db_path:
