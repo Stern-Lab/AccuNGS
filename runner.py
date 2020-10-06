@@ -244,8 +244,8 @@ def runner(input_dir, reference_file, output_dir, max_basecall_iterations, min_c
                       output_file=filenames['summary_graphs'], min_coverage=min_coverage,
                       stretches_to_plot=stretches_to_plot)  # TODO: drop low quality mutations?
         log.info(f"Most outputs are ready in {output_dir} !")
-        log.info(f"Calculating linked mutations...")
-        if skip_haplotypes == "Y":
+        if skip_haplotypes == "N":
+            log.info(f"Calculating linked mutations...")
             update_meta_data(output_dir=output_dir, status='Inferring haplotypes...', db_path=db_path)
             infer_haplotypes(cpu_count=cpu_count, filenames=filenames, linked_mutations_dir=filenames['linked_mutations_dir'],
                              log=log, max_read_size=max_read_size, output_dir=output_dir, stretches_pvalue=stretches_pvalue,
