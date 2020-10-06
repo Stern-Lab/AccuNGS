@@ -259,8 +259,6 @@ def process_fastq(fastq_file, reference, output_dir, quality_threshold, task, ev
     basecall_output = os.path.join(output_dir, 'basecall')
     if not quality_threshold:
         quality_threshold = 30
-    if reads_overlap == 'N':
-        reads_overlap = False
     os.makedirs(basecall_output, exist_ok=True)
     basecall(blast_output_file=blast_output_file, fastq_file=fastq_file, output_dir=basecall_output,
              quality_threshold=quality_threshold, mode=mode, reads_overlap=reads_overlap)

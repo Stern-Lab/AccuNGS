@@ -117,10 +117,13 @@ def pbs_runner(input_dir, output_dir, reference_file, max_basecall_iterations, d
                         ncpus=cpu_count, run_after_job_id=after_jobid, job_suffix=job_suffix,
                         custom_command=custom_command, default_command=default_command)  # todo: optimize cpu_count
     job_id = submit_cmdfile_to_pbs(cmd_path)
-    print(f"Submitted jod '{alias}' with id {job_id}")
-    print(f"Output files will be in {output_dir}")
-    print(f"cmd file pbs log will be in {pbs_logs_dir}")
-    print(f"runner log file will be in {os.path.join(output_dir, '.log')}")
+    if job_id:
+        print(f"Submitted jod '{alias}' with id {job_id}")
+        print(f"Output files will be in {output_dir}")
+        print(f"runner log file will be in {os.path.join(output_dir, '.log')}")
+    else:
+        print(f"Could not submit job {alias} to queue!")
+    print(f"cmd file and pbs logs are in {pbs_logs_dir}")
     return job_id
 
 

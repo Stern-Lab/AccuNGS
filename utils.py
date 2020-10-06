@@ -124,12 +124,14 @@ def reverse_string(string):
 
 
 def create_default_config_file(accungs_dir, config_file):
+    # TODO: this file should just exist.. no need to create it.
     config = configparser.ConfigParser()
     db_path = os.path.join(accungs_dir, 'db')
     os.makedirs(db_path, exist_ok=True)
     config['pbs_defaults'] = {
                               "job_suffix": "",
                               "alias": "AccuNGS",
+                              "cpu_count": 50,
                               "queue": "",
                               "default_command": "",
                               "after_jobid": "",
@@ -137,7 +139,7 @@ def create_default_config_file(accungs_dir, config_file):
                               }
     config['runner_defaults'] = {'max_basecall_iterations': 1,
                                  'output_dir': "",
-                                 'cpu_count': 50,
+                                 'cpu_count': "",
                                  'max_memory': "",
                                  'db_comment': "",
                                  'min_coverage': 10,
@@ -147,7 +149,7 @@ def create_default_config_file(accungs_dir, config_file):
                                  'blast_dust': 'no',
                                  'blast_num_alignments': 1000000,
                                  'blast_soft_masking': 'F',
-                                 'blast_perc_identity': 0.85,
+                                 'blast_perc_identity': 85,
                                  'blast_mode': 'SeqToRef',
                                  'stretches_max_read_size': 350,
                                  'consolidate_consensus_with_indels': 'Y',
