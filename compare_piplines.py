@@ -239,7 +239,7 @@ def main(args):
                                    reference_file=reference_file, mode="RefToSeq", evalue=pipeline_arguments['evalue'],
                                    quality_threshold=pipeline_arguments['q_score'], cleanup=False, db_path="",
                                    consolidate_consensus_with_indels='N', cpu_count=50, db_comment="",
-                                   max_read_size=350, min_coverage=10, queue=None, soft_masking=None,
+                                   max_read_size=350, min_coverage=10, queue="adistzachi@power9", soft_masking=None,
                                    skip_haplotypes="Y",
                                    stretches_pvalue=None, stretches_to_plot=None, stretches_distance=None,
                                    perc_identity=pipeline_arguments['blast'], max_basecall_iterations=1, dust="no",
@@ -268,7 +268,5 @@ if __name__ == '__main__':
     parser.add_argument("-ev", "--evalue", type=float, help="E value for blast, default=1e-7", required=False,
                         default=1e-7)
     parser.add_argument("-q", "--q_score", type=int, help="Q-score cutoff, default=30", required=False, default=30)
-
-
     args = parser.parse_args()
     main(args)
