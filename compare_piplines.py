@@ -8,6 +8,8 @@ showing some main differences between the outputs.
 
 import argparse
 import os
+from time import sleep
+
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
@@ -247,8 +249,13 @@ def main(args):
     if 'analysis' in stages:
         # note that this will only work if both perl and python output already exist.
         # There is no guarantee that the perl command is done except for the fact that the python is way slower...!
-        analyze_cmd_path = create_analyze_data_cmdfile(output_folder, alias='CmpPL-Analyze',
-                                                       previous_jobid=python_job_id)
+        try:
+            analyze_cmd_path = create_analyze_data_cmdfile(output_folder, alias='CmpPL-Analyze',
+                                                           previous_jobid=perl_job_id)
+        except:
+            sleep(60)
+            analyze_cmd_path = create_analyze_data_cmdfile(output_folder, alias='CmpPL-Analyze',
+                                                           previous_jobid=perl_job_id)
         submit_cmdfile_to_pbs(analyze_cmd_path)
 
 
