@@ -1,5 +1,4 @@
 import configparser
-import json
 import os
 import gzip
 import shutil

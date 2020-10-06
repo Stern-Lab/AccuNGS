@@ -124,7 +124,7 @@ def trim_read_id_prefixes(files, read_id_prefix_file):
                 df.to_csv(file, sep='\t', index=False)
 
 
-def aggregate_processed_output(input_dir, output_dir, reference, min_coverage, cleanup):
+def aggregate_processed_output(input_dir, output_dir, reference, min_coverage):
     if not min_coverage:
         min_coverage = 10
     os.makedirs(output_dir, exist_ok=True)

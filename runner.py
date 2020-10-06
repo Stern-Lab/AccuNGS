@@ -154,7 +154,7 @@ def build_db(db_path):
 
 
 def assign_output_dir(db_path):
-    now = datetime.now().strftime('%Y-%m-%d-%H:%M')
+    now = datetime.now().strftime('%Y-%m-%d-%H-%M')
     random_name = generate_slug(2)
     output_dir_name = random_name + "_" + now
     output_dir = os.path.join(db_path, output_dir_name)
@@ -236,7 +236,7 @@ def runner(input_dir, reference_file, output_dir, max_basecall_iterations, min_c
                                       processing_dir=filenames['processing_dir'], quality_threshold=quality_threshold,
                                       task=task)
         log.info("Aggregating processed fastq files outputs...")
-        aggregate_processed_output(input_dir=filenames['processing_dir'], output_dir=output_dir, cleanup=cleanup,
+        aggregate_processed_output(input_dir=filenames['processing_dir'], output_dir=output_dir,
                                    reference=reference_file, min_coverage=min_coverage)
         log.info("Generating graphs...")
         graph_summary(freqs_file=filenames['freqs_file_path'], blast_file=filenames['blast_file'],
