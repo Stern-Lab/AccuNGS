@@ -74,7 +74,7 @@ def create_perl_runner_cmdfile(data_dir, output_folder, reference_file, alias, p
     """
     cmd_file_path = os.path.join(output_folder, 'compare_pipelines.cmd')
     create_pbs_cmd_file(path=cmd_file_path, alias=alias, cmd=perl_runner_cmd, output_logs_dir=output_folder,
-                        run_after_job_id=merge_job_id)
+                        run_after_job_id=merge_job_id, queue="adistzachi@power9")
     return cmd_file_path
 
 
@@ -240,7 +240,7 @@ def main(args):
                                    quality_threshold=pipeline_arguments['q_score'], cleanup=False, db_path="",
                                    consolidate_consensus_with_indels='N', cpu_count=50, db_comment="",
                                    max_read_size=350, min_coverage=10, queue="adistzachi@power9", soft_masking=None,
-                                   skip_haplotypes="Y",
+                                   skip_haplotypes="Y", job_suffix=".power9.tau.ac.il",
                                    stretches_pvalue=None, stretches_to_plot=None, stretches_distance=None,
                                    perc_identity=pipeline_arguments['blast'], max_basecall_iterations=1, dust="no",
                                    num_alignments=1000000, task="blastn", alias="CmpPLPY", overlap_notation="N")
