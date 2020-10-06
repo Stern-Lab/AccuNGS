@@ -34,7 +34,7 @@ def create_pbs_cmd_file(path, alias, output_logs_dir, cmd, queue, gmem=10, ncpus
 
 
 def submit_cmdfile_to_pbs(cmdfile):
-    cmd = "/opt/pbs/bin/qsub " + cmdfile
+    cmd = "/opt/pbs/bin/qsub " + cmdfile  # TODO: this should be a param in config!
     result = os.popen(cmd).read()
     return result.split(".")[0]
 
@@ -42,7 +42,7 @@ def submit_cmdfile_to_pbs(cmdfile):
 def runner_cmd(input_dir, output_dir, reference_file, max_basecall_iterations, db_path, db_comment,
                quality_threshold, task, evalue, dust, num_alignments, mode, perc_identity, soft_masking, min_coverage,
                consolidate_consensus_with_indels, stretches_pvalue, stretches_distance, stretches_to_plot,
-               max_read_size, base_path, cleanup, cpu_count, overlap_notation):
+               max_read_size, base_path, cleanup, cpu_count, overlap_notation, skip_haplotypes):
     runner_path = os.path.join(base_path, 'runner.py')
     cmd = f"python {runner_path} -i {input_dir} -o {output_dir} -r {reference_file} "
     if max_basecall_iterations:
@@ -88,6 +88,8 @@ def runner_cmd(input_dir, output_dir, reference_file, max_basecall_iterations, d
         cmd += f" -db {db_path}"
     if db_comment:
         cmd += f" -dbc '{db_comment}'"
+    if skip_haplotypes:
+        cmd += f" -sh '{skip_haplotypes}'"
     return cmd
 
 
@@ -95,7 +97,7 @@ def pbs_runner(input_dir, output_dir, reference_file, max_basecall_iterations, d
                quality_threshold, task, evalue, dust, num_alignments, mode, perc_identity, overlap_notation,
                soft_masking, min_coverage, consolidate_consensus_with_indels, stretches_pvalue, stretches_distance,
                stretches_to_plot, max_read_size, alias, queue, cleanup, cpu_count, custom_command=None, after_jobid=None,
-               job_suffix=None, default_command=None):
+               job_suffix=None, default_command=None, skip_haplotypes='N'):
     if not output_dir:
         output_dir = assign_output_dir(db_path)
     base_path = os.path.dirname(os.path.abspath(__file__))
@@ -112,7 +114,7 @@ def pbs_runner(input_dir, output_dir, reference_file, max_basecall_iterations, d
                      consolidate_consensus_with_indels=consolidate_consensus_with_indels, db_path=db_path,
                      stretches_pvalue=stretches_pvalue, stretches_distance=stretches_distance,
                      stretches_to_plot=stretches_to_plot, max_read_size=max_read_size, base_path=base_path,
-                     overlap_notation=overlap_notation)
+                     overlap_notation=overlap_notation, skip_haplotypes=skip_haplotypes)
     create_pbs_cmd_file(cmd_path, alias, output_logs_dir=pbs_logs_dir, cmd=cmd, queue=queue, gmem=100,
                         ncpus=cpu_count, run_after_job_id=after_jobid, job_suffix=job_suffix,
                         custom_command=custom_command, default_command=default_command)  # todo: optimize cpu_count
@@ -146,4 +148,5 @@ if __name__ == "__main__":
                stretches_to_plot=args['stretches_to_plot'], max_read_size=args['stretches_max_read_size'],
                cpu_count=args['cpu_count'], overlap_notation=args['overlap_notation'], db_path=args['db_path'],
                after_jobid=args['after_jobid'], job_suffix=args['job_suffix'], alias=args['alias'],
+               skip_haplotypes=args['skip_haplotypes'],
                custom_command=args['custom_command'], queue=args['queue'], default_command=args['default_command'])

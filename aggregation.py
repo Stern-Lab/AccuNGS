@@ -160,8 +160,7 @@ if __name__ == "__main__":
     parser.add_argument("-mc", "--min_coverage",
                         help="bases with less than this coverage will be excluded from affecting the consensus "
                              "(default: 10)")
-    parser.add_argument("-c", "--cleanup", help="remove input folder when done (default: Y)", default="Y")
 
     args = parser.parse_args()
     aggregate_processed_output(input_dir=args.input_dir, output_dir=args.output_dir, reference=args.reference,
-                               min_coverage=args.min_coverage, cleanup=args.cleanup)
+                               min_coverage=args.min_coverage)

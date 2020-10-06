@@ -143,8 +143,8 @@ def update_meta_data(output_dir, status, db_path, params=None):
 def build_db(db_path):
     outputs = [f.path for f in os.scandir(db_path) if f.is_dir()]
     db_rows = []
-    for dir in outputs:
-        json_file = os.path.join(dir, "meta_data.json")
+    for directory in outputs:
+        json_file = os.path.join(directory, "meta_data.json")
         if os.path.isfile(json_file):
             with open(json_file) as read_handle:
                 meta_data = json.load(read_handle)
@@ -211,7 +211,7 @@ def process_data(consolidate_consensus_with_indels, dust, evalue, fastq_files, l
 def runner(input_dir, reference_file, output_dir, max_basecall_iterations, min_coverage, db_comment,
            quality_threshold, task, evalue, dust, num_alignments, soft_masking, perc_identity, mode, max_read_size,
            consolidate_consensus_with_indels, stretches_pvalue, stretches_distance, stretches_to_plot, cleanup,
-           cpu_count, opposing_strings, db_path, max_memory):
+           cpu_count, opposing_strings, db_path, max_memory, skip_haplotypes="N"):
     try:
         filenames = set_filenames(output_dir=output_dir, db_path=db_path)
         if not cpu_count:
@@ -245,16 +245,17 @@ def runner(input_dir, reference_file, output_dir, max_basecall_iterations, min_c
                       stretches_to_plot=stretches_to_plot)  # TODO: drop low quality mutations?
         log.info(f"Most outputs are ready in {output_dir} !")
         log.info(f"Calculating linked mutations...")
-        update_meta_data(output_dir=output_dir, status='Inferring haplotypes...', db_path=db_path)
-        infer_haplotypes(cpu_count=cpu_count, filenames=filenames, linked_mutations_dir=filenames['linked_mutations_dir'],
-                         log=log, max_read_size=max_read_size, output_dir=output_dir, stretches_pvalue=stretches_pvalue,
-                         processing_dir=filenames['processing_dir'], stretches_distance=stretches_distance)
-        graph_summary(freqs_file=filenames['freqs_file_path'], blast_file=filenames['blast_file'],
-                      read_counter_file=filenames['read_counter_file'], stretches_file=filenames['stretches'],
-                      output_file=filenames['summary_graphs'], min_coverage=min_coverage,
-                      stretches_to_plot=stretches_to_plot)  # TODO: drop low quality mutations?
-        graph_haplotypes(input_file=filenames['stretches'], number_of_stretches=stretches_to_plot,
-                         output_dir=output_dir)
+        if skip_haplotypes == "Y":
+            update_meta_data(output_dir=output_dir, status='Inferring haplotypes...', db_path=db_path)
+            infer_haplotypes(cpu_count=cpu_count, filenames=filenames, linked_mutations_dir=filenames['linked_mutations_dir'],
+                             log=log, max_read_size=max_read_size, output_dir=output_dir, stretches_pvalue=stretches_pvalue,
+                             processing_dir=filenames['processing_dir'], stretches_distance=stretches_distance)
+            graph_summary(freqs_file=filenames['freqs_file_path'], blast_file=filenames['blast_file'],
+                          read_counter_file=filenames['read_counter_file'], stretches_file=filenames['stretches'],
+                          output_file=filenames['summary_graphs'], min_coverage=min_coverage,
+                          stretches_to_plot=stretches_to_plot)  # TODO: drop low quality mutations?
+            graph_haplotypes(input_file=filenames['stretches'], number_of_stretches=stretches_to_plot,
+                             output_dir=output_dir)
         if cleanup == "Y":
             shutil.rmtree(filenames['processing_dir'])
         update_meta_data(output_dir=output_dir, status='Done', db_path=db_path)
@@ -307,6 +308,7 @@ def create_runner_parser():
     parser.add_argument("-db", "--db_path", help='path to db directory')
     parser.add_argument("-dbc", "--db_comment", help='comment to store in db')
     parser.add_argument("-mm", "--max_memory", help='limit memory usage to this many megabytes (default: None)')
+    parser.add_argument("-sh", "--skip_haplotypes", help='for debugging', default="N")
     return parser
 
 
@@ -324,5 +326,6 @@ if __name__ == "__main__":
            stretches_pvalue=float(args['stretches_pvalue']), stretches_distance=float(args['stretches_distance']),
            cleanup=args['cleanup'], consolidate_consensus_with_indels=args['consolidate_consensus_with_indels'],
            stretches_to_plot=int(args['stretches_to_plot']), max_read_size=int(args['stretches_max_read_size']),
-           cpu_count=args['cpu_count'], opposing_strings=args['overlap_notation'], db_path=args['db_path'])
+           cpu_count=args['cpu_count'], opposing_strings=args['overlap_notation'], db_path=args['db_path'],
+           skip_haplotypes=args['skip_haplotypes'])
 
