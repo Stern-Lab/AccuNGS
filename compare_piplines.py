@@ -74,7 +74,7 @@ def create_perl_runner_cmdfile(data_dir, output_folder, reference_file, alias, p
     """
     cmd_file_path = os.path.join(output_folder, 'compare_pipelines.cmd')
     create_pbs_cmd_file(path=cmd_file_path, alias=alias, cmd=perl_runner_cmd, output_logs_dir=output_folder,
-                        run_after_job_id=merge_job_id, queue="adistzachi@power9")
+                        run_after_job_id=merge_job_id, queue="adistzachi@power9", job_suffix=".power9.tau.ac.il")
     return cmd_file_path
 
 
@@ -128,7 +128,7 @@ def create_analyze_data_cmdfile(output_folder, alias, previous_jobid):
     cmd = f"cd {this_dir}; python -c " \
           f"'from {this_module} import analyze_data; analyze_data({output_folder_string})'"  # <- dirty hack for PBS
     create_pbs_cmd_file(cmd=cmd, alias=alias, path=cmd_file_path, output_logs_dir=output_folder,
-                        run_after_job_id=previous_jobid)
+                        run_after_job_id=previous_jobid, queue="adistzachi@power9", job_suffix=".power9.tau.ac.il")
     return cmd_file_path
 
 
