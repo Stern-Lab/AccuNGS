@@ -153,10 +153,12 @@ def build_db(db_path):
     db.to_csv(os.path.join(db_path, 'db.tsv'), sep='\t')
 
 
-def assign_output_dir(db_path):
-    now = datetime.now().strftime('%Y-%m-%d-%H-%M')
+def assign_output_dir(db_path, alias=None):
+    now = datetime.now().strftime('%Y-%m-%d')
     random_name = generate_slug(2)
     output_dir_name = random_name + "_" + now
+    if alias:
+        output_dir_name = alias + "_" + output_dir_name
     output_dir = os.path.join(db_path, output_dir_name)
     return output_dir
 
@@ -263,10 +265,6 @@ def runner(input_dir, reference_file, output_dir, max_basecall_iterations, min_c
     except Exception as e:
         log.exception(e)
         update_meta_data(output_dir=output_dir, status="Failed! see logs for details.", db_path=db_path)
-
-    #TODO: test everything, finish up, drop cpu_count?
-
-
 
 
 def create_runner_parser():

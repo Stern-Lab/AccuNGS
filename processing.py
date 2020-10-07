@@ -1,6 +1,5 @@
 import argparse
 import os
-import subprocess
 
 import pandas as pd
 from Bio import SeqIO
@@ -218,7 +217,6 @@ def basecall(blast_output_file, fastq_file, output_dir, quality_threshold, mode,
     called_bases, ignored_bases = filter_bases(called_bases, quality_threshold, reads_overlap)
     ignored_bases.to_csv(os.path.join(output_dir, base_filename+".ignored_bases"), sep="\t", index=False)
     called_bases.to_csv(os.path.join(output_dir, base_filename+".called_bases"), sep="\t", index=False)
-
 
 
 def convert_fastq_to_fasta(output_dir, fastq_file):

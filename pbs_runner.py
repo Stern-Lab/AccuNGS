@@ -100,7 +100,7 @@ def pbs_runner(input_dir, output_dir, reference_file, max_basecall_iterations, d
                stretches_to_plot, max_read_size, alias, queue, cleanup, cpu_count, custom_command=None, after_jobid=None,
                job_suffix=None, default_command=None, skip_haplotypes='N'):
     if not output_dir:
-        output_dir = assign_output_dir(db_path)
+        output_dir = assign_output_dir(db_path, alias)
     base_path = os.path.dirname(os.path.abspath(__file__))
     pbs_logs_dir = os.path.join(output_dir, "pbs_logs")
     os.makedirs(pbs_logs_dir, exist_ok=True)
@@ -118,7 +118,7 @@ def pbs_runner(input_dir, output_dir, reference_file, max_basecall_iterations, d
                      overlap_notation=overlap_notation, skip_haplotypes=skip_haplotypes)
     create_pbs_cmd_file(cmd_path, alias, output_logs_dir=pbs_logs_dir, cmd=cmd, queue=queue, gmem=100,
                         ncpus=cpu_count, run_after_job_id=after_jobid, job_suffix=job_suffix,
-                        custom_command=custom_command, default_command=default_command)  # todo: optimize cpu_count
+                        custom_command=custom_command, default_command=default_command)  # todo: gmem as param
     job_id = submit_cmdfile_to_pbs(cmd_path)
     if job_id:
         print(f"Submitted jod '{alias}' with id {job_id}")
