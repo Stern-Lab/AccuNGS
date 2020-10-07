@@ -1,3 +1,11 @@
+"""
+This script runs the runner on a PBS cluster system by creating a pbs cmd file and running it with qsub.
+In the output directory there will be an extra directory called pbs_logs which will contain the cmd file and the
+output logs of the cluster.
+You can set defaults for the pbs_runner in the config.ini file in the installation directory.
+These can also be parameters for the runner itself which will be used only when running the pbs_runner.
+"""
+
 import ast
 import os
 from random import randint
@@ -33,8 +41,8 @@ def create_pbs_cmd_file(path, alias, output_logs_dir, cmd, queue, gmem=10, ncpus
     o.close()
 
 
-def submit_cmdfile_to_pbs(cmdfile):
-    cmd = "/opt/pbs/bin/qsub " + cmdfile  # TODO: this should be a param in config!
+def submit_cmdfile_to_pbs(cmdfile, pbs_cmd_path):
+    cmd = f"{pbs_cmd_path} {cmdfile}"
     result = os.popen(cmd).read()
     return result.split(".")[0]
 
@@ -94,8 +102,8 @@ def runner_cmd(input_dir, output_dir, reference_file, max_basecall_iterations, d
     return cmd
 
 
-def pbs_runner(input_dir, output_dir, reference_file, max_basecall_iterations, db_path, db_comment,
-               quality_threshold, task, evalue, dust, num_alignments, mode, perc_identity, overlap_notation,
+def pbs_runner(input_dir, output_dir, reference_file, max_basecall_iterations, db_path, db_comment, pbs_cmd_path,
+               quality_threshold, task, evalue, dust, num_alignments, mode, perc_identity, overlap_notation, gmem,
                soft_masking, min_coverage, consolidate_consensus_with_indels, stretches_pvalue, stretches_distance,
                stretches_to_plot, max_read_size, alias, queue, cleanup, cpu_count, custom_command=None, after_jobid=None,
                job_suffix=None, default_command=None, skip_haplotypes='N'):
@@ -116,10 +124,10 @@ def pbs_runner(input_dir, output_dir, reference_file, max_basecall_iterations, d
                      stretches_pvalue=stretches_pvalue, stretches_distance=stretches_distance,
                      stretches_to_plot=stretches_to_plot, max_read_size=max_read_size, base_path=base_path,
                      overlap_notation=overlap_notation, skip_haplotypes=skip_haplotypes)
-    create_pbs_cmd_file(cmd_path, alias, output_logs_dir=pbs_logs_dir, cmd=cmd, queue=queue, gmem=100,
+    create_pbs_cmd_file(cmd_path, alias, output_logs_dir=pbs_logs_dir, cmd=cmd, queue=queue, gmem=gmem,
                         ncpus=cpu_count, run_after_job_id=after_jobid, job_suffix=job_suffix,
-                        custom_command=custom_command, default_command=default_command)  # todo: gmem as param
-    job_id = submit_cmdfile_to_pbs(cmd_path)
+                        custom_command=custom_command, default_command=default_command)
+    job_id = submit_cmdfile_to_pbs(cmd_path, pbs_cmd_path)
     if job_id:
         print(f"Submitted jod '{alias}' with id {job_id}")
         print(f"Output files will be in {output_dir}")
@@ -135,19 +143,21 @@ if __name__ == "__main__":
     parser.add_argument("-a", "--alias", default="AccuNGS", help="job alias visible in qstat (default: AccuNGS)")
     parser.add_argument("-q", "--queue", help="PBS queue to run on")
     parser.add_argument("-j", "--after_jobid", help="Run after successfully completing this jobid")
+    parser.add_argument("-gm", "--gmem", help="Memory in GB to ask for in cmd file")
     parser_args = vars(parser.parse_args())
     args = dict(get_config()['runner_defaults'])  # get runner defaults
     args.update({key: value for key, value in dict(get_config()['pbs_defaults']).items()})  # overide with pbs defaults
     args.update({key: value for key, value in parser_args.items() if value is not None})  # overide with cli args
     pbs_runner(input_dir=args['input_dir'], output_dir=args['output_dir'], reference_file=args['reference_file'],
-               max_basecall_iterations=args['max_basecall_iterations'],
+               max_basecall_iterations=args['max_basecall_iterations'], custom_command=args['custom_command'],
                quality_threshold=args['quality_threshold'], task=args['blast_task'], db_comment=args['db_comment'],
                evalue=args['blast_evalue'], dust=args['blast_dust'], num_alignments=args['blast_num_alignments'],
-               mode=args['blast_mode'], perc_identity=args['blast_perc_identity'], soft_masking=args['blast_soft_masking'],
-               min_coverage=args['min_coverage'], consolidate_consensus_with_indels=args['consolidate_consensus_with_indels'],
-               stretches_pvalue=args['stretches_pvalue'], stretches_distance=args['stretches_distance'], cleanup=args['cleanup'],
+               mode=args['blast_mode'], perc_identity=args['blast_perc_identity'],
+               min_coverage=args['min_coverage'], cleanup=args['cleanup'], default_command=args['default_command'],
+               consolidate_consensus_with_indels=args['consolidate_consensus_with_indels'], queue=args['queue'],
+               stretches_pvalue=args['stretches_pvalue'], stretches_distance=args['stretches_distance'],
                stretches_to_plot=args['stretches_to_plot'], max_read_size=args['stretches_max_read_size'],
                cpu_count=args['cpu_count'], overlap_notation=args['overlap_notation'], db_path=args['db_path'],
                after_jobid=args['after_jobid'], job_suffix=args['job_suffix'], alias=args['alias'],
-               skip_haplotypes=args['skip_haplotypes'],
-               custom_command=args['custom_command'], queue=args['queue'], default_command=args['default_command'])
+               skip_haplotypes=args['skip_haplotypes'], pbs_cmd_path=args['pbs_cmd_path'], gmem=args['gmem'],
+               soft_masking=args['blast_soft_masking'])

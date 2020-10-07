@@ -1,3 +1,17 @@
+"""
+This file is used by runner.py for base calling on each of the parts of the input files created by
+data_preparation.py (parallelization is done in runner.py).
+
+This is where most of the pipeline logic is done. The script accepts a fastq file and a reference, runs blast on it and
+does the basecalling.
+The output consists of several files -
+called_bases: every base called and its attributes.
+ignored_bases: every base ignored, its attributes and why it was ignored.
+suspicious_reads: every suspicious read and why it is suspicious.
+ignored_reads: every read ignored and why.
+read_counter: every read and a number describing how many times it was aligned by blast.
+"""
+
 import argparse
 import os
 

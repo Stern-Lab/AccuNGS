@@ -1,3 +1,10 @@
+"""
+This script is used by runner.py in order to aggregate all the parallel computation output done by instances of
+processing.py.
+
+It trims read_ids (to save space), concats the blast and basecalling outputs, creates the mutation_read_list (called
+separately by the runner) and creates the famous freqs file and the new reference files from it.
+"""
 import argparse
 import json
 import os

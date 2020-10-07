@@ -128,8 +128,10 @@ def create_default_config_file(accungs_dir, config_file):
     db_path = os.path.join(accungs_dir, 'db')
     os.makedirs(db_path, exist_ok=True)
     config['pbs_defaults'] = {
+                              "pbs_cmd_path": "/opt/pbs/bin/qsub",
                               "job_suffix": "",
                               "alias": "AccuNGS",
+                              "gmem": 100,
                               "cpu_count": 50,
                               "queue": "",
                               "default_command": "",

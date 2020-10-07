@@ -1,6 +1,7 @@
 """
-This script accepts 1 or 2 fastq / gz files, concatenates them and extracts them if necessary and then splits them into
-several smaller files ready for parallel execution.
+This script works recursively on a directory containing fastq / gz files. If given an overlap notation it will merge
+overlapping reads. After that it will split the files into an optimal number of parts depending on the current available
+RAM and CPU cores or a given memory usage limit and a fixed number of CPUs.
 """
 
 import os

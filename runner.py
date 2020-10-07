@@ -1,3 +1,10 @@
+"""
+This is where the magic happens!
+This script is the main pipeline tool.
+It accepts as input a directory containing fastq/gz files (or directories containing them) and a reference file.
+It outputs:
+TODO: docs.
+"""
 import argparse
 import concurrent.futures
 import getpass

@@ -1,6 +1,5 @@
 """
-This script takes an input folder containing fastq files, merges them using the new pipeline and than runs both
-the perl (old) and python (new) pipeline.
+This hack takes an input folder containing fastq files and runs both the perl (old) and python (new) pipeline.
 In the output folder there will be the outputs of both pipelines as well as a log file under .log.
 Under the 'analysis' folder a joined dataset of both output data will be created as well as several visualisations
 showing some main differences between the outputs.
@@ -235,20 +234,20 @@ def main(args):
                                                      output_folder=output_folder,
                                                      reference_file=reference_file, alias='CmpPLPRL',
                                                      pipeline_arguments=pipeline_arguments)
-        perl_job_id = submit_cmdfile_to_pbs(perl_runner_cmd)
+        perl_job_id = submit_cmdfile_to_pbs(perl_runner_cmd, pbs_cmd_path="/opt/pbs/bin/qsub")
     if 'python' in stages:
         python_job_id = pbs_runner(input_dir=input_data_folder, output_dir=python_runner_flags['o'],
                                    reference_file=reference_file, mode="RefToSeq", evalue=pipeline_arguments['evalue'],
                                    quality_threshold=pipeline_arguments['q_score'], cleanup=False, db_path="",
                                    consolidate_consensus_with_indels='N', cpu_count=50, db_comment="",
                                    max_read_size=350, min_coverage=10, queue="adistzachi@power9", soft_masking=None,
-                                   skip_haplotypes="Y", job_suffix=".power9.tau.ac.il",
+                                   skip_haplotypes="Y", job_suffix=".power9.tau.ac.il", gmem=100,
+                                   pbs_cmd_path="/opt/pbs/bin/qsub",
                                    stretches_pvalue=None, stretches_to_plot=None, stretches_distance=None,
                                    perc_identity=pipeline_arguments['blast'], max_basecall_iterations=1, dust="no",
                                    num_alignments=1000000, task="blastn", alias="CmpPLPY", overlap_notation="N")
     if 'analysis' in stages:
         # note that this will only work if both perl and python output already exist.
-        # There is no guarantee that the perl command is done except for the fact that the python is way slower...!
         try:
             analyze_cmd_path = create_analyze_data_cmdfile(output_folder, alias='CmpPL-Analyze',
                                                            previous_jobid=perl_job_id)
@@ -256,7 +255,7 @@ def main(args):
             sleep(60)
             analyze_cmd_path = create_analyze_data_cmdfile(output_folder, alias='CmpPL-Analyze',
                                                            previous_jobid=perl_job_id)
-        submit_cmdfile_to_pbs(analyze_cmd_path)
+        submit_cmdfile_to_pbs(analyze_cmd_path, pbs_cmd_path="/opt/pbs/bin/qsub")
 
 
 if __name__ == '__main__':
