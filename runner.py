@@ -27,7 +27,7 @@ from processing import process_fastq
 from aggregation import aggregate_processed_output, create_freqs_file, create_mutation_read_list_file
 from logger import pipeline_logger
 from utils import get_files_in_dir, get_sequence_from_fasta, get_mp_results_and_report, create_new_ref_with_freqs, \
-    get_files_by_extension, concatenate_files_by_extension, get_config
+    get_files_by_extension, concatenate_files_by_extension, get_config, md5_dir, md5_file
 from haplotypes.co_occurs_to_stretches import calculate_stretches
 
 
@@ -225,6 +225,8 @@ def runner(input_dir, reference_file, output_dir, max_basecall_iterations, min_c
         filenames = set_filenames(output_dir=output_dir, db_path=db_path)
         if not cpu_count:
             cpu_count = mp.cpu_count()
+        input_dir_hash = md5_dir(input_dir)
+        reference_file_hash = md5_file(reference_file)
         params = locals().copy()
         update_meta_data(params=params, output_dir=output_dir, status='Setting up...', db_path=db_path)
         log = pipeline_logger(logger_name='AccuNGS-Runner', log_folder=output_dir)
