@@ -225,11 +225,7 @@ def runner(input_dir, reference_file, output_dir, max_basecall_iterations, min_c
            cpu_count, opposing_strings, db_path, max_memory, calculate_haplotypes="Y"):
     # TODO: docs                                                - day
     #       mutations linking optimizations                     - half day
-    #       cleanup remove just basecall files and not blast    - test
-    #       multirunner from ipython                            - test
-    #       make sh permanent                                   - test
     #       how to count overlapping reads coverage             - discussion
-    #       permissions                                         - test
     try:
         filenames = set_filenames(output_dir=output_dir, db_path=db_path)
         if not cpu_count:
@@ -239,7 +235,7 @@ def runner(input_dir, reference_file, output_dir, max_basecall_iterations, min_c
         params = locals().copy()
         update_meta_data(params=params, output_dir=output_dir, status='Setting up...', db_path=db_path)
         log = pipeline_logger(logger_name='AccuNGS-Runner', log_folder=output_dir)
-        log.debug(f"runner params: {params}")
+        log.debug(f"runner params: {params}")  # TODO: why does this contain status..?
         log.info("Preparing data")
         update_meta_data(output_dir=output_dir, status='Preparing data...', db_path=db_path)
         prepare_data(input_dir=input_dir, output_dir=filenames['data_dir'], overlap_notation=opposing_strings,
