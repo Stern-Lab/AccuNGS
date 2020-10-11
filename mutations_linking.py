@@ -58,6 +58,7 @@ def get_mutations_linked_with_position(x, variants_list, mutation_read_list, max
 
 def get_variants_list(freqs_file):
     freqs = pd.read_csv(freqs_file, sep='\t')
+    freqs['ref_pos'] = freqs['ref_pos'].round(3)
     variants = freqs[(freqs['base_rank'] != 0) & (freqs.base_count > 0)].set_index(['ref_pos', 'read_base'])
     return variants.index
 
