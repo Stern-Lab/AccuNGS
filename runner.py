@@ -58,8 +58,9 @@ def set_filenames(output_dir, db_path):
                  "processing_dir": os.path.join(output_dir, "processing"),
                  'linked_mutations_dir': os.path.join(output_dir, "linked_mutations"),
                  'data_dir': os.path.join(output_dir, "data")}
+    filenames['basecall_dir'] = os.path.join(filenames['processing_dir'], 'basecall')
     os.makedirs(filenames['data_dir'], exist_ok=True)
-    os.makedirs(filenames["processing_dir"], exist_ok=True)
+    os.makedirs(filenames["basecall_dir"], exist_ok=True)
     return filenames
 
 
@@ -170,11 +171,10 @@ def assign_output_dir(db_path, alias=None):
     return output_dir
 
 
-def infer_haplotypes(cpu_count, filenames, linked_mutations_dir, log, max_read_size, output_dir, processing_dir,
+def infer_haplotypes(cpu_count, filenames, linked_mutations_dir, log, max_read_size, output_dir, basecall_dir,
                      stretches_distance, stretches_pvalue):
     os.makedirs(linked_mutations_dir, exist_ok=True)
     # TODO: optimize part size
-    basecall_dir = os.path.join(processing_dir, 'basecall')
     called_bases_files = get_files_by_extension(basecall_dir, "called_bases")
     mutation_read_list_path = os.path.join(output_dir, "mutation_read_list.tsv")
     create_mutation_read_list_file(called_bases_files=called_bases_files, output_path=mutation_read_list_path)
@@ -191,7 +191,7 @@ def infer_haplotypes(cpu_count, filenames, linked_mutations_dir, log, max_read_s
 
 def process_data(consolidate_consensus_with_indels, dust, evalue, fastq_files, log, max_basecall_iterations,
                  min_coverage, mode, num_alignments, opposing_strings, output_dir, perc_identity, processing_dir,
-                 quality_threshold, reference_file, soft_masking, task):
+                 quality_threshold, reference_file, soft_masking, task, basecall_dir):
     reads_overlap = bool(opposing_strings)
     for basecall_iteration_counter in range(1, max_basecall_iterations + 1):
         log.info(f"Processing fastq files iteration {basecall_iteration_counter}/{max_basecall_iterations}")
@@ -204,7 +204,7 @@ def process_data(consolidate_consensus_with_indels, dust, evalue, fastq_files, l
         os.makedirs(iteration_data_dir, exist_ok=True)
         alignment_score = check_consensus_alignment_with_ref(reference_file=reference_file,
                                                              iteration_counter=basecall_iteration_counter,
-                                                             basecall_dir=os.path.join(processing_dir, 'basecall'),
+                                                             basecall_dir=basecall_dir,
                                                              with_indels=consolidate_consensus_with_indels,
                                                              iteration_data_dir=iteration_data_dir,
                                                              min_coverage=min_coverage)
@@ -220,7 +220,14 @@ def process_data(consolidate_consensus_with_indels, dust, evalue, fastq_files, l
 def runner(input_dir, reference_file, output_dir, max_basecall_iterations, min_coverage, db_comment,
            quality_threshold, task, evalue, dust, num_alignments, soft_masking, perc_identity, mode, max_read_size,
            consolidate_consensus_with_indels, stretches_pvalue, stretches_distance, stretches_to_plot, cleanup,
-           cpu_count, opposing_strings, db_path, max_memory, skip_haplotypes="N"):
+           cpu_count, opposing_strings, db_path, max_memory, calculate_haplotypes="Y"):
+    # TODO: docs                                                - day
+    #       mutations linking optimizations                     - half day
+    #       cleanup remove just basecall files and not blast    - test
+    #       multirunner from ipython                            - test
+    #       make sh permanent                                   - test
+    #       how to count overlapping reads coverage             - discussion
+    #       permissions                                         - test
     try:
         filenames = set_filenames(output_dir=output_dir, db_path=db_path)
         if not cpu_count:
@@ -245,7 +252,7 @@ def runner(input_dir, reference_file, output_dir, max_basecall_iterations, min_c
                                       mode=mode, num_alignments=num_alignments, opposing_strings=opposing_strings,
                                       output_dir=output_dir, perc_identity=perc_identity, reference_file=reference_file,
                                       processing_dir=filenames['processing_dir'], quality_threshold=quality_threshold,
-                                      task=task)
+                                      task=task, basecall_dir=filenames['basecall_dir'])
         log.info("Aggregating processed fastq files outputs...")
         aggregate_processed_output(input_dir=filenames['processing_dir'], output_dir=output_dir,
                                    reference=reference_file, min_coverage=min_coverage)
@@ -255,12 +262,12 @@ def runner(input_dir, reference_file, output_dir, max_basecall_iterations, min_c
                       output_file=filenames['summary_graphs'], min_coverage=min_coverage,
                       stretches_to_plot=stretches_to_plot)  # TODO: drop low quality mutations?
         log.info(f"Most outputs are ready in {output_dir} !")
-        if skip_haplotypes == "N":
+        if calculate_haplotypes == "Y":
             log.info(f"Calculating linked mutations...")
             update_meta_data(output_dir=output_dir, status='Inferring haplotypes...', db_path=db_path)
             infer_haplotypes(cpu_count=cpu_count, filenames=filenames, linked_mutations_dir=filenames['linked_mutations_dir'],
                              log=log, max_read_size=max_read_size, output_dir=output_dir, stretches_pvalue=stretches_pvalue,
-                             processing_dir=filenames['processing_dir'], stretches_distance=stretches_distance)
+                             basecall_dir=filenames['basecall_dir'], stretches_distance=stretches_distance)
             graph_summary(freqs_file=filenames['freqs_file_path'], blast_file=filenames['blast_file'],
                           read_counter_file=filenames['read_counter_file'], stretches_file=filenames['stretches'],
                           output_file=filenames['summary_graphs'], min_coverage=min_coverage,
@@ -268,7 +275,11 @@ def runner(input_dir, reference_file, output_dir, max_basecall_iterations, min_c
             graph_haplotypes(input_file=filenames['stretches'], number_of_stretches=stretches_to_plot,
                              output_dir=output_dir)
         if cleanup == "Y":
-            shutil.rmtree(filenames['processing_dir'])
+            log.info(f"Removing directory {filenames['basecall_dir']} to save space.")
+            shutil.rmtree(filenames['basecall_dir'])
+            with open(filenames['basecall_dir'], 'w') as f:
+                f.write("Directory 'basecall' which contains the original parts of the output files has been removed. "
+                        "To prevent it from being remove run with option --cleanup N")
         update_meta_data(output_dir=output_dir, status='Done', db_path=db_path)
         log.info(f"Done!")
     except Exception as e:
@@ -315,7 +326,7 @@ def create_runner_parser():
     parser.add_argument("-db", "--db_path", help='path to db directory')
     parser.add_argument("-dbc", "--db_comment", help='comment to store in db')
     parser.add_argument("-mm", "--max_memory", help='limit memory usage to this many megabytes (default: None)')
-    parser.add_argument("-sh", "--skip_haplotypes", help='for debugging', default="N")
+    parser.add_argument("-ch", "--calculate_haplotypes", help='for debugging', default="Y")
     return parser
 
 
@@ -334,5 +345,5 @@ if __name__ == "__main__":
            cleanup=args['cleanup'], consolidate_consensus_with_indels=args['consolidate_consensus_with_indels'],
            stretches_to_plot=int(args['stretches_to_plot']), max_read_size=int(args['stretches_max_read_size']),
            cpu_count=args['cpu_count'], opposing_strings=args['overlap_notation'], db_path=args['db_path'],
-           skip_haplotypes=args['skip_haplotypes'])
+           calculate_haplotypes=args['calculate_haplotypes'])
 
