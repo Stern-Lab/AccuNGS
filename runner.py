@@ -1,9 +1,51 @@
 """
 This is where the magic happens!
-This script is the main pipeline tool.
-It accepts as input a directory containing fastq/gz files (or directories containing them) and a reference file.
-It outputs:
-TODO: docs.
+This tool ... TODO: what is this and what does it do?!
+
+It is meant to be able to run locally and in pbs_runner.py there is also specific support for pbs cluster systems.
+
+___Overview___
+The pipeline is divided into 4 parts each having it's own .py file.
+I   -  Preperation (data_preperation.py)
+II  -  Processing (processing.py)
+III -  Aggregation (aggregation.py)
+IV  -  Haplotype Inference (mutations_linking.py)
+
+I - Data Prepeation
+Input: directory containing fastq/gz files or a directory containing such directories.
+Output: fastq files in sizes ready for efficient processing.
+
+Depending on currently availble RAM and CPUs or given values in -mm / --max_memory and -cc / --cpu_count the script
+will divide the files into an efficient number of files to later run the processing script on.
+If given an overlap_notation it will also merge the forward and backward reads in corresponding fastq files.
+
+II - Processing
+Input: fastq files from part I and a reference fasta file.
+Output: called_bases - every base called and its attributes.
+        ignored_bases - every base ignored, its attributes and why it was ignored.
+        suspicious_reads - every suspicious read and why it is suspicious.
+        ignored_reads - every read ignored and why.
+        read_counter - every read and a number describing how many times it was aligned by blast.
+        blast files - alignment output files.
+
+This is where the main logic of the pipeline happens and the runner runs this on each of the fastq files in parallel.
+Basically it first aligns the reads to the reference with blast and then goes over every read and nucleotide and decides
+whether to filter them out or leave them in.
+
+III - Aggregation
+Input: directory containing output of basecalling of stage II
+Output: concatenations - concatenated outputs of stage II
+        read_id_prefix_file - a json file containing a dictionary of read prefixes to save memory in the other files.
+        mutation_read_list - a file describing in which reads each mutation appeared.
+        freqs - a frequencies file describing the different alleles and their frequencies for each position.
+        consensus_with_indels - a fasta file of the majority frequency derived from the freqs file including indels
+        consensus_without_indels - a fasta file of the majority frequency derived from the freqs file exclusing indels
+        read_counter - a file counting how many alignments were called for each read.
+
+IV - Haplotype Inference
+Input: directory containing output of stage III
+Output: linked_mutations - file containing pairs of mutatations, their pvalues and their frequencies.
+        stretches - file containing the aggregations of the stretches by their frequencies.
 """
 import argparse
 import concurrent.futures
@@ -135,6 +177,7 @@ def get_consensus_path(basecall_iteration_counter, consolidate_consensus_with_in
 
 
 def update_meta_data(output_dir, status, db_path, params=None):
+    # TODO: running time
     json_file = os.path.join(output_dir, 'meta_data.json')
     if params is not None:
         meta_data = params

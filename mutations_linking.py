@@ -7,6 +7,9 @@ from scipy.stats import fisher_exact
 
 from utils import drange
 
+# TODO: combine with co-occurs_to_stretches.py
+#       docs
+
 
 def _get_total_read_list(mutations_reads_list):
     complete_read_list = set()

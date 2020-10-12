@@ -107,6 +107,12 @@ def pbs_runner(input_dir, output_dir, reference_file, max_basecall_iterations, d
                soft_masking, min_coverage, consolidate_consensus_with_indels, stretches_pvalue, stretches_distance,
                stretches_to_plot, max_read_size, alias, queue, cleanup, cpu_count, custom_command=None, after_jobid=None,
                job_suffix=None, default_command=None, calculate_haplotypes='Y'):
+    # TODO: if running with ~500-1000 cpus doesnt work -
+    #       reintroduce stages into the runner,
+    #       do relevant aggregation (when needed) in aggregation instead of linked mutations,
+    #       create a dir with files reperesenting mutation_read_list_parts,
+    #       use it in a pbs array calling linked mutations on each part.
+
     if not output_dir:
         output_dir = assign_output_dir(db_path, alias)
     base_path = os.path.dirname(os.path.abspath(__file__))
@@ -140,7 +146,7 @@ def pbs_runner(input_dir, output_dir, reference_file, max_basecall_iterations, d
 
 if __name__ == "__main__":
     parser = create_runner_parser()
-    parser.add_argument("-a", "--alias", default="AccuNGS", help="job alias visible in qstat (default: AccuNGS)")
+    parser.add_argument("-a", "--alias", help="job alias visible in qstat")
     parser.add_argument("-q", "--queue", help="PBS queue to run on")
     parser.add_argument("-j", "--after_jobid", help="Run after successfully completing this jobid")
     parser.add_argument("-gm", "--gmem", help="Memory in GB to ask for in cmd file")
