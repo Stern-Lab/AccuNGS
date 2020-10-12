@@ -2,8 +2,14 @@
 This script is used by runner.py in order to aggregate all the parallel computation output done by instances of
 processing.py.
 
-It trims read_ids (to save space), concats the blast and basecalling outputs, creates the mutation_read_list (called
-separately by the runner) and creates the famous freqs file and the new reference files from it.
+Input: directory containing output of basecalling from processing.py
+Output: concatenations - concatenated outputs of processing.py
+        read_id_prefix_file - a json file containing a dictionary of read prefixes to save memory in the other files.
+        mutation_read_list - a file describing in which reads each mutation appeared.
+        freqs - a frequencies file describing the different alleles and their frequencies for each position.
+        consensus_with_indels - a fasta file of the majority frequency derived from the freqs file including indels
+        consensus_without_indels - a fasta file of the majority frequency derived from the freqs file exclusing indels
+        read_counter - a file counting how many alignments were called for each read.
 """
 import argparse
 import json

@@ -1,7 +1,12 @@
 """
-This script works recursively on a directory containing fastq / gz files. If given an overlap notation it will merge
-overlapping reads. After that it will split the files into an optimal number of parts depending on the current available
-RAM and CPU cores or a given memory usage limit and a fixed number of CPUs.
+This is usually called by runner.py
+
+Input: directory containing fastq/gz files or a directory containing such directories.
+Output: fastq files in sizes ready for efficient processing.
+
+Depending on currently availble RAM and CPUs or given values in -mm / --max_memory and -cc / --cpu_count the script
+will divide the files into an efficient number of files to later run the processing script on.
+If given an overlap_notation it will also merge the forward and backward reads in corresponding fastq files.
 """
 
 import os
