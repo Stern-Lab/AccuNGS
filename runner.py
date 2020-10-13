@@ -138,7 +138,7 @@ def parallel_calc_linked_mutations(freqs_file_path, output_dir, mutation_read_li
         else:
             end_index = start_index + part_size + max_read_length
         start_position = positions[start_index]
-        end_position = positions[end_index-1]
+        end_position = positions[end_index-1] + 0.99  # include insertions
         mutation_read_list_parts[f"{start_index}_{end_index}"] = mutation_read_list.loc[start_position:end_position]
         start_index += part_size
     with mp.Pool(cpu_count) as pool:
