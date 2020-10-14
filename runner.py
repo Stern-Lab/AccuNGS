@@ -324,7 +324,7 @@ def runner(input_dir, reference_file, output_dir, max_basecall_iterations, min_c
         update_meta_data(output_dir=output_dir, status='Done', db_path=db_path)
         log.info(f"Done!")
     except Exception as e:
-        log.exception(e)
+        log.exception(e)  # TODO: fix this
         update_meta_data(output_dir=output_dir, status="Failed! see logs for details.", db_path=db_path)
 
 

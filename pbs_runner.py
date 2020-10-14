@@ -107,11 +107,12 @@ def pbs_runner(input_dir, output_dir, reference_file, max_basecall_iterations, d
                soft_masking, min_coverage, consolidate_consensus_with_indels, stretches_pvalue, stretches_distance,
                stretches_to_plot, max_read_size, alias, queue, cleanup, cpu_count, custom_command=None, after_jobid=None,
                job_suffix=None, default_command=None, calculate_haplotypes='Y'):
-    # TODO: if running with ~500-1000 cpus doesnt work -
+    # TODO:
     #       reintroduce stages into the runner,
     #       do relevant aggregation (when needed) in aggregation instead of linked mutations,
-    #       create a dir with files reperesenting mutation_read_list_parts,
+    #       create a dir with files representing mutation_read_list_parts,
     #       use it in a pbs array calling linked mutations on each part.
+    #       where each job uses 24 cpus or less and limit to 500 jobs per array.
 
     if not output_dir:
         output_dir = assign_output_dir(db_path, alias)
