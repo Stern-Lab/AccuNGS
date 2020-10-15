@@ -8,7 +8,7 @@ import hashlib
 from _hashlib import HASH as Hash
 from pathlib import Path
 from typing import Union
-
+from shutil import copyfile
 import numpy as np
 import pandas as pd
 
@@ -158,7 +158,9 @@ def reverse_string(string):
 def get_config():
     accungs_dir = os.path.dirname(os.path.abspath(__file__))
     config_file = os.path.join(accungs_dir, 'config.ini')
-    assert os.path.isfile(config_file), "Missing config.ini file! You should probably reinstall..."
+    if not os.path.isfile(config_file):
+        sample_config = os.path.join(accungs_dir, "config_sample.ini")
+        copyfile(sample_config, config_file)
     config = configparser.ConfigParser()
     config.read(config_file)
     return config
