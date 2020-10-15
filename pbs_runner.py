@@ -6,7 +6,6 @@ You can set defaults for the pbs_runner in the config.ini file in the installati
 These can also be parameters for the runner itself which will be used only when running the pbs_runner.
 """
 
-import ast
 import os
 from random import randint
 
@@ -100,14 +99,13 @@ def runner_cmd(input_dir, output_dir, reference_file, max_basecall_iterations, d
 
 def pbs_runner(input_dir, output_dir, reference_file, max_basecall_iterations, db_path, db_comment, pbs_cmd_path,
                quality_threshold, task, evalue, dust, num_alignments, mode, perc_identity, overlapping_reads, gmem,
-               soft_masking, min_coverage, with_indels, stretches_pvalue, stretches_distance,
+               soft_masking, min_coverage, with_indels, stretches_pvalue, stretches_distance, calculate_haplotypes,
                stretches_to_plot, max_read_size, alias, queue, cleanup, cpu_count, custom_command=None, after_jobid=None,
-               job_suffix=None, default_command=None, calculate_haplotypes='Y'):
-    # TODO:
-    #       reintroduce stages into the runner,
+               job_suffix=None, default_command=None):
+    # TODO: reintroduce stages into the runner,
     #       do relevant aggregation (when needed) in aggregation instead of linked mutations,
     #       create a dir with files representing mutation_read_list_parts,
-    #       use it in a pbs array calling linked mutations on each part.
+    #       use it in a pbs array calling linked mutations on each part
     #       where each job uses 24 cpus or less and limit to 500 jobs per array.
 
     if not output_dir:
@@ -119,14 +117,13 @@ def pbs_runner(input_dir, output_dir, reference_file, max_basecall_iterations, d
     alias += f"_{cmd_identifier}"
     cmd_path = os.path.join(pbs_logs_dir, f'{alias}.cmd')
     cmd = runner_cmd(input_dir=input_dir, output_dir=output_dir, reference_file=reference_file,
-                     max_basecall_iterations=max_basecall_iterations,
+                     max_basecall_iterations=max_basecall_iterations, max_read_size=max_read_size,
                      quality_threshold=quality_threshold, task=task, evalue=evalue, dust=dust,
                      num_alignments=num_alignments, mode=mode, perc_identity=perc_identity, db_comment=db_comment,
                      soft_masking=soft_masking, min_coverage=min_coverage, cleanup=cleanup, cpu_count=cpu_count,
-                     with_indels=with_indels, db_path=db_path,
-                     stretches_pvalue=stretches_pvalue, stretches_distance=stretches_distance,
-                     stretches_to_plot=stretches_to_plot, max_read_size=max_read_size, base_path=base_path,
-                     overlapping_reads=overlapping_reads, calculate_haplotypes=calculate_haplotypes)
+                     with_indels=with_indels, db_path=db_path, calculate_haplotypes=calculate_haplotypes,
+                     stretches_pvalue=stretches_pvalue, stretches_distance=stretches_distance, base_path=base_path,
+                     stretches_to_plot=stretches_to_plot, overlapping_reads=overlapping_reads)
     create_pbs_cmd_file(cmd_path, alias, output_logs_dir=pbs_logs_dir, cmd=cmd, queue=queue, gmem=gmem,
                         ncpus=cpu_count, run_after_job_id=after_jobid, job_suffix=job_suffix,
                         custom_command=custom_command, default_command=default_command)

@@ -87,7 +87,7 @@ def parallel_process(processing_dir, fastq_files, reference_file, quality_thresh
                         "To avoid this try running with --max_memory max_available_RAM_in_MB")
 
 
-def set_filenames(output_dir, db_path):
+def set_filenames(output_dir):
     filenames = {"freqs_file_path": os.path.join(output_dir, 'freqs.tsv'),
                  "linked_mutations_path": os.path.join(output_dir, 'linked_mutations.tsv'),
                  "mutation_read_list_path": os.path.join(output_dir, 'mutation_read_list.tsv'),
@@ -116,7 +116,7 @@ def calculate_linked_mutations(freqs_file_path, mutation_read_list, max_read_len
 
 def parallel_calc_linked_mutations(freqs_file_path, output_dir, mutation_read_list_path, max_read_length, part_size,
                                    cpu_count):
-    #TODO: optimize memory usage and proper exceptions.
+    # TODO: optimize memory usage and better exceptions.
     mutation_read_list = pd.read_csv(mutation_read_list_path, sep="\t")
     mutation_read_list['ref_pos'] = mutation_read_list['ref_pos'].round(3)
     mutation_read_list = mutation_read_list.set_index(['ref_pos', 'read_base'], drop=True)
@@ -175,7 +175,7 @@ def get_consensus_path(basecall_iteration_counter, with_indels, iteration_data_d
 
 
 def update_meta_data(output_dir, status, db_path, params=None):
-    # TODO: running time
+    # TODO: write running time in meta_data
     json_file = os.path.join(output_dir, 'meta_data.json')
     if params is not None:
         meta_data = params
@@ -264,15 +264,13 @@ def runner(input_dir, reference_file, output_dir, max_basecall_iterations, min_c
            quality_threshold, task, evalue, dust, num_alignments, soft_masking, perc_identity, mode, max_read_size,
            with_indels, stretches_pvalue, stretches_distance, stretches_to_plot, cleanup,
            cpu_count, overlapping_reads, db_path, max_memory, calculate_haplotypes="Y"):
-    # TODO: docs                                                - day
-    #       mutations linking optimizations                     - half day
     if not db_path:
         db_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'db')
     if not output_dir:
         output_dir = assign_output_dir(db_path)
     log = pipeline_logger(logger_name='AccuNGS-Runner', log_folder=output_dir)
     try:
-        filenames = set_filenames(output_dir=output_dir, db_path=db_path)
+        filenames = set_filenames(output_dir=output_dir)
         if not cpu_count:
             cpu_count = mp.cpu_count()
         input_dir_hash = md5_dir(input_dir)
@@ -356,7 +354,7 @@ def create_runner_parser():
                         help="Minimal coverage required for a position to be considered as consensus")
     parser.add_argument("-wi", "--with_indels", help="Y/N, create consensus with or without indels")
     parser.add_argument("-sp", "--stretches_pvalue", type=float,
-                        help="only consider joint mutations with pvalue below this value")  # TODO: better docs
+                        help="only consider joint mutations with pvalue below this value")
     parser.add_argument("-sd", "--stretches_distance", type=float,
                         help="mean transitive distance between joint mutations to calculate stretches")
     parser.add_argument("-stp", "--stretches_to_plot", type=int,

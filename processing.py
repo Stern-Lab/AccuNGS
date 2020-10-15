@@ -210,11 +210,7 @@ def filter_bases(called_bases, quality_threshold, reads_overlap):
 
 
 def basecall(blast_output_file, fastq_file, output_dir, quality_threshold, mode, reads_overlap):
-    """
-    outputs ignored_reads, ignored_bases, suspicious_alignments, called_bases
-    """
     base_filename = os.path.basename(fastq_file)
-    # read alignments from blast file and do preliminary filtering
     alignments, ignored_reads, suspicious_reads, read_counter = get_alignments(blast_output_file, fastq_file=fastq_file,
                                                                                reads_overlap=reads_overlap)
     read_counter.to_csv(os.path.join(output_dir, base_filename + ".read_counter"), sep="\t")
@@ -243,22 +239,6 @@ def process_fastq(fastq_file, reference, output_dir, quality_threshold, task, ev
     os.makedirs(blast_output, exist_ok=True)
     reads_fasta_file_path = convert_fastq_to_fasta(fastq_file=fastq_file, output_dir=blast_output)
     blast_output_file = reads_fasta_file_path + ".blast"
-    # TODO: test all these blast defaults.
-    # Set blast defaults:
-    if task is None:
-        task = "blastn"
-    if evalue is None:
-        evalue = 1e-7
-    if not dust:
-        dust = "no"
-    if num_alignments is None:
-        num_alignments = 1000000
-    if soft_masking is None:
-        soft_masking = "F"
-    if perc_identity is None:
-        perc_identity = 85
-    if mode is None:
-        mode = "RefToSeq"  # TODO: test differences between modes.
     run_blast(reads_fasta=reads_fasta_file_path, reference=reference, output=blast_output_file, mode=mode, task=task,
               evalue=evalue, num_alignments=num_alignments, dust=dust, soft_masking=soft_masking, log=log,
               perc_identity=perc_identity)
@@ -277,16 +257,14 @@ if __name__ == "__main__":
     parser.add_argument("-r", "--reference_path", required=True)
     parser.add_argument("-o", "--output_dir", required=True)
     parser.add_argument("-ro", "--reads_overlap", required=True)
-    parser.add_argument("-q", "--quality_threshold", type=int,
-                        help="bases with quality under this will be ignored (default: 30)")
-    parser.add_argument("-bt", "--blast_task", help="blast's task parameter (default: blastn")
-    parser.add_argument("-be", "--blast_evalue", help="blast's evalue parameter (default: 1e-7)", type=float)
-    parser.add_argument("-bd", "--blast_dust", help="blast's dust parameter (default: on)")
-    parser.add_argument("-bn", "--blast_num_alignments", type=int,
-                        help="blast's num_alignments parameter (default: 1000000)")
-    parser.add_argument("-bp", "--blast_perc_identity", type=int, help="blast's perc_identity parameter (default: 85)")
-    parser.add_argument("-bs", "--blast_soft_masking", type=int, help="blast's soft_masking parameter (default: F)")
-    parser.add_argument("-bm", "--blast_mode", help="RefToSeq or SeqToRef (default: RefToSeq)")  # TODO: docs
+    parser.add_argument("-q", "--quality_threshold", type=int, help="bases with quality under this will be ignored")
+    parser.add_argument("-bt", "--blast_task", help="blast's task parameter")
+    parser.add_argument("-be", "--blast_evalue", help="blast's evalue parameter", type=float)
+    parser.add_argument("-bd", "--blast_dust", help="blast's dust parameter")
+    parser.add_argument("-bn", "--blast_num_alignments", type=int, help="blast's num_alignments parameter")
+    parser.add_argument("-bp", "--blast_perc_identity", type=int, help="blast's perc_identity parameter")
+    parser.add_argument("-bs", "--blast_soft_masking", type=int, help="blast's soft_masking parameter")
+    parser.add_argument("-bm", "--blast_mode", help="RefToSeq or SeqToRef")
     args = parser.parse_args()
     process_fastq(fastq_file=args.fastq_file, reference=args.reference_path, output_dir=args.output_dir,
                   reads_overlap=args.reads_overlap, quality_threshold=args.quality_threshold, task=args.blast_task,
