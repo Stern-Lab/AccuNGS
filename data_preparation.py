@@ -6,7 +6,7 @@ Output: fastq files in sizes ready for efficient processing.
 
 Depending on currently availble RAM and CPUs or given values in -mm / --max_memory and -cc / --cpu_count the script
 will divide the files into an efficient number of files to later run the processing script on.
-If given an overlap_notation it will also merge the forward and backward reads in corresponding fastq files.
+If given an merge_opposing it will also merge the forward and backward reads in corresponding fastq files.
 """
 
 import os
@@ -93,7 +93,7 @@ def split_fastq_file(fastq_file, output_dir, cpu_count, max_memory):
             SeqIO.write(batch, handler, "fastq")
 
 
-def find_relevant_files(input_dir, log):
+def find_read_files(input_dir, log):
     fastq_files = get_files_by_extension(input_dir, 'fastq')
     if len(fastq_files) == 0:
         gz_files = get_files_by_extension(input_dir, 'gz')
@@ -118,25 +118,17 @@ def merge_opposing_reads(file1, file2, output_file, rep_length, file_type, log):
     return output_file
 
 
-def are_opposing(files, opposing_strings=None):
-    if len(opposing_strings) != 1:
-        if (opposing_strings[0] in files[0] and opposing_strings[1] in files[1]) or (
-                opposing_strings[1] in files[0] and opposing_strings[0] in files[1]):
-            return True
-    return False
-
-
-def prepare_data_in_dir(input_dir, output_dir, rep_length, opposing_strings, log, cpu_count, max_memory):
+def prepare_data_in_dir(input_dir, output_dir, rep_length, overlapping_reads, log, cpu_count, max_memory):
     input_dir_name = os.path.basename(input_dir)
     if input_dir_name == "":
         input_dir_name = os.path.basename(input_dir[:-1])  # that last '/' confuses basename..
-    files, file_type = find_relevant_files(input_dir, log)
+    files, file_type = find_read_files(input_dir, log)
     if len(files) == 0:
         log.warning(f"Did not find any relevant files in {input_dir} !")
         return None
-    if are_opposing(files, opposing_strings):
+    if overlapping_reads == "Y":
         if len(files) == 2:
-            log.debug(f"Found 2 opposing files in {input_dir}")
+            log.debug(f"Found 2 opposing read files in {input_dir}")
             merged_reads = os.path.join(output_dir, input_dir_name + '_merged_reads.fastq')
             merged_reads = merge_opposing_reads(file1=files[0], file2=files[1], output_file=merged_reads,
                                                 rep_length=rep_length, file_type=file_type, log=log)
@@ -144,7 +136,7 @@ def prepare_data_in_dir(input_dir, output_dir, rep_length, opposing_strings, log
                 merged_reads = extract_gz(merged_reads, output_dir=output_dir)
             split_fastq_file(fastq_file=merged_reads, output_dir=output_dir, cpu_count=cpu_count, max_memory=max_memory)
         else:
-            raise Exception(f"Found more than 2 files containing opposing_strings: {opposing_strings} !")
+            raise Exception(f"When using merge_opposing !")
     else:
         for file in files:
             if file_type == 'gz':
@@ -152,21 +144,17 @@ def prepare_data_in_dir(input_dir, output_dir, rep_length, opposing_strings, log
             split_fastq_file(fastq_file=file, output_dir=output_dir, cpu_count=cpu_count, max_memory=max_memory)
 
 
-def prepare_data(input_dir, output_dir, cpu_count, max_memory, rep_length=None, overlap_notation=None):
+def prepare_data(input_dir, output_dir, cpu_count, max_memory, overlapping_reads, rep_length=60):
     log = pipeline_logger(logger_name='Data-Preparation', log_folder=output_dir)
     if not cpu_count:
         cpu_count = mp.cpu_count()
-    if rep_length is None:
-        rep_length = 60
-    if overlap_notation is None:
-        overlap_notation = ("_R1", "_R2")
     os.makedirs(output_dir, exist_ok=True)
     prepare_data_in_dir(input_dir=input_dir, output_dir=output_dir, rep_length=rep_length, max_memory=max_memory,
-                        opposing_strings=overlap_notation, log=log, cpu_count=cpu_count)
+                        overlapping_reads=overlapping_reads, log=log, cpu_count=cpu_count)
     sub_dirs = [f.path for f in os.scandir(input_dir) if f.is_dir()]
     for dir_path in sub_dirs:
         prepare_data_in_dir(input_dir=dir_path, output_dir=output_dir, rep_length=rep_length, max_memory=max_memory,
-                            opposing_strings=overlap_notation, log=log, cpu_count=cpu_count)
+                            overlapping_reads=overlapping_reads, log=log, cpu_count=cpu_count)
 
 
 if __name__ == "__main__":
@@ -175,11 +163,11 @@ if __name__ == "__main__":
                         help="Path to directory containing fastq or gz files of one specific sample")
     parser.add_argument("-o", "--output_dir", help="Where the output files go", required=True)
     parser.add_argument("-r", "--rep_length", help="amount of N bases to repeat (default: 60)", type=int)
-    parser.add_argument("-on", "--overlap_notation", default=None, nargs="+", type=str,
+    parser.add_argument("-on", "--merge_opposing", default=None, nargs="+", type=str,
                         help="Notation of overlapping reads in the same directory to merge. Passing N would run without"
                              " considering overlapping reads (default is: '_R1 _R2')")
     parser.add_argument("-cc", "--cpu_count", default=None, type=int,
                         help="How many cpu's you have will determine to how many parts to split the file")
     args = parser.parse_args()
     prepare_data(input_dir=args.input_dir, output_dir=args.output_dir, rep_length=args.rep_length,
-                 overlap_notation=args.overlap_notation, cpu_count=args.cpu_count)
+                 merge_opposing=args.overlap_notation, cpu_count=args.cpu_count)
