@@ -49,8 +49,8 @@ def submit_cmdfile_to_pbs(cmdfile, pbs_cmd_path):
 
 def runner_cmd(input_dir, output_dir, reference_file, max_basecall_iterations, db_path, db_comment,
                quality_threshold, task, evalue, dust, num_alignments, mode, perc_identity, soft_masking, min_coverage,
-               consolidate_consensus_with_indels, stretches_pvalue, stretches_distance, stretches_to_plot,
-               max_read_size, base_path, cleanup, cpu_count, overlap_notation, calculate_haplotypes):
+               with_indels, stretches_pvalue, stretches_distance, stretches_to_plot,
+               max_read_size, base_path, cleanup, cpu_count, overlapping_reads, calculate_haplotypes):
     runner_path = os.path.join(base_path, 'runner.py')
     cmd = f"python {runner_path} -i {input_dir} -o {output_dir} -r {reference_file} "
     if max_basecall_iterations:
@@ -73,8 +73,8 @@ def runner_cmd(input_dir, output_dir, reference_file, max_basecall_iterations, d
         cmd += f" -bs {soft_masking}"
     if min_coverage:
         cmd += f" -mc {min_coverage}"
-    if consolidate_consensus_with_indels:
-        cmd += f" -ccwi {consolidate_consensus_with_indels}"
+    if with_indels:
+        cmd += f" -wi {with_indels}"
     if stretches_pvalue:
         cmd += f" -sp {stretches_pvalue}"
     if stretches_distance:
@@ -87,12 +87,8 @@ def runner_cmd(input_dir, output_dir, reference_file, max_basecall_iterations, d
         cmd += f" -c {cleanup}"
     if cpu_count:
         cmd += f" -cc {cpu_count}"
-    if overlap_notation:
-        if isinstance(overlap_notation, str):
-            if overlap_notation.startswith('['):
-                overlap_notation = ast.literal_eval(overlap_notation)
-        overlap_notation = ' '.join(overlap_notation)
-        cmd += f" -on {overlap_notation}"
+    if overlapping_reads:
+        cmd += f" -or {overlapping_reads}"
     if db_path:
         cmd += f" -db {db_path}"
     if db_comment:
@@ -103,8 +99,8 @@ def runner_cmd(input_dir, output_dir, reference_file, max_basecall_iterations, d
 
 
 def pbs_runner(input_dir, output_dir, reference_file, max_basecall_iterations, db_path, db_comment, pbs_cmd_path,
-               quality_threshold, task, evalue, dust, num_alignments, mode, perc_identity, overlap_notation, gmem,
-               soft_masking, min_coverage, consolidate_consensus_with_indels, stretches_pvalue, stretches_distance,
+               quality_threshold, task, evalue, dust, num_alignments, mode, perc_identity, overlapping_reads, gmem,
+               soft_masking, min_coverage, with_indels, stretches_pvalue, stretches_distance,
                stretches_to_plot, max_read_size, alias, queue, cleanup, cpu_count, custom_command=None, after_jobid=None,
                job_suffix=None, default_command=None, calculate_haplotypes='Y'):
     # TODO:
@@ -127,10 +123,10 @@ def pbs_runner(input_dir, output_dir, reference_file, max_basecall_iterations, d
                      quality_threshold=quality_threshold, task=task, evalue=evalue, dust=dust,
                      num_alignments=num_alignments, mode=mode, perc_identity=perc_identity, db_comment=db_comment,
                      soft_masking=soft_masking, min_coverage=min_coverage, cleanup=cleanup, cpu_count=cpu_count,
-                     consolidate_consensus_with_indels=consolidate_consensus_with_indels, db_path=db_path,
+                     with_indels=with_indels, db_path=db_path,
                      stretches_pvalue=stretches_pvalue, stretches_distance=stretches_distance,
                      stretches_to_plot=stretches_to_plot, max_read_size=max_read_size, base_path=base_path,
-                     overlap_notation=overlap_notation, calculate_haplotypes=calculate_haplotypes)
+                     overlapping_reads=overlapping_reads, calculate_haplotypes=calculate_haplotypes)
     create_pbs_cmd_file(cmd_path, alias, output_logs_dir=pbs_logs_dir, cmd=cmd, queue=queue, gmem=gmem,
                         ncpus=cpu_count, run_after_job_id=after_jobid, job_suffix=job_suffix,
                         custom_command=custom_command, default_command=default_command)
@@ -152,19 +148,19 @@ if __name__ == "__main__":
     parser.add_argument("-j", "--after_jobid", help="Run after successfully completing this jobid")
     parser.add_argument("-gm", "--gmem", help="Memory in GB to ask for in cmd file")
     parser_args = vars(parser.parse_args())
-    args = dict(get_config()['runner_defaults'])  # get runner defaults
+    args = dict(get_config()['runner_defaults'])                                            # get runner defaults
     args.update({key: value for key, value in dict(get_config()['pbs_defaults']).items()})  # overide with pbs defaults
-    args.update({key: value for key, value in parser_args.items() if value is not None})  # overide with cli args
+    args.update({key: value for key, value in parser_args.items() if value is not None})    # overide with cli args
     pbs_runner(input_dir=args['input_dir'], output_dir=args['output_dir'], reference_file=args['reference_file'],
                max_basecall_iterations=args['max_basecall_iterations'], custom_command=args['custom_command'],
                quality_threshold=args['quality_threshold'], task=args['blast_task'], db_comment=args['db_comment'],
                evalue=args['blast_evalue'], dust=args['blast_dust'], num_alignments=args['blast_num_alignments'],
                mode=args['blast_mode'], perc_identity=args['blast_perc_identity'],
                min_coverage=args['min_coverage'], cleanup=args['cleanup'], default_command=args['default_command'],
-               consolidate_consensus_with_indels=args['consolidate_consensus_with_indels'], queue=args['queue'],
+               with_indels=args['with_indels'], queue=args['queue'],
                stretches_pvalue=args['stretches_pvalue'], stretches_distance=args['stretches_distance'],
                stretches_to_plot=args['stretches_to_plot'], max_read_size=args['stretches_max_read_size'],
-               cpu_count=args['cpu_count'], overlap_notation=args['overlap_notation'], db_path=args['db_path'],
+               cpu_count=args['cpu_count'], overlapping_reads=args['overlapping_reads'], db_path=args['db_path'],
                after_jobid=args['after_jobid'], job_suffix=args['job_suffix'], alias=args['alias'],
                calculate_haplotypes=args['calculate_haplotypes'], pbs_cmd_path=args['pbs_cmd_path'], gmem=args['gmem'],
                soft_masking=args['blast_soft_masking'])

@@ -17,7 +17,7 @@ Output: fastq files in sizes ready for efficient processing.
 
 Depending on currently availble RAM and CPUs or given values in -mm / --max_memory and -cc / --cpu_count the script
 will divide the files into an efficient number of files to later run the processing script on.
-If given an overlap_notation it will also merge the forward and backward reads in corresponding fastq files.
+If given an merge_opposing it will also merge the forward and backward reads in corresponding fastq files.
 
 II - Processing
 Input: fastq files from part I and a reference fasta file.
@@ -88,8 +88,6 @@ def parallel_process(processing_dir, fastq_files, reference_file, quality_thresh
 
 
 def set_filenames(output_dir, db_path):
-    if not output_dir:
-        output_dir = assign_output_dir(db_path)
     filenames = {"freqs_file_path": os.path.join(output_dir, 'freqs.tsv'),
                  "linked_mutations_path": os.path.join(output_dir, 'linked_mutations.tsv'),
                  "mutation_read_list_path": os.path.join(output_dir, 'mutation_read_list.tsv'),
@@ -168,9 +166,9 @@ def check_consensus_alignment_with_ref(reference_file, with_indels, min_coverage
     return alignment_score
 
 
-def get_consensus_path(basecall_iteration_counter, consolidate_consensus_with_indels, iteration_data_dir):
+def get_consensus_path(basecall_iteration_counter, with_indels, iteration_data_dir):
     consensus = os.path.join(iteration_data_dir, "consensus_with")
-    if consolidate_consensus_with_indels != "Y":
+    if with_indels != "Y":
         consensus += "out"
     consensus += f"_indels_{basecall_iteration_counter}.fasta"
     return consensus
@@ -182,6 +180,7 @@ def update_meta_data(output_dir, status, db_path, params=None):
     if params is not None:
         meta_data = params
         del meta_data['filenames']
+        del meta_data['log']
         meta_data['username'] = getpass.getuser()
         meta_data['start_time'] = datetime.now().strftime('%Y-%m-%d-%H:%M')
     else:
@@ -234,13 +233,12 @@ def infer_haplotypes(cpu_count, filenames, linked_mutations_dir, log, max_read_s
                         output=filenames['stretches'])  # TODO: refactor that function
 
 
-def process_data(consolidate_consensus_with_indels, dust, evalue, fastq_files, log, max_basecall_iterations,
+def process_data(with_indels, dust, evalue, fastq_files, log, max_basecall_iterations,
                  min_coverage, mode, num_alignments, opposing_strings, output_dir, perc_identity, processing_dir,
                  quality_threshold, reference_file, soft_masking, task, basecall_dir):
     reads_overlap = bool(opposing_strings)
     for basecall_iteration_counter in range(1, max_basecall_iterations + 1):
         log.info(f"Processing fastq files iteration {basecall_iteration_counter}/{max_basecall_iterations}")
-        # TODO: whats up with the different modes?!?
         parallel_process(processing_dir=processing_dir, fastq_files=fastq_files, reference_file=reference_file,
                          quality_threshold=quality_threshold, task=task, evalue=evalue, dust=dust, mode=mode,
                          num_alignments=num_alignments, soft_masking=soft_masking, perc_identity=perc_identity,
@@ -250,25 +248,29 @@ def process_data(consolidate_consensus_with_indels, dust, evalue, fastq_files, l
         alignment_score = check_consensus_alignment_with_ref(reference_file=reference_file,
                                                              iteration_counter=basecall_iteration_counter,
                                                              basecall_dir=basecall_dir,
-                                                             with_indels=consolidate_consensus_with_indels,
+                                                             with_indels=with_indels,
                                                              iteration_data_dir=iteration_data_dir,
                                                              min_coverage=min_coverage)
         log.info(f'Iteration alignment score: {round(alignment_score, 4)}')
         if alignment_score == 1:
             break
-        consensus_path = get_consensus_path(basecall_iteration_counter, consolidate_consensus_with_indels,
-                                            iteration_data_dir)
+        consensus_path = get_consensus_path(basecall_iteration_counter=basecall_iteration_counter,
+                                            with_indels=with_indels, iteration_data_dir=iteration_data_dir)
         reference_file = consensus_path
     return reference_file
 
 
 def runner(input_dir, reference_file, output_dir, max_basecall_iterations, min_coverage, db_comment,
            quality_threshold, task, evalue, dust, num_alignments, soft_masking, perc_identity, mode, max_read_size,
-           consolidate_consensus_with_indels, stretches_pvalue, stretches_distance, stretches_to_plot, cleanup,
-           cpu_count, opposing_strings, db_path, max_memory, calculate_haplotypes="Y"):
+           with_indels, stretches_pvalue, stretches_distance, stretches_to_plot, cleanup,
+           cpu_count, overlapping_reads, db_path, max_memory, calculate_haplotypes="Y"):
     # TODO: docs                                                - day
     #       mutations linking optimizations                     - half day
-    #       how to count overlapping reads coverage             - discussion
+    if not db_path:
+        db_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'db')
+    if not output_dir:
+        output_dir = assign_output_dir(db_path)
+    log = pipeline_logger(logger_name='AccuNGS-Runner', log_folder=output_dir)
     try:
         filenames = set_filenames(output_dir=output_dir, db_path=db_path)
         if not cpu_count:
@@ -277,20 +279,19 @@ def runner(input_dir, reference_file, output_dir, max_basecall_iterations, min_c
         reference_file_hash = md5_file(reference_file)
         params = locals().copy()
         update_meta_data(params=params, output_dir=output_dir, status='Setting up...', db_path=db_path)
-        log = pipeline_logger(logger_name='AccuNGS-Runner', log_folder=output_dir)
         log.debug(f"runner params: {params}")  # TODO: why does this contain status..?
         log.info("Preparing data")
         update_meta_data(output_dir=output_dir, status='Preparing data...', db_path=db_path)
-        prepare_data(input_dir=input_dir, output_dir=filenames['data_dir'], overlap_notation=opposing_strings,
+        prepare_data(input_dir=input_dir, output_dir=filenames['data_dir'], overlapping_reads=overlapping_reads,
                      cpu_count=cpu_count, max_memory=max_memory)
         data_files = get_files_in_dir(filenames['data_dir'])
         fastq_files = [file_path for file_path in data_files if "fastq.part_" in os.path.basename(file_path)]
         log.info(f"Processing {len(fastq_files)} fastq files.")
         update_meta_data(output_dir=output_dir, status='Processing data...', db_path=db_path)
-        reference_file = process_data(consolidate_consensus_with_indels=consolidate_consensus_with_indels, dust=dust,
+        reference_file = process_data(with_indels=with_indels, dust=dust,
                                       evalue=evalue, fastq_files=fastq_files, log=log, soft_masking=soft_masking,
                                       max_basecall_iterations=max_basecall_iterations, min_coverage=min_coverage,
-                                      mode=mode, num_alignments=num_alignments, opposing_strings=opposing_strings,
+                                      mode=mode, num_alignments=num_alignments, opposing_strings=overlapping_reads,
                                       output_dir=output_dir, perc_identity=perc_identity, reference_file=reference_file,
                                       processing_dir=filenames['processing_dir'], quality_threshold=quality_threshold,
                                       task=task, basecall_dir=filenames['basecall_dir'])
@@ -324,50 +325,51 @@ def runner(input_dir, reference_file, output_dir, max_basecall_iterations, min_c
         update_meta_data(output_dir=output_dir, status='Done', db_path=db_path)
         log.info(f"Done!")
     except Exception as e:
-        log.exception(e)  # TODO: fix this
+        log.exception(e)
         update_meta_data(output_dir=output_dir, status="Failed! see logs for details.", db_path=db_path)
 
 
 def create_runner_parser():
-    # TODO: present dynamic defaults from config file
-    parser = argparse.ArgumentParser()
+    # TODO: dynamic defaults?
+    parser = argparse.ArgumentParser(description="Note: Default parameter values are retrieved from config.ini in your "
+                                                 "installation directory.")
     parser.add_argument("-i", "--input_dir", required=True,
-                        help="Path to directory containing basecall files")
-    parser.add_argument("-o", "--output_dir")
-    parser.add_argument("-r", "--reference_file", required=True)
-    parser.add_argument("-m", "--max_basecall_iterations", type=int, default=1,
-                        help="number of times to run basecall before giving up equalizing reference with consensus")
-    parser.add_argument("-on", "--overlap_notation", nargs="+", type=str,
-                        help="Notation of overlapping reads in the same directory to merge (default: '_R1 _R2') and "
-                             "passing nothing would run without overlap")
-    parser.add_argument("-bt", "--blast_task", help="blast's task parameter (default: blastn")
-    parser.add_argument("-be", "--blast_evalue", help="blast's evalue parameter (default: 1e-7)", type=float)
-    parser.add_argument("-bd", "--blast_dust", help="blast's dust parameter (default: on)")
-    parser.add_argument("-bn", "--blast_num_alignments", type=int,
-                        help="blast's num_alignments parameter (default: 1000000)")
-    parser.add_argument("-bp", "--blast_perc_identity", type=int, help="blast's perc_identity parameter (default: 85)")
-    parser.add_argument("-bs", "--blast_soft_masking", help="blast's soft_masking parameter (default: F)")
-    parser.add_argument("-bm", "--blast_mode", help="RefToSeq or SeqToRef (default: RefToSeq)")  # TODO: docs
+                        help="Path to directory containing fastq/gz files or sub directories containg fastq/gz files.")
+    parser.add_argument("-o", "--output_dir", help="A directory for output files. "
+                                                   "If none is given will put it in the db")
+    parser.add_argument("-r", "--reference_file", required=True, help="Reference file to align against.")
+    parser.add_argument("-m", "--max_basecall_iterations", type=int,
+                        help="Number of times to rerun with previous consensus as the new reference before giving up.")
+    parser.add_argument("-or", "--overlapping_reads",
+                        help="Y/N, merge opposing reads in the same directory. This assumes 2 fastq/gz files in each "
+                             "sub directory of the input_dir and would drop all non overlapping areas of the reads.")
+    parser.add_argument("-bt", "--blast_task", help="blast's task parameter")
+    parser.add_argument("-be", "--blast_evalue", help="blast's evalue parameter", type=float)
+    parser.add_argument("-bd", "--blast_dust", help="blast's dust parameter")
+    parser.add_argument("-bn", "--blast_num_alignments", type=int, help="blast's num_alignments parameter")
+    parser.add_argument("-bp", "--blast_perc_identity", type=int, help="blast's perc_identity parameter")
+    parser.add_argument("-bs", "--blast_soft_masking", help="blast's soft_masking parameter")
+    parser.add_argument("-bm", "--blast_mode", help="RefToSeq or SeqToRef")  # TODO: docs
     parser.add_argument("-qt", "--quality_threshold", type=int,
-                        help="phred score must be higher than this to be included (default: 30)")
-    parser.add_argument("-mc", "--min_coverage", type=int, default=10,
-                        help="minimal coverage to plot in summary graphs (default: 10)")  # TODO: different default?
-    parser.add_argument("-ccwi", "--consolidate_consensus_with_indels", type=str, default="Y",
-                        help="Y/N where N means we consolidate consensus without indels (default: Y)")
+                        help="phred score must be higher than this to be included")
+    parser.add_argument("-mc", "--min_coverage", type=int,
+                        help="Minimal coverage required for a position to be considered as consensus")
+    parser.add_argument("-wi", "--with_indels", help="Y/N, create consensus with or without indels")
     parser.add_argument("-sp", "--stretches_pvalue", type=float,
-                        help="only consider joint mutations with pvalue below this (default: 10**-9")  # TODO: better docs
+                        help="only consider joint mutations with pvalue below this value")  # TODO: better docs
     parser.add_argument("-sd", "--stretches_distance", type=float,
-                        help="mean transitive distance between joint mutations to calculate stretches (default: 10)")
-    parser.add_argument("-stp", "--stretches_to_plot", type=int, default=5,
-                        help="number of stretches to plot in deep dive (default: 5)")
+                        help="mean transitive distance between joint mutations to calculate stretches")
+    parser.add_argument("-stp", "--stretches_to_plot", type=int,
+                        help="number of stretches to plot in deep dive")
     parser.add_argument("-smrs", "--stretches_max_read_size", type=int,
-                        help="look this many positions forward for joint mutations (default: 350)")
-    parser.add_argument("-c", "--cleanup", help="remove input folder when done (default: Y)", default="Y")
-    parser.add_argument("-cc", "--cpu_count", help="max number of cpus to use (default: all)", type=int)
+                        help="look this many positions forward for joint mutations")
+    parser.add_argument("-c", "--cleanup", help="Remove processing/basecall directory when done")
+    parser.add_argument("-cc", "--cpu_count", help="max number of cpus to use (None means all)", type=int)
     parser.add_argument("-db", "--db_path", help='path to db directory')
     parser.add_argument("-dbc", "--db_comment", help='comment to store in db')
-    parser.add_argument("-mm", "--max_memory", help='limit memory usage to this many megabytes (default: None)')
-    parser.add_argument("-ch", "--calculate_haplotypes", help='for debugging', default="Y")
+    parser.add_argument("-mm", "--max_memory", help='limit memory usage to this many megabytes '
+                                                    '(None would use available memory when starting to run)')
+    parser.add_argument("-ch", "--calculate_haplotypes", help='Run pipeline including calculating haplotypes')
     return parser
 
 
@@ -377,14 +379,13 @@ if __name__ == "__main__":
     args = dict(get_config()['runner_defaults'])
     args.update({key: value for key, value in parser_args.items() if value is not None})
     runner(input_dir=args['input_dir'], output_dir=args['output_dir'], reference_file=args['reference_file'],
-           max_basecall_iterations=int(args['max_basecall_iterations']),
+           max_basecall_iterations=int(args['max_basecall_iterations']), overlapping_reads=args['overlapping_reads'],
            quality_threshold=int(args['quality_threshold']), task=args['blast_task'], max_memory=args['max_memory'],
            evalue=float(args['blast_evalue']), dust=args['blast_dust'], num_alignments=int(args['blast_num_alignments']),
-           mode=args['blast_mode'], perc_identity=float(args['blast_perc_identity']),
+           mode=args['blast_mode'], perc_identity=float(args['blast_perc_identity']), cpu_count=args['cpu_count'],
            min_coverage=int(args['min_coverage']), db_comment=args['db_comment'], soft_masking=args['blast_soft_masking'],
            stretches_pvalue=float(args['stretches_pvalue']), stretches_distance=float(args['stretches_distance']),
-           cleanup=args['cleanup'], consolidate_consensus_with_indels=args['consolidate_consensus_with_indels'],
+           cleanup=args['cleanup'], with_indels=args['with_indels'], calculate_haplotypes=args['calculate_haplotypes'],
            stretches_to_plot=int(args['stretches_to_plot']), max_read_size=int(args['stretches_max_read_size']),
-           cpu_count=args['cpu_count'], opposing_strings=args['overlap_notation'], db_path=args['db_path'],
-           calculate_haplotypes=args['calculate_haplotypes'])
+           db_path=args['db_path'])
 

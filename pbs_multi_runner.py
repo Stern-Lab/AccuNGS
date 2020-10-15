@@ -31,13 +31,13 @@ def multi_runner(params_list):
                    evalue=args['blast_evalue'], dust=args['blast_dust'], num_alignments=args['blast_num_alignments'],
                    mode=args['blast_mode'], perc_identity=args['blast_perc_identity'], db_comment=args['db_comment'],
                    min_coverage=args['min_coverage'], soft_masking=args['blast_soft_masking'],
-                   consolidate_consensus_with_indels=args['consolidate_consensus_with_indels'], gmem=args['gmem'],
-                   stretches_pvalue=args['stretches_pvalue'], stretches_distance=args['stretches_distance'],
+                   with_indels=args['with_indels'], gmem=args['gmem'], stretches_pvalue=args['stretches_pvalue'],
+                   stretches_distance=args['stretches_distance'], calculate_haplotypes=args['calculate_haplotypes'],
                    stretches_to_plot=args['stretches_to_plot'], max_read_size=args['stretches_max_read_size'],
-                   cpu_count=args['cpu_count'], overlap_notation=args['overlap_notation'], db_path=args['db_path'],
+                   cpu_count=args['cpu_count'], overlapping_reads=args['overlapping_reads'], db_path=args['db_path'],
                    after_jobid=args['after_jobid'], job_suffix=args['job_suffix'], alias=args['alias'],
                    custom_command=args['custom_command'], queue=args['queue'], default_command=args['default_command'],
-                   pbs_cmd_path=args['pbs_cmd_path'], calculate_haplotypes=args['calculate_haplotypes'])
+                   pbs_cmd_path=args['pbs_cmd_path'])
 
 
 if __name__ == "__main__":
