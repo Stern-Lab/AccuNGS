@@ -155,53 +155,10 @@ def reverse_string(string):
     return string[::-1]
 
 
-def create_default_config_file(accungs_dir, config_file):
-    # TODO: this file should just exist.. no need to create it.
-    config = configparser.ConfigParser()
-    db_path = os.path.join(accungs_dir, 'db')
-    os.makedirs(db_path, exist_ok=True)
-    config['pbs_defaults'] = {
-                              "pbs_cmd_path": "/opt/pbs/bin/qsub",
-                              "job_suffix": "",
-                              "alias": "AccuNGS",
-                              "gmem": 100,
-                              "cpu_count": 50,
-                              "queue": "",
-                              "default_command": "",
-                              "after_jobid": "",
-                              "custom_command": "",
-                              }
-    config['runner_defaults'] = {'max_basecall_iterations': 1,
-                                 'output_dir': "",
-                                 'cpu_count': "",
-                                 'max_memory': "",
-                                 'db_comment': "",
-                                 'min_coverage': 10,
-                                 'quality_threshold': 30,
-                                 'blast_task': 'blastn',
-                                 'blast_evalue': 1e-7,
-                                 'blast_dust': 'no',
-                                 'blast_num_alignments': 1000000,
-                                 'blast_soft_masking': 'F',
-                                 'blast_perc_identity': 85,
-                                 'blast_mode': 'SeqToRef',
-                                 'stretches_max_read_size': 350,
-                                 'consolidate_consensus_with_indels': 'Y',
-                                 'stretches_pvalue': 1e-9,
-                                 'stretches_distance': 10,
-                                 'stretches_to_plot': 5,
-                                 'cleanup': 'Y',
-                                 'overlap_notation': ['_R1', '_R2'],
-                                 'db_path': db_path}
-    with open(config_file, 'w') as configfile:
-        config.write(configfile)
-
-
 def get_config():
     accungs_dir = os.path.dirname(os.path.abspath(__file__))
     config_file = os.path.join(accungs_dir, 'config.ini')
-    if not os.path.isfile(config_file):
-        create_default_config_file(accungs_dir, config_file)
+    assert os.path.isfile(config_file), "Missing config.ini file! You should probably reinstall..."
     config = configparser.ConfigParser()
     config.read(config_file)
     return config
