@@ -48,10 +48,10 @@ def submit_cmdfile_to_pbs(cmdfile, pbs_cmd_path):
 
 def runner_cmd(input_dir, output_dir, reference_file, max_basecall_iterations, db_path, db_comment,
                quality_threshold, task, evalue, dust, num_alignments, mode, perc_identity, soft_masking, min_coverage,
-               with_indels, stretches_pvalue, stretches_distance, stretches_to_plot,
+               with_indels, stretches_pvalue, stretches_distance, stretches_to_plot, python_path,
                max_read_size, base_path, cleanup, cpu_count, overlapping_reads, calculate_haplotypes):
     runner_path = os.path.join(base_path, 'runner.py')
-    cmd = f"python {runner_path} -i {input_dir} -o {output_dir} -r {reference_file} "
+    cmd = f"{python_path} {runner_path} -i {input_dir} -o {output_dir} -r {reference_file} "
     if max_basecall_iterations:
         cmd += f" -m {max_basecall_iterations}"
     if quality_threshold:
@@ -100,8 +100,8 @@ def runner_cmd(input_dir, output_dir, reference_file, max_basecall_iterations, d
 def pbs_runner(input_dir, output_dir, reference_file, max_basecall_iterations, db_path, db_comment, pbs_cmd_path,
                quality_threshold, task, evalue, dust, num_alignments, mode, perc_identity, overlapping_reads, gmem,
                soft_masking, min_coverage, with_indels, stretches_pvalue, stretches_distance, calculate_haplotypes,
-               stretches_to_plot, max_read_size, alias, queue, cleanup, cpu_count, custom_command=None, after_jobid=None,
-               job_suffix=None, default_command=None):
+               stretches_to_plot, max_read_size, alias, queue, cleanup, cpu_count, python_path, custom_command=None,
+               after_jobid=None, job_suffix=None, default_command=None):
     # TODO: reintroduce stages into the runner,
     #       do relevant aggregation (when needed) in aggregation instead of linked mutations,
     #       create a dir with files representing mutation_read_list_parts,
@@ -118,7 +118,7 @@ def pbs_runner(input_dir, output_dir, reference_file, max_basecall_iterations, d
     cmd_path = os.path.join(pbs_logs_dir, f'{alias}.cmd')
     cmd = runner_cmd(input_dir=input_dir, output_dir=output_dir, reference_file=reference_file,
                      max_basecall_iterations=max_basecall_iterations, max_read_size=max_read_size,
-                     quality_threshold=quality_threshold, task=task, evalue=evalue, dust=dust,
+                     quality_threshold=quality_threshold, task=task, evalue=evalue, dust=dust, python_path=python_path,
                      num_alignments=num_alignments, mode=mode, perc_identity=perc_identity, db_comment=db_comment,
                      soft_masking=soft_masking, min_coverage=min_coverage, cleanup=cleanup, cpu_count=cpu_count,
                      with_indels=with_indels, db_path=db_path, calculate_haplotypes=calculate_haplotypes,
@@ -154,7 +154,7 @@ if __name__ == "__main__":
                evalue=args['blast_evalue'], dust=args['blast_dust'], num_alignments=args['blast_num_alignments'],
                mode=args['blast_mode'], perc_identity=args['blast_perc_identity'],
                min_coverage=args['min_coverage'], cleanup=args['cleanup'], default_command=args['default_command'],
-               with_indels=args['with_indels'], queue=args['queue'],
+               with_indels=args['with_indels'], queue=args['queue'], python_path=args['python_path'],
                stretches_pvalue=args['stretches_pvalue'], stretches_distance=args['stretches_distance'],
                stretches_to_plot=args['stretches_to_plot'], max_read_size=args['stretches_max_read_size'],
                cpu_count=args['cpu_count'], overlapping_reads=args['overlapping_reads'], db_path=args['db_path'],
