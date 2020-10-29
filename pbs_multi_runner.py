@@ -37,7 +37,7 @@ def multi_runner(params_list):
                    cpu_count=args['cpu_count'], overlapping_reads=args['overlapping_reads'], db_path=args['db_path'],
                    after_jobid=args['after_jobid'], job_suffix=args['job_suffix'], alias=args['alias'],
                    custom_command=args['custom_command'], queue=args['queue'], default_command=args['default_command'],
-                   pbs_cmd_path=args['pbs_cmd_path'])
+                   pbs_cmd_path=args['pbs_cmd_path'], python_path=args['python_path'])
 
 
 if __name__ == "__main__":
