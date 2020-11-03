@@ -236,7 +236,7 @@ def infer_haplotypes(cpu_count, filenames, linked_mutations_dir, log, max_read_s
 def process_data(with_indels, dust, evalue, fastq_files, log, max_basecall_iterations,
                  min_coverage, mode, num_alignments, opposing_strings, output_dir, perc_identity, processing_dir,
                  quality_threshold, reference_file, soft_masking, task, basecall_dir):
-    reads_overlap = bool(opposing_strings)
+    reads_overlap = True if opposing_strings == 'Y' or opposing_strings == 'y' else False
     for basecall_iteration_counter in range(1, max_basecall_iterations + 1):
         log.info(f"Processing fastq files iteration {basecall_iteration_counter}/{max_basecall_iterations}")
         parallel_process(processing_dir=processing_dir, fastq_files=fastq_files, reference_file=reference_file,
