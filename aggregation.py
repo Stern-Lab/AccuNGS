@@ -128,7 +128,7 @@ def trim_read_id_prefixes(files, read_id_prefix_file):
     for file in files:
         df = pd.read_table(file)
         if not df.empty:
-            df['read_id'] = df.read_id.map(lambda x: str(prefix_dict[x[:prefix_length]]) + x[prefix_length:])
+            df['read_id'] = df.read_id.map(lambda x: str(prefix_dict[x[:prefix_length]]) + "-" + x[prefix_length:])
             if file.endswith("bases"):
                 df.to_csv(file, sep='\t', index=False, index_label='ref_pos')
             else:
