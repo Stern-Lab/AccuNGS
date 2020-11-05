@@ -1,4 +1,4 @@
-This is the repository accompanying the AccuNGS paper (bioRxiv 2018; DOI 10.1101/349498) and is subject to the AccuNGS paper user license. 
+This is the repository accompanying the AccuNGS paper (PLoS Pathog 2020; DOI 10.1371/journal.ppat.1009029) and is subject to the AccuNGS paper user license. 
 
 Within AccuNGS protocol, the sequencing library is created to maximize overlap of the Forward and Reverse reads of a paired-end Illumina sequencing run, in a manner that allows for two observations of each base of the original insert. This practically cancels much of the sequencing by synthesis errors. In order to support paired-end-aware analysis, we have created a basecalling pipeline. 
 
