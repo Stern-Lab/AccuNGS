@@ -164,3 +164,14 @@ def get_config():
     config = configparser.ConfigParser()
     config.read(config_file)
     return config
+
+
+def create_fixed_param_list(input_dir, output_dir, params_dict):
+    input_dirs = [d for d in get_files_in_dir(input_dir) if os.path.isdir(d)]
+    dirs_dict = {in_dir: os.path.join(output_dir, os.path.basename(in_dir)) for in_dir in input_dirs}
+    param_list = []
+    for in_dir, out_dir in dirs_dict.items():
+        param = {'input_dir': in_dir, 'output_dir': out_dir}
+        param.update(params_dict)
+        param_list.append(param)
+    return param_list
