@@ -57,7 +57,6 @@ import shutil
 
 from datetime import datetime
 from functools import partial
-from coolname import generate_slug
 import pandas as pd
 from Bio import pairwise2
 
@@ -205,13 +204,27 @@ def build_db(db_path):
     db.to_csv(os.path.join(db_path, 'db.tsv'), sep='\t')
 
 
+def create_dir_also_if_exists(output_dir):
+    try:
+        os.makedirs(output_dir, exist_ok=False)
+    except FileExistsError:
+        i = 2
+        while i < 1000:
+            try:
+                output_dir = f"{output_dir}_{i}"
+                os.makedirs(output_dir, exist_ok=False)
+            except FileExistsError:
+                i += 1
+    return output_dir
+
+
 def assign_output_dir(db_path, alias=None):
-    now = datetime.now().strftime('%Y-%m-%d')
-    random_name = generate_slug(2)
-    output_dir_name = random_name + "_" + now
+    now = datetime.now().strftime('%Y-%m-%d-%H:%M:%S')
+    output_dir_name = now
     if alias:
         output_dir_name = alias + "_" + output_dir_name
     output_dir = os.path.join(db_path, output_dir_name)
+    output_dir = create_dir_also_if_exists(output_dir)
     return output_dir
 
 
