@@ -167,6 +167,10 @@ def get_config():
 
 
 def create_fixed_param_list(input_dir, output_dir, params_dict):
+    """
+    Use to created a parameter list for pbs_multi_runner when you have different inputs in sub directories of
+    input_dir dirs and want to run the same parameters on all of them.
+    """
     input_dirs = [d for d in get_files_in_dir(input_dir) if os.path.isdir(d)]
     dirs_dict = {in_dir: os.path.join(output_dir, os.path.basename(in_dir)) for in_dir in input_dirs}
     param_list = []
