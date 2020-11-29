@@ -49,6 +49,7 @@ def graph_coverage(freqs, ax):
 def graph_mutation_freqs_by_mutation(mutation_data, ax):
     mutation_data["mutation"] = mutation_data["ref_base"] + ">" + mutation_data["read_base"]
     sns.boxplot('mutation', 'frequency', data=mutation_data, ax=ax)
+    ax.set_yscale("log")
     ax.set_ylabel("Frequency")
     ax.set_xlabel("Mutation")
     ax.title.set_text('Mutations by type')
@@ -57,6 +58,7 @@ def graph_mutation_freqs_by_mutation(mutation_data, ax):
 
 def graph_mutation_freqs_by_position(mutation_data, ax):
     sns.scatterplot(x="ref_pos", y="frequency", data=mutation_data, ax=ax)
+    ax.set_ylim(bottom=mutation_data['frequency'].min()*0.9)  # otherwise yaxis is missing lower values.. weird.
     ax.set_yscale("log")
     ax.set_xlabel("Ref position")
     ax.set_ylabel("Frequency")
