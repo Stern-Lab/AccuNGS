@@ -58,7 +58,7 @@ def graph_mutation_freqs_by_mutation(mutation_data, ax):
 
 def graph_mutation_freqs_by_position(mutation_data, ax):
     sns.scatterplot(x="ref_pos", y="frequency", data=mutation_data, ax=ax)
-    ax.set_ylim(bottom=mutation_data['frequency'].min()*0.9)  # otherwise yaxis is missing lower values.. weird.
+    ax.set_ylim([mutation_data['frequency'].min() * 0.9, 1])  # otherwise yaxis is missing lower values.. weird.
     ax.set_yscale("log")
     ax.set_xlabel("Ref position")
     ax.set_ylabel("Frequency")
