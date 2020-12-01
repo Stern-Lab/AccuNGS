@@ -80,7 +80,7 @@ def get_sequence_from_fasta(fasta_file):
 
 
 def md5_update_from_file(filename: Union[str, Path], hash: Hash) -> Hash:
-    assert Path(filename).is_file()
+    assert Path(filename).is_file(), f"{filename} is not a valid file!"
     with open(str(filename), "rb") as f:
         for chunk in iter(lambda: f.read(4096), b""):
             hash.update(chunk)
@@ -92,7 +92,7 @@ def md5_file(filename: Union[str, Path]) -> str:
 
 
 def md5_update_from_dir(directory: Union[str, Path], hash: Hash) -> Hash:
-    assert Path(directory).is_dir()
+    assert Path(directory).is_dir(), f"{directory} is not a valid directory!"
     for path in sorted(Path(directory).iterdir(), key=lambda p: str(p).lower()):
         hash.update(path.name.encode())
         if path.is_file():
