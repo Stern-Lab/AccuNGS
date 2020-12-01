@@ -192,6 +192,8 @@ def update_meta_data(output_dir, status, db_path, params=None):
 
 
 def build_db(db_path):
+    # TODO: get user feedback on what db functionality should be
+    os.makedirs(db_path, exist_ok=True)
     outputs = [f.path for f in os.scandir(db_path) if f.is_dir()]
     db_rows = []
     for directory in outputs:
