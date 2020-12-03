@@ -1,0 +1,22 @@
+biopython @ file:///C:/ci/biopython_1600333875752/work
+certifi==2020.11.8
+cycler==0.10.0
+kiwisolver @ file:///C:/ci/kiwisolver_1604014703538/work
+matplotlib @ file:///C:/ci/matplotlib-base_1603355780617/work
+mkl-fft==1.2.0
+mkl-random==1.1.1
+mkl-service==2.3.0
+numpy @ file:///C:/ci/numpy_and_numpy_base_1603466732592/work
+olefile==0.46
+pandas @ file:///C:/ci/pandas_1602083338010/work
+Pillow @ file:///C:/ci/pillow_1603823068645/work
+psutil @ file:///C:/ci/psutil_1598370330503/work
+pyparsing==2.4.7
+python-dateutil==2.8.1
+pytz @ file:///tmp/build/80754af9/pytz_1606604771399/work
+scipy @ file:///C:/ci/scipy_1604596260408/work
+seaborn @ file:///tmp/build/80754af9/seaborn_1600553570093/work
+sip==4.19.13
+six @ file:///C:/ci/six_1605187374963/work
+tornado==6.0.4
+wincertstore==0.2
