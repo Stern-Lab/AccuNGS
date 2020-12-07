@@ -283,9 +283,9 @@ def runner(input_dir, reference_file, output_dir, max_basecall_iterations, min_c
         db_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'db')
     if not output_dir:
         output_dir = assign_output_dir(db_path)
-    if os.path.exists(output_dir): # the output folder must be empty
+    if os.path.exists(output_dir):
         if os.listdir(output_dir):
-            raise Exception("The output folder is not empty. Empty it or choose a different name.")
+            raise Exception("output_dir must be path to a new or empty directory!")
     log = pipeline_logger(logger_name='AccuNGS-Runner', log_folder=output_dir)
     try:
         filenames = set_filenames(output_dir=output_dir)
