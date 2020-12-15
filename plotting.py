@@ -75,7 +75,7 @@ def plot_stretches_summary(df, stretches, ax):
         meandist = round(strech_df.iloc[0, 4], 3)
         ax.plot((min_pos, max_pos), (meandist, meandist), label=f"Stretch #{strech}")
     if not df.empty:
-        ax.legend() # TODO : when df is empty- print? to log? now it prints legend's info. added check to prevent alert
+        ax.legend() # TODO : add to log if df is empty and not preformed
         ax.title.set_text("Haplotypes")
         ax.set_xlabel('Position')
         ax.set_ylabel('Mean Frequency')
