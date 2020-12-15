@@ -46,7 +46,7 @@ def aggregate_called_bases(called_bases_files):
     freqs.name = 'base_count'
     freqs = pd.DataFrame(freqs).reset_index()
     freqs = freqs.merge(ref_df, on=['ref_pos'], how='left')
-    freqs['ref_pos'] = round(freqs['ref_pos'], 3)                         # fix that floating point nonsense
+    freqs['ref_pos'] = round(freqs['ref_pos'], 3)                         # TODO fix that floating point nonsense
     return freqs
 
 
@@ -57,7 +57,7 @@ def create_freqs_file(called_bases_files, output_path):
     freqs['frequency'] = freqs['base_count'] / freqs['coverage']
     freqs['base_rank'] = 5 - freqs.groupby('ref_pos').base_count.rank('min')
     freqs['probability'] = 1 - 10**(np.log10(1 - freqs["frequency"] + 1e-07) * (freqs["coverage"] + 1))
-    # TODO: does probability logic make sense?
+    # TODO: does probability logic make sense? - according to Adi - same as perl script
     freqs.to_csv(output_path, sep="\t", index=False)
 
 

@@ -279,13 +279,13 @@ def runner(input_dir, reference_file, output_dir, max_basecall_iterations, min_c
            quality_threshold, task, evalue, dust, num_alignments, soft_masking, perc_identity, mode, max_read_size,
            with_indels, stretches_pvalue, stretches_distance, stretches_to_plot, cleanup,
            cpu_count, overlapping_reads, db_path, max_memory, calculate_haplotypes="Y"):
+    if os.path.exists(output_dir):
+        if os.listdir(output_dir):
+            raise Exception("output_dir must be path to a new or empty directory!")
     if not db_path:
         db_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'db')
     if not output_dir:
         output_dir = assign_output_dir(db_path)
-    if os.path.exists(output_dir):
-        if os.listdir(output_dir):
-            raise Exception("output_dir must be path to a new or empty directory!")
     log = pipeline_logger(logger_name='AccuNGS-Runner', log_folder=output_dir)
     try:
         filenames = set_filenames(output_dir=output_dir)
