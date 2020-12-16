@@ -48,7 +48,7 @@ def graph_coverage(freqs, ax):
 
 def graph_mutation_freqs_by_mutation(mutation_data, ax):
     mutation_data["mutation"] = mutation_data["ref_base"] + ">" + mutation_data["read_base"]
-    sns.boxplot('mutation', 'frequency', data=mutation_data, ax=ax)
+    sns.boxplot(x='mutation', y='frequency', data=mutation_data, ax=ax)
     ax.set_yscale("log")
     ax.set_ylabel("Frequency")
     ax.set_xlabel("Mutation")
@@ -74,7 +74,8 @@ def plot_stretches_summary(df, stretches, ax):
         min_pos = min(strech_df.Pos1.min(), strech_df.Pos2.min())
         meandist = round(strech_df.iloc[0, 4], 3)
         ax.plot((min_pos, max_pos), (meandist, meandist), label=f"Stretch #{strech}")
-    ax.legend()
+    if not df.empty:
+        ax.legend() # TODO : add to log if df is empty and not preformed
     ax.title.set_text("Haplotypes")
     ax.set_xlabel('Position')
     ax.set_ylabel('Mean Frequency')
@@ -93,7 +94,7 @@ def graph_haplotype_overview(stretches_file, ax, stretches_to_plot):
 
 def graph_summary(freqs_file, blast_file, read_counter_file, stretches_file, output_file, stretches_to_plot,
                   min_coverage):
-    # TODO: graph multimapped ignored bases
+    # TODO: graph multimapped ignored bases, min_coverage can be set as defult
     if not min_coverage:
         min_coverage = 10
     fig, axes = plt.subplots(figsize=(60, 20), ncols=3, nrows=2)
@@ -108,4 +109,4 @@ def graph_summary(freqs_file, blast_file, read_counter_file, stretches_file, out
     axes[1][0] = graph_mutation_freqs_by_mutation(mutation_data, axes[1][0])
     axes[1][1] = graph_mutation_freqs_by_position(mutation_data, axes[1][1])
     axes[1][2] = graph_haplotype_overview(stretches_file, axes[1][2], stretches_to_plot=stretches_to_plot)
-    fig.savefig(output_file, bbox_inches="tight", pad_inches=0.3)  # TODO: what do these params mean?
+    fig.savefig(output_file, bbox_inches="tight", pad_inches=0.3)
