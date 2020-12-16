@@ -76,9 +76,9 @@ def plot_stretches_summary(df, stretches, ax):
         ax.plot((min_pos, max_pos), (meandist, meandist), label=f"Stretch #{strech}")
     if not df.empty:
         ax.legend() # TODO : add to log if df is empty and not preformed
-        ax.title.set_text("Haplotypes")
-        ax.set_xlabel('Position')
-        ax.set_ylabel('Mean Frequency')
+    ax.title.set_text("Haplotypes")
+    ax.set_xlabel('Position')
+    ax.set_ylabel('Mean Frequency')
     return ax
 
 
@@ -109,4 +109,4 @@ def graph_summary(freqs_file, blast_file, read_counter_file, stretches_file, out
     axes[1][0] = graph_mutation_freqs_by_mutation(mutation_data, axes[1][0])
     axes[1][1] = graph_mutation_freqs_by_position(mutation_data, axes[1][1])
     axes[1][2] = graph_haplotype_overview(stretches_file, axes[1][2], stretches_to_plot=stretches_to_plot)
-    fig.savefig(output_file, bbox_inches="tight", pad_inches=0.3)  # TODO: what do these params mean: tight - find the bbox.
+    fig.savefig(output_file, bbox_inches="tight", pad_inches=0.3)
