@@ -234,20 +234,28 @@ def convert_fastq_to_fasta(output_dir, fastq_file):
 
 def process_fastq(fastq_file, reference, output_dir, quality_threshold, task, evalue, dust, num_alignments,
                   soft_masking, perc_identity, mode, reads_overlap):
-    log = pipeline_logger(logger_name=f"Computation_{os.path.basename(fastq_file)}", log_folder=output_dir)
-    blast_output = os.path.join(output_dir, 'blast')
-    os.makedirs(blast_output, exist_ok=True)
-    reads_fasta_file_path = convert_fastq_to_fasta(fastq_file=fastq_file, output_dir=blast_output)
-    blast_output_file = reads_fasta_file_path + ".blast"
-    run_blast(reads_fasta=reads_fasta_file_path, reference=reference, output=blast_output_file, mode=mode, task=task,
+    try:
+        log = pipeline_logger(logger_name=f"Computation_{os.path.basename(fastq_file)}", log_folder=output_dir)
+        blast_output = os.path.join(output_dir, 'blast')
+        os.makedirs(blast_output, exist_ok=True)
+        reads_fasta_file_path = convert_fastq_to_fasta(fastq_file=fastq_file, output_dir=blast_output)
+        blast_output_file = reads_fasta_file_path + ".blast"
+        run_blast(reads_fasta=reads_fasta_file_path, reference=reference, output=blast_output_file, mode=mode, task=task,
               evalue=evalue, num_alignments=num_alignments, dust=dust, soft_masking=soft_masking, log=log,
               perc_identity=perc_identity)
-    basecall_output = os.path.join(output_dir, 'basecall')
-    if not quality_threshold:
-        quality_threshold = 30
-    os.makedirs(basecall_output, exist_ok=True)
-    basecall(blast_output_file=blast_output_file, fastq_file=fastq_file, output_dir=basecall_output,
+        basecall_output = os.path.join(output_dir, 'basecall')
+        if not quality_threshold:
+            quality_threshold = 30
+        os.makedirs(basecall_output, exist_ok=True)
+        basecall(blast_output_file=blast_output_file, fastq_file=fastq_file, output_dir=basecall_output,
              quality_threshold=quality_threshold, mode=mode, reads_overlap=reads_overlap)
+
+    except Exception as e:
+        path = os.path.join(output_dir, 'Exceptions_during_process_fastq.txt')
+        with open(path, 'w+') as f:
+            f.write(e.__str__())
+            f.write("\n")
+        f.close()
 
 
 if __name__ == "__main__":
