@@ -138,16 +138,21 @@ def pbs_runner(input_dir, output_dir, reference_file, max_basecall_iterations, d
     return job_id
 
 
-if __name__ == "__main__":
+def get_pbs_args():
     parser = create_runner_parser()
     parser.add_argument("-a", "--alias", help="job alias visible in qstat")
     parser.add_argument("-q", "--queue", help="PBS queue to run on")
     parser.add_argument("-j", "--after_jobid", help="Run after successfully completing this jobid")
     parser.add_argument("-gm", "--gmem", help="Memory in GB to ask for in cmd file")
     parser_args = vars(parser.parse_args())
-    args = dict(get_config()['runner_defaults'])                                            # get runner defaults
+    args = dict(get_config()['runner_defaults'])  # get runner defaults
     args.update({key: value for key, value in dict(get_config()['pbs_defaults']).items()})  # overide with pbs defaults
-    args.update({key: value for key, value in parser_args.items() if value is not None})    # overide with cli args
+    args.update({key: value for key, value in parser_args.items() if value is not None})  # overide with cli args
+    return args
+
+
+if __name__ == "__main__":
+    args = get_pbs_args()
     pbs_runner(input_dir=args['input_dir'], output_dir=args['output_dir'], reference_file=args['reference_file'],
                max_basecall_iterations=args['max_basecall_iterations'], custom_command=args['custom_command'],
                quality_threshold=args['quality_threshold'], task=args['blast_task'], db_comment=args['db_comment'],
