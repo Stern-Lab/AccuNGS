@@ -28,7 +28,7 @@ def run_project(args):
     params_list_file = os.path.join(output_dir, 'project_params.json')
     params_list = create_params_list(args)
     with open(params_list_file, 'w') as write_handle:
-        json.dump(params_list, write_handle)
+        json.dump(params_list, write_handle, indent=4)
     print(f"Project params file in {params_list_file}")
     multi_runner(params_list)
 
