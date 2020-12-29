@@ -23,7 +23,9 @@ def create_params_list(args):
 
 
 def run_project(args):
-    params_list_file = os.path.join(args['output_dir'], 'project_params.json')
+    output_dir = args['output_dir']
+    os.makedirs(output_dir, exist_ok=True)
+    params_list_file = os.path.join(output_dir, 'project_params.json')
     params_list = create_params_list(args)
     with open(params_list_file, 'w') as write_handle:
         json.dump(params_list, write_handle)
