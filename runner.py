@@ -85,17 +85,17 @@ def parallel_process(processing_dir, fastq_files, reference_file, quality_thresh
         raise Exception("Processing failed. This may be due to RAM overload."
                         "To avoid this try running with --max_memory max_available_RAM_in_MB")
 
-    path = os.path.join(processing_dir, 'Exceptions_during_process_fastq.txt')
+    path = os.path.join(processing_dir, 'exceptions_during_process_fastq.txt')
     if os.path.exists(path):
-        file_exception = open(path, 'r')
-        content = file_exception.read()
-        file_exception.close()
-        exception_printed = "There were exception in the parallel processing. see " \
+        with  open(path, 'r') as file_exception:
+            content = file_exception.read()
+            file_exception.close()
+            exception_printed = "There were exception in the parallel processing. see " \
                             "processing\Exceptions_during_run_blast.txt. "
-        if content.find("blastn -out") > 0:
-            exception_printed += " There might be a problem involving blast installation"
-        if len(content) > 0:
-            raise Exception(exception_printed)
+            if content.find("blastn -out") > 0:
+                exception_printed += " There might be a problem involving blast installation"
+            if len(content) > 0:
+                raise Exception(exception_printed)
 
 
 def set_filenames(output_dir):
@@ -287,25 +287,6 @@ def process_data(with_indels, dust, evalue, fastq_files, log, max_basecall_itera
     return reference_file
 
 
-def validate_input(output_dir, input_dir, reference_file):
-    if os.path.exists(output_dir):
-        if os.listdir(output_dir):
-            raise Exception("Output_dir must be path to a new or empty directory!")
-    if not os.path.isfile(reference_file):
-        raise Exception("Reference_file must exist!") 
-    if not os.path.isdir(input_dir):
-        raise Exception("Input_dir must exist!")
-    input_dir_loop = os.fsencode(input_dir)
-    if len(os.listdir(input_dir_loop)) > 0:
-        for file in os.listdir(input_dir_loop):
-            file_name = os.fsdecode(file)
-            if file_name.endswith(".fastq"):
-                break
-            raise Exception("There are no fastq files in input_dir!")
-    else:
-        raise Exception("input_dir is empty!")
-
-
 def runner(input_dir, reference_file, output_dir, max_basecall_iterations, min_coverage, db_comment,
            quality_threshold, task, evalue, dust, num_alignments, soft_masking, perc_identity, mode, max_read_size,
            with_indels, stretches_pvalue, stretches_distance, stretches_to_plot, cleanup,
@@ -314,7 +295,6 @@ def runner(input_dir, reference_file, output_dir, max_basecall_iterations, min_c
         db_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'db')
     if not output_dir:
         output_dir = assign_output_dir(db_path)
-    validate_input(output_dir, input_dir, reference_file)
     log = pipeline_logger(logger_name='AccuNGS-Runner', log_folder=output_dir)
     try:
         filenames = set_filenames(output_dir=output_dir)
@@ -349,7 +329,7 @@ def runner(input_dir, reference_file, output_dir, max_basecall_iterations, min_c
                       output_file=filenames['summary_graphs'], min_coverage=min_coverage,
                       stretches_to_plot=stretches_to_plot)  # TODO: drop low quality mutations?
         log.info(f"Most outputs are ready in {output_dir} !")
-        if calculate_haplotypes == "Y" or calculate_haplotypes == "y" :
+        if calculate_haplotypes == "Y" or calculate_haplotypes == "y":
             log.info(f"Calculating linked mutations...")
             update_meta_data(output_dir=output_dir, status='Inferring haplotypes...', db_path=db_path)
             infer_haplotypes(cpu_count=cpu_count, filenames=filenames,
