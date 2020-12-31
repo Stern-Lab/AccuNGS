@@ -15,7 +15,7 @@ def create_params_list(args):
     for dir_name in os.listdir(parent_input):
         dir_path = os.path.join(parent_input, dir_name)
         if os.path.isdir(dir_path):
-            params_dict = {key: value for key, value in args.items() if len(value) > 0}
+            params_dict = args.copy()
             params_dict['input_dir'] = dir_path
             params_dict['output_dir'] = os.path.join(parent_output, dir_name)
             params_list.append(params_dict)
