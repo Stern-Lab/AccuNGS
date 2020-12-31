@@ -113,8 +113,9 @@ def pbs_runner(input_dir, output_dir, reference_file, max_basecall_iterations, d
     base_path = os.path.dirname(os.path.abspath(__file__))
     pbs_logs_dir = os.path.join(output_dir, "pbs_logs")
     os.makedirs(pbs_logs_dir, exist_ok=True)
-    cmd_identifier = randint(42, 777)  # so that we can easily connect cmdfile and job
-    alias += f"_{cmd_identifier}"
+    if not alias:
+        cmd_identifier = randint(42, 777)  # so that we can easily connect cmdfile and job
+        alias = f"AccuNGS_{cmd_identifier}"
     cmd_path = os.path.join(pbs_logs_dir, f'{alias}.cmd')
     cmd = runner_cmd(input_dir=input_dir, output_dir=output_dir, reference_file=reference_file,
                      max_basecall_iterations=max_basecall_iterations, max_read_size=max_read_size,
