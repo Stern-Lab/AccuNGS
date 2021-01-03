@@ -74,28 +74,17 @@ from haplotypes.co_occurs_to_stretches import calculate_stretches
 
 def parallel_process(processing_dir, fastq_files, reference_file, quality_threshold, task, evalue, dust, num_alignments,
                      soft_masking, perc_identity, mode, reads_overlap):
-    process_fastq_partial = partial(process_fastq, reference=reference_file, output_dir=processing_dir,
-                                    quality_threshold=quality_threshold, task=task, evalue=evalue, dust=dust,
-                                    num_alignments=num_alignments, soft_masking=soft_masking,
-                                    perc_identity=perc_identity, mode=mode, reads_overlap=reads_overlap)
-    try:
-        with concurrent.futures.ProcessPoolExecutor() as executor:
-            executor.map(process_fastq_partial, fastq_files)
-    except:
-        raise Exception("Processing failed. This may be due to RAM overload."
-                        "To avoid this try running with --max_memory max_available_RAM_in_MB")
-
-    path = os.path.join(processing_dir, 'exceptions_during_process_fastq.txt')
-    if os.path.exists(path):
-        with  open(path, 'r') as file_exception:
-            content = file_exception.read()
-            file_exception.close()
-            exception_printed = "There were exception in the parallel processing. see " \
-                            "processing\Exceptions_during_run_blast.txt. "
-            if content.find("blastn -out") > 0:
-                exception_printed += " There might be a problem involving blast installation"
-            if len(content) > 0:
-                raise Exception(exception_printed)
+    with concurrent.futures.ProcessPoolExecutor() as executor:
+        future_tasks = {executor.submit(process_fastq, fastq_file, reference=reference_file, output_dir=processing_dir,
+                                        quality_threshold=quality_threshold, task=task, evalue=evalue, dust=dust,
+                                        num_alignments=num_alignments, soft_masking=soft_masking,
+                                        perc_identity=perc_identity, mode=mode, reads_overlap=reads_overlap): fastq_file
+                                        for fastq_file in fastq_files}
+        try:
+            for future in concurrent.futures.as_completed(future_tasks):
+                future.result()
+        except Exception as e:
+            raise Exception(e.args)
 
 
 def set_filenames(output_dir):
@@ -272,6 +261,7 @@ def process_data(with_indels, dust, evalue, fastq_files, log, max_basecall_itera
                          reads_overlap=reads_overlap)
         iteration_data_dir = os.path.join(output_dir, 'iteration_data')
         os.makedirs(iteration_data_dir, exist_ok=True)
+
         alignment_score = check_consensus_alignment_with_ref(reference_file=reference_file,
                                                              iteration_counter=basecall_iteration_counter,
                                                              basecall_dir=basecall_dir,
