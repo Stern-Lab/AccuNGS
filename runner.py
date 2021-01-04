@@ -74,17 +74,16 @@ from haplotypes.co_occurs_to_stretches import calculate_stretches
 
 def parallel_process(processing_dir, fastq_files, reference_file, quality_threshold, task, evalue, dust, num_alignments,
                      soft_masking, perc_identity, mode, reads_overlap):
-    process_fastq_partial = partial(process_fastq,  reference=reference_file, output_dir=processing_dir,
-                                    quality_threshold=quality_threshold, task=task, evalue=evalue, dust=dust,
-                                    num_alignments=num_alignments, soft_masking=soft_masking,
-                                    perc_identity=perc_identity, mode=mode, reads_overlap=reads_overlap)
-    try:
-        with concurrent.futures.ProcessPoolExecutor() as executor:
-            executor.map(process_fastq_partial, fastq_files)
-    except:
-        raise Exception("Processing failed. This may be due to RAM overload."
-                        "To avoid this try running with --max_memory max_available_RAM_in_MB")
+    with concurrent.futures.ProcessPoolExecutor() as executor:
+        future_tasks = {executor.submit(process_fastq, fastq_file, reference=reference_file, output_dir=processing_dir,
+                                        quality_threshold=quality_threshold, task=task, evalue=evalue, dust=dust,
+                                        num_alignments=num_alignments, soft_masking=soft_masking,
+                                        perc_identity=perc_identity, mode=mode, reads_overlap=reads_overlap): fastq_file
+                                        for fastq_file in fastq_files}
 
+        for future in concurrent.futures.as_completed(future_tasks):
+            future.result()
+                
 
 def set_filenames(output_dir):
     filenames = {"freqs_file_path": os.path.join(output_dir, 'freqs.tsv'),
@@ -135,7 +134,7 @@ def parallel_calc_linked_mutations(freqs_file_path, output_dir, mutation_read_li
         else:
             end_index = start_index + part_size + max_read_length
         start_position = positions[start_index]
-        end_position = positions[end_index-1] + 0.999  # include insertions
+        end_position = positions[end_index - 1] + 0.999  # include insertions
         mutation_read_list_parts[f"{start_index}_{end_index}"] = mutation_read_list.loc[start_position:end_position]
         start_index += part_size
     with mp.Pool(cpu_count) as pool:
@@ -322,11 +321,13 @@ def runner(input_dir, reference_file, output_dir, max_basecall_iterations, min_c
                       output_file=filenames['summary_graphs'], min_coverage=min_coverage,
                       stretches_to_plot=stretches_to_plot)  # TODO: drop low quality mutations?
         log.info(f"Most outputs are ready in {output_dir} !")
-        if calculate_haplotypes == "Y":
+        if calculate_haplotypes == "Y" or calculate_haplotypes == "y":
             log.info(f"Calculating linked mutations...")
             update_meta_data(output_dir=output_dir, status='Inferring haplotypes...', db_path=db_path)
-            infer_haplotypes(cpu_count=cpu_count, filenames=filenames, linked_mutations_dir=filenames['linked_mutations_dir'],
-                             log=log, max_read_size=max_read_size, output_dir=output_dir, stretches_pvalue=stretches_pvalue,
+            infer_haplotypes(cpu_count=cpu_count, filenames=filenames,
+                             linked_mutations_dir=filenames['linked_mutations_dir'],
+                             log=log, max_read_size=max_read_size, output_dir=output_dir,
+                             stretches_pvalue=stretches_pvalue,
                              basecall_dir=filenames['basecall_dir'], stretches_distance=stretches_distance)
             graph_summary(freqs_file=filenames['freqs_file_path'], blast_file=filenames['blast_file'],
                           read_counter_file=filenames['read_counter_file'], stretches_file=filenames['stretches'],
@@ -387,7 +388,7 @@ def create_runner_parser():
     parser.add_argument("-dbc", "--db_comment", help='comment to store in db')
     parser.add_argument("-mm", "--max_memory", help='limit memory usage to this many megabytes '
                                                     '(None would use available memory when starting to run)')
-    parser.add_argument("-ch", "--calculate_haplotypes", help='Run pipeline including calculating haplotypes')
+    parser.add_argument("-ch", "--calculate_haplotypes", help='Y/N, Run pipeline including calculating haplotypes')
     return parser
 
 
@@ -399,11 +400,11 @@ if __name__ == "__main__":
     runner(input_dir=args['input_dir'], output_dir=args['output_dir'], reference_file=args['reference_file'],
            max_basecall_iterations=int(args['max_basecall_iterations']), overlapping_reads=args['overlapping_reads'],
            quality_threshold=int(args['quality_threshold']), task=args['blast_task'], max_memory=args['max_memory'],
-           evalue=float(args['blast_evalue']), dust=args['blast_dust'], num_alignments=int(args['blast_num_alignments']),
+           evalue=float(args['blast_evalue']), dust=args['blast_dust'],
+           num_alignments=int(args['blast_num_alignments']),
            mode=args['blast_mode'], perc_identity=float(args['blast_perc_identity']), cpu_count=args['cpu_count'],
            min_coverage=int(args['min_coverage']), db_comment=args['db_comment'], soft_masking=args['blast_soft_masking'],
            stretches_pvalue=float(args['stretches_pvalue']), stretches_distance=float(args['stretches_distance']),
            cleanup=args['cleanup'], with_indels=args['with_indels'], calculate_haplotypes=args['calculate_haplotypes'],
            stretches_to_plot=int(args['stretches_to_plot']), max_read_size=int(args['stretches_max_read_size']),
            db_path=args['db_path'])
-

@@ -26,7 +26,8 @@ import numpy as np
 from utils import reverse_string
 
 
-def run_blast(reads_fasta, reference, output, mode, task, evalue, perc_identity, num_alignments, dust, soft_masking, log):
+def run_blast(reads_fasta, reference, output, mode, task, evalue, perc_identity, num_alignments, dust, soft_masking,
+              log):
     if mode == "SeqToRef":
         query = reads_fasta
         subject = reference
@@ -57,14 +58,15 @@ def _rename_columns(df):
             new_name[col[:-3]] = 'read'
     if new_name['subject'] == new_name['query']:
         raise Exception("Blast returned 2 constant columns! This really shouldn't happen.")
-    new_columns = {name: name.replace('query', new_name['query']).replace('subject', new_name['subject']) for name in df.columns}
+    new_columns = {name: name.replace('query', new_name['query']).replace('subject', new_name['subject']) for name in
+                   df.columns}
     return df.rename(columns=new_columns)
 
 
 def get_alignments(blast_output, fastq_file, reads_overlap):
     df = pd.read_csv(blast_output, sep="\t", index_col=False,
                      names=["query_id", "subject_id", "query_start", 'query_end', 'subject_start',
-                            'subject_end', 'plus_or_minus', 'length', 'mutations',  'query_seq', 'subject_seq'])
+                            'subject_end', 'plus_or_minus', 'length', 'mutations', 'query_seq', 'subject_seq'])
     alignments = _rename_columns(df)
     suspicious_reads = pd.DataFrame()
     alignments, ignored_reads, multi_mapped_alignments, read_counter = filter_reads_by_alignment_count(alignments,
@@ -102,7 +104,7 @@ def get_quality(fastq_file, alignments):
 def get_max_insertion_value(df_index, insertion):
     max_decimal = 0
     for num in range(10):
-        decimal = num/10
+        decimal = num / 10
         if insertion + decimal in df_index:
             if decimal > max_decimal:
                 max_decimal = decimal
@@ -116,10 +118,10 @@ def fix_insertions_index(df, ref_start):
     df_index = [float(i) for i in df.index.to_list()]
     insertion_counter = 0
     for insertion in insertions:
-        insertion = insertion - insertion_counter                   # each insertion moves the other insertions
+        insertion = insertion - insertion_counter  # each insertion moves the other insertions
         insertion_position = df_index.index(insertion)
-        insertion_value = round(insertion + 0.001, 3)               # fix floating point nonsense
-        while insertion_value-1 in df_index:
+        insertion_value = round(insertion + 0.001, 3)  # fix floating point nonsense
+        while insertion_value - 1 in df_index:
             insertion_value = round(insertion_value + 0.001, 3)
         df_index[insertion_position] = insertion_value
         df_index = [x - 1 if x > insertion else x for x in df_index]
@@ -148,7 +150,7 @@ def parse_alignment_data(data, read_seq, ref_seq, read_start, ref_start, mode, m
     deletions = df[df.read_seq == "-"].read_pos
     if len(deletions) > 0:
         deletions = df[df.read_seq == "-"].read_pos
-        for deletion in deletions.values:         # deletions have no quality...!
+        for deletion in deletions.values:  # deletions have no quality...!
             quality.insert(deletion - 1, np.inf)  # set deletions quality to be inf so that we don't filter them later
     df['quality'] = df.read_pos.map(lambda pos: quality[pos - 1])
     df = fix_insertions_index(df, data[ref_start])
@@ -214,13 +216,13 @@ def basecall(blast_output_file, fastq_file, output_dir, quality_threshold, mode,
     alignments, ignored_reads, suspicious_reads, read_counter = get_alignments(blast_output_file, fastq_file=fastq_file,
                                                                                reads_overlap=reads_overlap)
     read_counter.to_csv(os.path.join(output_dir, base_filename + ".read_counter"), sep="\t")
-    suspicious_reads.to_csv(os.path.join(output_dir, base_filename+".suspicious_reads"), sep="\t")
-    ignored_reads.to_csv(os.path.join(output_dir, base_filename+".ignored_reads"), sep="\t")
+    suspicious_reads.to_csv(os.path.join(output_dir, base_filename + ".suspicious_reads"), sep="\t")
+    ignored_reads.to_csv(os.path.join(output_dir, base_filename + ".ignored_reads"), sep="\t")
     called_bases = alignments.apply(lambda row: get_alignment_df(row, mode=mode), axis=1)
     called_bases = pd.concat(list(called_bases)).reset_index(drop=True)
     called_bases, ignored_bases = filter_bases(called_bases, quality_threshold, reads_overlap)
-    ignored_bases.to_csv(os.path.join(output_dir, base_filename+".ignored_bases"), sep="\t", index=False)
-    called_bases.to_csv(os.path.join(output_dir, base_filename+".called_bases"), sep="\t", index=False)
+    ignored_bases.to_csv(os.path.join(output_dir, base_filename + ".ignored_bases"), sep="\t", index=False)
+    called_bases.to_csv(os.path.join(output_dir, base_filename + ".called_bases"), sep="\t", index=False)
 
 
 def convert_fastq_to_fasta(output_dir, fastq_file):
@@ -239,15 +241,15 @@ def process_fastq(fastq_file, reference, output_dir, quality_threshold, task, ev
     os.makedirs(blast_output, exist_ok=True)
     reads_fasta_file_path = convert_fastq_to_fasta(fastq_file=fastq_file, output_dir=blast_output)
     blast_output_file = reads_fasta_file_path + ".blast"
-    run_blast(reads_fasta=reads_fasta_file_path, reference=reference, output=blast_output_file, mode=mode, task=task,
-              evalue=evalue, num_alignments=num_alignments, dust=dust, soft_masking=soft_masking, log=log,
-              perc_identity=perc_identity)
+    run_blast(reads_fasta=reads_fasta_file_path, reference=reference, output=blast_output_file, mode=mode,task=task,
+                  evalue=evalue, num_alignments=num_alignments, dust=dust, soft_masking=soft_masking, log=log,
+                  perc_identity=perc_identity)
     basecall_output = os.path.join(output_dir, 'basecall')
     if not quality_threshold:
         quality_threshold = 30
     os.makedirs(basecall_output, exist_ok=True)
     basecall(blast_output_file=blast_output_file, fastq_file=fastq_file, output_dir=basecall_output,
-             quality_threshold=quality_threshold, mode=mode, reads_overlap=reads_overlap)
+            quality_threshold=quality_threshold, mode=mode, reads_overlap=reads_overlap)
 
 
 if __name__ == "__main__":
