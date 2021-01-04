@@ -80,12 +80,10 @@ def parallel_process(processing_dir, fastq_files, reference_file, quality_thresh
                                         num_alignments=num_alignments, soft_masking=soft_masking,
                                         perc_identity=perc_identity, mode=mode, reads_overlap=reads_overlap): fastq_file
                                         for fastq_file in fastq_files}
-        try:
-            for future in concurrent.futures.as_completed(future_tasks):
-                future.result()
-        except Exception as e:
-            raise Exception(e.args)
 
+        for future in concurrent.futures.as_completed(future_tasks):
+            future.result()
+                
 
 def set_filenames(output_dir):
     filenames = {"freqs_file_path": os.path.join(output_dir, 'freqs.tsv'),
