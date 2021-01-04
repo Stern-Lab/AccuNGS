@@ -259,7 +259,6 @@ def process_data(with_indels, dust, evalue, fastq_files, log, max_basecall_itera
                          reads_overlap=reads_overlap)
         iteration_data_dir = os.path.join(output_dir, 'iteration_data')
         os.makedirs(iteration_data_dir, exist_ok=True)
-
         alignment_score = check_consensus_alignment_with_ref(reference_file=reference_file,
                                                              iteration_counter=basecall_iteration_counter,
                                                              basecall_dir=basecall_dir,
@@ -283,6 +282,11 @@ def runner(input_dir, reference_file, output_dir, max_basecall_iterations, min_c
         db_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'db')
     if not output_dir:
         output_dir = assign_output_dir(db_path)
+    if os.path.exists(output_dir):
+        list_dir = os.listdir(output_dir)
+        if len(list_dir) > 0:
+            if not ((len(list_dir) == 1) and (list_dir[0] == 'pbs_logs')):
+                raise Exception("output_dir must be path to a new or empty directory!")
     log = pipeline_logger(logger_name='AccuNGS-Runner', log_folder=output_dir)
     try:
         filenames = set_filenames(output_dir=output_dir)

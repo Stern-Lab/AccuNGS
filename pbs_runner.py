@@ -113,8 +113,9 @@ def pbs_runner(input_dir, output_dir, reference_file, max_basecall_iterations, d
     base_path = os.path.dirname(os.path.abspath(__file__))
     pbs_logs_dir = os.path.join(output_dir, "pbs_logs")
     os.makedirs(pbs_logs_dir, exist_ok=True)
-    cmd_identifier = randint(42, 777)  # so that we can easily connect cmdfile and job
-    alias += f"_{cmd_identifier}"
+    if not alias:
+        cmd_identifier = randint(42, 777)  # so that we can easily connect cmdfile and job
+        alias = f"AccuNGS_{cmd_identifier}"
     cmd_path = os.path.join(pbs_logs_dir, f'{alias}.cmd')
     cmd = runner_cmd(input_dir=input_dir, output_dir=output_dir, reference_file=reference_file,
                      max_basecall_iterations=max_basecall_iterations, max_read_size=max_read_size,
@@ -138,16 +139,21 @@ def pbs_runner(input_dir, output_dir, reference_file, max_basecall_iterations, d
     return job_id
 
 
-if __name__ == "__main__":
+def get_pbs_args():
     parser = create_runner_parser()
     parser.add_argument("-a", "--alias", help="job alias visible in qstat")
     parser.add_argument("-q", "--queue", help="PBS queue to run on")
     parser.add_argument("-j", "--after_jobid", help="Run after successfully completing this jobid")
     parser.add_argument("-gm", "--gmem", help="Memory in GB to ask for in cmd file")
     parser_args = vars(parser.parse_args())
-    args = dict(get_config()['runner_defaults'])                                            # get runner defaults
+    args = dict(get_config()['runner_defaults'])  # get runner defaults
     args.update({key: value for key, value in dict(get_config()['pbs_defaults']).items()})  # overide with pbs defaults
-    args.update({key: value for key, value in parser_args.items() if value is not None})    # overide with cli args
+    args.update({key: value for key, value in parser_args.items() if value is not None})  # overide with cli args
+    return args
+
+
+if __name__ == "__main__":
+    args = get_pbs_args()
     pbs_runner(input_dir=args['input_dir'], output_dir=args['output_dir'], reference_file=args['reference_file'],
                max_basecall_iterations=args['max_basecall_iterations'], custom_command=args['custom_command'],
                quality_threshold=args['quality_threshold'], task=args['blast_task'], db_comment=args['db_comment'],
