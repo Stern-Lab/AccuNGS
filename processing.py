@@ -241,15 +241,15 @@ def process_fastq(fastq_file, reference, output_dir, quality_threshold, task, ev
     os.makedirs(blast_output, exist_ok=True)
     reads_fasta_file_path = convert_fastq_to_fasta(fastq_file=fastq_file, output_dir=blast_output)
     blast_output_file = reads_fasta_file_path + ".blast"
-    run_blast(reads_fasta=reads_fasta_file_path, reference=reference, output=blast_output_file, mode=mode,task=task,
-                  evalue=evalue, num_alignments=num_alignments, dust=dust, soft_masking=soft_masking, log=log,
-                  perc_identity=perc_identity)
+    run_blast(reads_fasta=reads_fasta_file_path, reference=reference, output=blast_output_file, mode=mode, task=task,
+              evalue=evalue, num_alignments=num_alignments, dust=dust, soft_masking=soft_masking, log=log,
+              perc_identity=perc_identity)
     basecall_output = os.path.join(output_dir, 'basecall')
     if not quality_threshold:
         quality_threshold = 30
     os.makedirs(basecall_output, exist_ok=True)
     basecall(blast_output_file=blast_output_file, fastq_file=fastq_file, output_dir=basecall_output,
-            quality_threshold=quality_threshold, mode=mode, reads_overlap=reads_overlap)
+             quality_threshold=quality_threshold, mode=mode, reads_overlap=reads_overlap)
 
 
 if __name__ == "__main__":

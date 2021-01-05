@@ -79,11 +79,11 @@ def parallel_process(processing_dir, fastq_files, reference_file, quality_thresh
                                         quality_threshold=quality_threshold, task=task, evalue=evalue, dust=dust,
                                         num_alignments=num_alignments, soft_masking=soft_masking,
                                         perc_identity=perc_identity, mode=mode, reads_overlap=reads_overlap): fastq_file
-                                        for fastq_file in fastq_files}
+                        for fastq_file in fastq_files}
 
         for future in concurrent.futures.as_completed(future_tasks):
             future.result()
-                
+
 
 def set_filenames(output_dir):
     filenames = {"freqs_file_path": os.path.join(output_dir, 'freqs.tsv'),
