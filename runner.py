@@ -274,6 +274,31 @@ def process_data(with_indels, dust, evalue, fastq_files, log, max_basecall_itera
     return reference_file
 
 
+def validate_input(output_dir, input_dir, reference_file):
+    if os.path.exists(output_dir):
+        list_dir = os.listdir(output_dir)
+        if len(list_dir) > 0:
+            if not ((len(list_dir) == 1) and (list_dir[0] == 'pbs_logs')):
+                raise Exception("output_dir must be path to a new or empty directory!")
+    if not os.path.isfile(reference_file):
+        raise Exception("Reference_file must exist!")
+    else:
+        file_name = os.fsdecode(reference_file)
+        if not file_name.endswith(".fasta"):
+            raise Exception("Reference_file must be fasta file!")
+    if not os.path.isdir(input_dir):
+        raise Exception("Input_dir must exist!")
+    input_dir_loop = os.fsencode(input_dir)
+    if len(os.listdir(input_dir_loop)) > 0:
+        for file in os.listdir(input_dir_loop):
+            file_name = os.fsdecode(file)
+            if file_name.endswith(".fastq"):
+                break
+            raise Exception("There are no fastq files in input_dir!")
+    else:
+        raise Exception("input_dir is empty!")
+
+
 def runner(input_dir, reference_file, output_dir, max_basecall_iterations, min_coverage, db_comment,
            quality_threshold, task, evalue, dust, num_alignments, soft_masking, perc_identity, mode, max_read_size,
            with_indels, stretches_pvalue, stretches_distance, stretches_to_plot, cleanup,
@@ -282,11 +307,7 @@ def runner(input_dir, reference_file, output_dir, max_basecall_iterations, min_c
         db_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'db')
     if not output_dir:
         output_dir = assign_output_dir(db_path)
-    if os.path.exists(output_dir):
-        list_dir = os.listdir(output_dir)
-        if len(list_dir) > 0:
-            if not ((len(list_dir) == 1) and (list_dir[0] == 'pbs_logs')):
-                raise Exception("output_dir must be path to a new or empty directory!")
+    validate_input(output_dir, input_dir, reference_file)
     log = pipeline_logger(logger_name='AccuNGS-Runner', log_folder=output_dir)
     try:
         filenames = set_filenames(output_dir=output_dir)
@@ -403,7 +424,8 @@ if __name__ == "__main__":
            evalue=float(args['blast_evalue']), dust=args['blast_dust'],
            num_alignments=int(args['blast_num_alignments']),
            mode=args['blast_mode'], perc_identity=float(args['blast_perc_identity']), cpu_count=args['cpu_count'],
-           min_coverage=int(args['min_coverage']), db_comment=args['db_comment'], soft_masking=args['blast_soft_masking'],
+           min_coverage=int(args['min_coverage']), db_comment=args['db_comment'],
+           soft_masking=args['blast_soft_masking'],
            stretches_pvalue=float(args['stretches_pvalue']), stretches_distance=float(args['stretches_distance']),
            cleanup=args['cleanup'], with_indels=args['with_indels'], calculate_haplotypes=args['calculate_haplotypes'],
            stretches_to_plot=int(args['stretches_to_plot']), max_read_size=int(args['stretches_max_read_size']),
