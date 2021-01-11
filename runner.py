@@ -283,18 +283,19 @@ def validate_input(output_dir, input_dir, reference_file):
     if not os.path.isfile(reference_file):
         raise Exception("Reference_file must exist!")
     else:
-        file_name = os.fsdecode(reference_file)
-        if not file_name.endswith(".fasta"):
-            raise Exception("Reference_file must be fasta file!")
+        if ".fasta" not in os.path.basename(reference_file):
+            raise Exception("Reference_file must end with .fasta!")
     if not os.path.isdir(input_dir):
         raise Exception("Input_dir must exist!")
-    input_dir_loop = os.fsencode(input_dir)
-    if len(os.listdir(input_dir_loop)) > 0:
-        for file in os.listdir(input_dir_loop):
+    list_dir = os.listdir(input_dir)
+    if len(list_dir) > 0:
+        correct_files = False
+        for file in list_dir:
             file_name = os.fsdecode(file)
-            if file_name.endswith(".fastq"):
-                break
-            raise Exception("There are no fastq files in input_dir!")
+            if ".fastq" in os.path.basename(file_name):
+                correct_files = True
+        if not correct_files:
+            raise Exception("There are no files ending with fastq or gz in input_dir!")
     else:
         raise Exception("input_dir is empty!")
 
@@ -377,7 +378,7 @@ def create_runner_parser():
                         help="Path to directory containing fastq/gz files or sub directories containg fastq/gz files.")
     parser.add_argument("-o", "--output_dir", help="A directory for output files. "
                                                    "If none is given will put it in the db")
-    parser.add_argument("-r", "--reference_file", required=True, help="Reference file to align against.")
+    parser.add_argument("-r", "--reference_file", required=True, help="Reference file with extension to align against.")
     parser.add_argument("-m", "--max_basecall_iterations", type=int,
                         help="Number of times to rerun with previous consensus as the new reference before giving up.")
     parser.add_argument("-or", "--overlapping_reads",
@@ -424,7 +425,7 @@ if __name__ == "__main__":
            evalue=float(args['blast_evalue']), dust=args['blast_dust'],
            num_alignments=int(args['blast_num_alignments']),
            mode=args['blast_mode'], perc_identity=float(args['blast_perc_identity']), cpu_count=args['cpu_count'],
-           min_coverage=int(args['min_coverage']), db_comment=args['db_comment'],soft_masking=args['blast_soft_masking'],
+           min_coverage=int(args['min_coverage']), db_comment=args['db_comment'], soft_masking=args['blast_soft_masking'],
            stretches_pvalue=float(args['stretches_pvalue']), stretches_distance=float(args['stretches_distance']),
            cleanup=args['cleanup'], with_indels=args['with_indels'], calculate_haplotypes=args['calculate_haplotypes'],
            stretches_to_plot=int(args['stretches_to_plot']), max_read_size=int(args['stretches_max_read_size']),
