@@ -283,21 +283,14 @@ def validate_input(output_dir, input_dir, reference_file):
     if not os.path.isfile(reference_file):
         raise Exception("Reference_file must exist!")
     else:
-        if ".fasta" not in os.path.basename(reference_file):
+        if not os.path.basename(reference_file).endswith(".fasta"):
             raise Exception("Reference_file must end with .fasta!")
     if not os.path.isdir(input_dir):
         raise Exception("Input_dir must exist!")
-    list_dir = os.listdir(input_dir)
-    if len(list_dir) > 0:
-        correct_files = False
-        for file in list_dir:
-            file_name = os.fsdecode(file)
-            if ".fastq" in os.path.basename(file_name):
-                correct_files = True
-        if not correct_files:
-            raise Exception("There are no files ending with fastq or gz in input_dir!")
-    else:
-        raise Exception("input_dir is empty!")
+    files_fasta = get_files_by_extension(input_dir, "fastq")
+    files_fastagz = get_files_by_extension(input_dir, "fastq.gz")
+    if len(files_fasta) == 0 and len(files_fastagz) == 0:
+        raise Exception("There are no files ending with fastq or gz in input_dir!")
 
 
 def runner(input_dir, reference_file, output_dir, max_basecall_iterations, min_coverage, db_comment,
