@@ -58,7 +58,7 @@ import shutil
 from datetime import datetime
 from functools import partial
 import pandas as pd
-from Bio import pairwise2
+from Bio import pairwise2,SeqIO
 
 from data_preparation import prepare_data
 from graph_haplotypes import graph_haplotypes
@@ -75,6 +75,7 @@ from haplotypes.co_occurs_to_stretches import calculate_stretches
 def parallel_process(processing_dir, fastq_files, reference_file, quality_threshold, task, evalue, dust, num_alignments,
                      soft_masking, perc_identity, mode, reads_overlap):
     with concurrent.futures.ProcessPoolExecutor() as executor:
+
         future_tasks = {executor.submit(process_fastq, fastq_file, reference=reference_file, output_dir=processing_dir,
                                         quality_threshold=quality_threshold, task=task, evalue=evalue, dust=dust,
                                         num_alignments=num_alignments, soft_masking=soft_masking,
@@ -281,16 +282,18 @@ def validate_input(output_dir, input_dir, reference_file):
             if not ((len(list_dir) == 1) and (list_dir[0] == 'pbs_logs')):
                 raise Exception("output_dir must be path to a new or empty directory!")
     if not os.path.isfile(reference_file):
-        raise Exception("Reference_file must exist!")
+        raise Exception("reference_file must exist!")
     else:
-        if not os.path.basename(reference_file).endswith(".fasta"):
-            raise Exception("Reference_file must end with .fasta!")
+        with open(reference_file, "r") as handle:
+            fasta = SeqIO.parse(handle, "fasta")
+            if not any(fasta):
+                raise Exception("reference_file must be of type fasta!")
     if not os.path.isdir(input_dir):
         raise Exception("Input_dir must exist!")
     files_fasta = get_files_by_extension(input_dir, "fastq")
     files_fastagz = get_files_by_extension(input_dir, "fastq.gz")
     if len(files_fasta) == 0 and len(files_fastagz) == 0:
-        raise Exception("There are no files ending with fastq or gz in input_dir!")
+        raise Exception("Could not find files ending with '.fastq' or 'fastq.gz' in input_dir !")
 
 
 def runner(input_dir, reference_file, output_dir, max_basecall_iterations, min_coverage, db_comment,
@@ -371,14 +374,15 @@ def create_runner_parser():
                         help="Path to directory containing fastq/gz files or sub directories containg fastq/gz files.")
     parser.add_argument("-o", "--output_dir", help="A directory for output files. "
                                                    "If none is given will put it in the db")
-    parser.add_argument("-r", "--reference_file", required=True, help="Reference file with extension to align against.")
+    parser.add_argument("-r", "--reference_file", required=True, help="Full path to reference file (including "
+                                                                      "extension) of type fasta to align against.")
     parser.add_argument("-m", "--max_basecall_iterations", type=int,
                         help="Number of times to rerun with previous consensus as the new reference before giving up.")
     parser.add_argument("-or", "--overlapping_reads",
                         help="Y/N, merge opposing reads in the same directory. This assumes 2 fastq/gz files in each "
                              "sub directory of the input_dir and would drop all non overlapping areas of the reads.")
     parser.add_argument("-bt", "--blast_task", help="blast's task parameter")
-    parser.add_argument("-be", "--blast_evalue", help="blast's evalue parameter", type=float)
+    parser.add_argument("-be", "--blast_evalue", help="blast's e value parameter", type=float)
     parser.add_argument("-bd", "--blast_dust", help="blast's dust parameter")
     parser.add_argument("-bn", "--blast_num_alignments", type=int, help="blast's num_alignments parameter")
     parser.add_argument("-bp", "--blast_perc_identity", type=int, help="blast's perc_identity parameter")
