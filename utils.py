@@ -108,7 +108,6 @@ def md5_dir(directory: Union[str, Path]) -> str:
 
 
 def create_new_ref_with_freqs(reference_fasta_file, freqs_file, min_coverage, output_file, drop_indels):
-    print(min_coverage)
     # TODO: what about deletions in the start or begining?
     """Create reference from freqs filling unaligned parts with the given reference file."""
     with open(reference_fasta_file, "r") as handle:
