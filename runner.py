@@ -307,7 +307,6 @@ def runner(input_dir, reference_file, output_dir, max_basecall_iterations, min_c
     log = pipeline_logger(logger_name='AccuNGS-Runner', log_folder=output_dir)
     if overlapping_reads == 'Y':
         min_coverage /= 2
-    print (min_coverage)
     try:
         filenames = set_filenames(output_dir=output_dir)
         if not cpu_count:
