@@ -58,7 +58,7 @@ import shutil
 from datetime import datetime
 from functools import partial
 import pandas as pd
-from Bio import pairwise2,SeqIO
+from Bio import pairwise2, SeqIO
 
 from data_preparation import prepare_data
 from graph_haplotypes import graph_haplotypes
@@ -75,7 +75,6 @@ from haplotypes.co_occurs_to_stretches import calculate_stretches
 def parallel_process(processing_dir, fastq_files, reference_file, quality_threshold, task, evalue, dust, num_alignments,
                      soft_masking, perc_identity, mode, reads_overlap):
     with concurrent.futures.ProcessPoolExecutor() as executor:
-
         future_tasks = {executor.submit(process_fastq, fastq_file, reference=reference_file, output_dir=processing_dir,
                                         quality_threshold=quality_threshold, task=task, evalue=evalue, dust=dust,
                                         num_alignments=num_alignments, soft_masking=soft_masking,
@@ -146,11 +145,11 @@ def parallel_calc_linked_mutations(freqs_file_path, output_dir, mutation_read_li
 
 
 def check_consensus_alignment_with_ref(reference_file, with_indels, min_coverage, iteration_data_dir, basecall_dir,
-                                       iteration_counter):
+                                       iteration_counter, is_overlapping):
     reference = get_sequence_from_fasta(reference_file)
     freqs_file_path = os.path.join(iteration_data_dir, f"freqs_{iteration_counter}.tsv")
     called_bases_files = get_files_by_extension(basecall_dir, "called_bases")
-    create_freqs_file(called_bases_files=called_bases_files, output_path=freqs_file_path)
+    create_freqs_file(called_bases_files=called_bases_files, output_path=freqs_file_path, is_overlapping=is_overlapping)
     if with_indels == "Y":
         consensus_path = os.path.join(iteration_data_dir, f"consensus_with_indels_{iteration_counter}.fasta")
         drop_indels = False
@@ -250,7 +249,7 @@ def infer_haplotypes(cpu_count, filenames, linked_mutations_dir, log, max_read_s
 
 def process_data(with_indels, dust, evalue, fastq_files, log, max_basecall_iterations,
                  min_coverage, mode, num_alignments, opposing_strings, output_dir, perc_identity, processing_dir,
-                 quality_threshold, reference_file, soft_masking, task, basecall_dir):
+                 quality_threshold, reference_file, soft_masking, task, basecall_dir, is_overlapping):
     reads_overlap = True if opposing_strings == 'Y' or opposing_strings == 'y' else False
     for basecall_iteration_counter in range(1, max_basecall_iterations + 1):
         log.info(f"Processing fastq files iteration {basecall_iteration_counter}/{max_basecall_iterations}")
@@ -265,7 +264,7 @@ def process_data(with_indels, dust, evalue, fastq_files, log, max_basecall_itera
                                                              basecall_dir=basecall_dir,
                                                              with_indels=with_indels,
                                                              iteration_data_dir=iteration_data_dir,
-                                                             min_coverage=min_coverage)
+                                                             min_coverage=min_coverage, is_overlapping=is_overlapping)
         log.info(f'Iteration alignment score: {round(alignment_score, 4)}')
         if alignment_score == 1:
             break
@@ -306,6 +305,9 @@ def runner(input_dir, reference_file, output_dir, max_basecall_iterations, min_c
         output_dir = assign_output_dir(db_path)
     validate_input(output_dir, input_dir, reference_file)
     log = pipeline_logger(logger_name='AccuNGS-Runner', log_folder=output_dir)
+    if overlapping_reads == 'Y':
+        min_coverage /= 2
+    print (min_coverage)
     try:
         filenames = set_filenames(output_dir=output_dir)
         if not cpu_count:
@@ -329,10 +331,12 @@ def runner(input_dir, reference_file, output_dir, max_basecall_iterations, min_c
                                       mode=mode, num_alignments=num_alignments, opposing_strings=overlapping_reads,
                                       output_dir=output_dir, perc_identity=perc_identity, reference_file=reference_file,
                                       processing_dir=filenames['processing_dir'], quality_threshold=quality_threshold,
-                                      task=task, basecall_dir=filenames['basecall_dir'])
+                                      task=task, basecall_dir=filenames['basecall_dir'],
+                                      is_overlapping=overlapping_reads)
         log.info("Aggregating processed fastq files outputs...")
         aggregate_processed_output(input_dir=filenames['processing_dir'], output_dir=output_dir,
-                                   reference=reference_file, min_coverage=min_coverage)
+                                   reference=reference_file, min_coverage=min_coverage,
+                                   is_overlapping=overlapping_reads)
         log.info("Generating graphs...")
         graph_summary(freqs_file=filenames['freqs_file_path'], blast_file=filenames['blast_file'],
                       read_counter_file=filenames['read_counter_file'], stretches_file=filenames['stretches'],
@@ -422,7 +426,8 @@ if __name__ == "__main__":
            evalue=float(args['blast_evalue']), dust=args['blast_dust'],
            num_alignments=int(args['blast_num_alignments']),
            mode=args['blast_mode'], perc_identity=float(args['blast_perc_identity']), cpu_count=args['cpu_count'],
-           min_coverage=int(args['min_coverage']), db_comment=args['db_comment'], soft_masking=args['blast_soft_masking'],
+           min_coverage=int(args['min_coverage']), db_comment=args['db_comment'],
+           soft_masking=args['blast_soft_masking'],
            stretches_pvalue=float(args['stretches_pvalue']), stretches_distance=float(args['stretches_distance']),
            cleanup=args['cleanup'], with_indels=args['with_indels'], calculate_haplotypes=args['calculate_haplotypes'],
            stretches_to_plot=int(args['stretches_to_plot']), max_read_size=int(args['stretches_max_read_size']),
