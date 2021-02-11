@@ -145,11 +145,12 @@ def parallel_calc_linked_mutations(freqs_file_path, output_dir, mutation_read_li
 
 
 def check_consensus_alignment_with_ref(reference_file, with_indels, min_coverage, iteration_data_dir, basecall_dir,
-                                       iteration_counter, is_overlapping):
+                                       iteration_counter, overlapping_reads):
     reference = get_sequence_from_fasta(reference_file)
     freqs_file_path = os.path.join(iteration_data_dir, f"freqs_{iteration_counter}.tsv")
     called_bases_files = get_files_by_extension(basecall_dir, "called_bases")
-    create_freqs_file(called_bases_files=called_bases_files, output_path=freqs_file_path, is_overlapping=is_overlapping)
+    create_freqs_file(called_bases_files=called_bases_files, output_path=freqs_file_path,
+                      overlapping_reads=overlapping_reads)
     if with_indels == "Y":
         consensus_path = os.path.join(iteration_data_dir, f"consensus_with_indels_{iteration_counter}.fasta")
         drop_indels = False
@@ -248,9 +249,9 @@ def infer_haplotypes(cpu_count, filenames, linked_mutations_dir, log, max_read_s
 
 
 def process_data(with_indels, dust, evalue, fastq_files, log, max_basecall_iterations,
-                 min_coverage, mode, num_alignments, opposing_strings, output_dir, perc_identity, processing_dir,
-                 quality_threshold, reference_file, soft_masking, task, basecall_dir, is_overlapping):
-    reads_overlap = True if opposing_strings == 'Y' or opposing_strings == 'y' else False
+                 min_coverage, mode, num_alignments, overlapping_reads, output_dir, perc_identity, processing_dir,
+                 quality_threshold, reference_file, soft_masking, task, basecall_dir):
+    reads_overlap = True if overlapping_reads == 'Y' or overlapping_reads == 'y' else False
     for basecall_iteration_counter in range(1, max_basecall_iterations + 1):
         log.info(f"Processing fastq files iteration {basecall_iteration_counter}/{max_basecall_iterations}")
         parallel_process(processing_dir=processing_dir, fastq_files=fastq_files, reference_file=reference_file,
@@ -264,7 +265,8 @@ def process_data(with_indels, dust, evalue, fastq_files, log, max_basecall_itera
                                                              basecall_dir=basecall_dir,
                                                              with_indels=with_indels,
                                                              iteration_data_dir=iteration_data_dir,
-                                                             min_coverage=min_coverage, is_overlapping=is_overlapping)
+                                                             min_coverage=min_coverage,
+                                                             overlapping_reads=overlapping_reads)
         log.info(f'Iteration alignment score: {round(alignment_score, 4)}')
         if alignment_score == 1:
             break
@@ -327,15 +329,14 @@ def runner(input_dir, reference_file, output_dir, max_basecall_iterations, min_c
         reference_file = process_data(with_indels=with_indels, dust=dust,
                                       evalue=evalue, fastq_files=fastq_files, log=log, soft_masking=soft_masking,
                                       max_basecall_iterations=max_basecall_iterations, min_coverage=min_coverage,
-                                      mode=mode, num_alignments=num_alignments, opposing_strings=overlapping_reads,
+                                      mode=mode, num_alignments=num_alignments, overlapping_reads=overlapping_reads,
                                       output_dir=output_dir, perc_identity=perc_identity, reference_file=reference_file,
                                       processing_dir=filenames['processing_dir'], quality_threshold=quality_threshold,
-                                      task=task, basecall_dir=filenames['basecall_dir'],
-                                      is_overlapping=overlapping_reads)
+                                      task=task, basecall_dir=filenames['basecall_dir'])
         log.info("Aggregating processed fastq files outputs...")
         aggregate_processed_output(input_dir=filenames['processing_dir'], output_dir=output_dir,
                                    reference=reference_file, min_coverage=min_coverage,
-                                   is_overlapping=overlapping_reads)
+                                   overlapping_reads=overlapping_reads)
         log.info("Generating graphs...")
         graph_summary(freqs_file=filenames['freqs_file_path'], blast_file=filenames['blast_file'],
                       read_counter_file=filenames['read_counter_file'], stretches_file=filenames['stretches'],
