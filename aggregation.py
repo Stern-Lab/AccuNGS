@@ -27,12 +27,12 @@ def convert_called_bases_to_freqs(called_bases):
             dummy_bases.append({'ref_pos': pos, 'read_base': base})
     freq_dummies = pd.DataFrame.from_dict(dummy_bases)
     freqs = pd.concat([freq_dummies, called_bases])
-    freqs = freqs.groupby('ref_pos').read_base.value_counts()-1
+    freqs = freqs.groupby('ref_pos').read_base.value_counts() - 1  # -1 ->remove dummies from value_counts
     ref_df = called_bases[['ref_pos', 'ref_base']]
     return freqs, ref_df
 
 
-def aggregate_called_bases(called_bases_files):
+def aggregate_called_bases(called_bases_files, overlapping_reads):
     freqs = pd.Series(dtype=int)
     ref_df = pd.DataFrame()
     for called_bases_file in called_bases_files:
@@ -43,20 +43,22 @@ def aggregate_called_bases(called_bases_files):
         else:
             freqs = freqs.add(freqs_part, fill_value=0)
             ref_df = pd.concat([ref_df, ref_df_part]).drop_duplicates()
+    if overlapping_reads == 'Y':
+        freqs /= 2
     freqs.name = 'base_count'
     freqs = pd.DataFrame(freqs).reset_index()
     freqs = freqs.merge(ref_df, on=['ref_pos'], how='left')
-    freqs['ref_pos'] = round(freqs['ref_pos'], 3)                         # fix that floating point nonsense
+    freqs['ref_pos'] = round(freqs['ref_pos'], 3)  # fix that floating point nonsense
     return freqs
 
 
-def create_freqs_file(called_bases_files, output_path):
-    freqs = aggregate_called_bases(called_bases_files)
+def create_freqs_file(called_bases_files, output_path, overlapping_reads):
+    freqs = aggregate_called_bases(called_bases_files, overlapping_reads)
     coverage = freqs.groupby('ref_pos').base_count.sum()
     freqs['coverage'] = freqs.ref_pos.map(lambda pos: coverage[round(pos)])
     freqs['frequency'] = freqs['base_count'] / freqs['coverage']
     freqs['base_rank'] = 5 - freqs.groupby('ref_pos').base_count.rank('min')
-    freqs['probability'] = 1 - 10**(np.log10(1 - freqs["frequency"] + 1e-07) * (freqs["coverage"] + 1))
+    freqs['probability'] = 1 - 10 ** (np.log10(1 - freqs["frequency"] + 1e-07) * (freqs["coverage"] + 1))
     # TODO: does probability logic make sense? same as perl script
     freqs.to_csv(output_path, sep="\t", index=False)
 
@@ -135,9 +137,7 @@ def trim_read_id_prefixes(files, read_id_prefix_file):
                 df.to_csv(file, sep='\t', index=False)
 
 
-def aggregate_processed_output(input_dir, output_dir, reference, min_coverage):
-    if not min_coverage:
-        min_coverage = 10
+def aggregate_processed_output(input_dir, output_dir, reference, min_coverage, overlapping_reads):
     os.makedirs(output_dir, exist_ok=True)
     freqs_file_path = os.path.join(output_dir, "freqs.tsv")
     basecall_dir = os.path.join(input_dir, 'basecall')
@@ -148,7 +148,8 @@ def aggregate_processed_output(input_dir, output_dir, reference, min_coverage):
     basecall_files = get_files_in_dir(basecall_dir)
     read_id_prefix_file = os.path.join(output_dir, "read_id_prefixes.json")
     trim_read_id_prefixes(files=basecall_files, read_id_prefix_file=read_id_prefix_file)
-    create_freqs_file(called_bases_files=called_bases_files, output_path=freqs_file_path)
+    create_freqs_file(called_bases_files=called_bases_files, output_path=freqs_file_path,
+                      overlapping_reads=overlapping_reads)
     read_counters = get_files_by_extension(basecall_dir, "read_counter")
     aggregate_read_counters(read_counters=read_counters, output_path=os.path.join(output_dir, "read_counter.tsv"))
     concatenate_files_by_extension(input_dir=blast_dir, extension="blast", remove_headers=False,

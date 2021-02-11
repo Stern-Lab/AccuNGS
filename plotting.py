@@ -95,8 +95,6 @@ def graph_haplotype_overview(stretches_file, ax, stretches_to_plot):
 def graph_summary(freqs_file, blast_file, read_counter_file, stretches_file, output_file, stretches_to_plot,
                   min_coverage):
     # TODO: graph multimapped ignored bases, min_coverage can be set as defult
-    if not min_coverage:
-        min_coverage = 10
     fig, axes = plt.subplots(figsize=(60, 20), ncols=3, nrows=2)
     plt.suptitle("Pipeline Statistics", fontsize=18)
     plt.subplots_adjust(wspace=0.2, hspace=0.25)
