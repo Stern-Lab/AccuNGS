@@ -170,4 +170,4 @@ if __name__ == "__main__":
                         help="How many cpu's you have will determine to how many parts to split the file")
     args = parser.parse_args()
     prepare_data(input_dir=args.input_dir, output_dir=args.output_dir, rep_length=args.rep_length,
-                 merge_opposing=args.overlap_notation, cpu_count=args.cpu_count)
+                 overlapping_reads=args.overlap_notation, cpu_count=args.cpu_count)
