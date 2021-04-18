@@ -46,20 +46,15 @@ def run_blast(reads_fasta, reference, output, mode, task, evalue, perc_identity,
                                            num_alignments=num_alignments, soft_masking=soft_masking,
                                            perc_identity=perc_identity, evalue=evalue, outfmt=outfmt)
     stdout, stderr = blast_instance()
-    return stdout, stderr
+    for output_string in [stdout, stderr]:
+        if output_string:
+            log.debug(output_string)
 
 
 def _rename_columns(df):
-    new_name = {}
-    for col in ['subject_id', 'query_id']:
-        if df[col].nunique() == 1:
-            new_name[col[:-3]] = 'ref'
-        else:
-            new_name[col[:-3]] = 'read'
-    if new_name['subject'] == new_name['query']:
-        raise Exception("Blast returned 2 constant columns! This really shouldn't happen.")
-    new_columns = {name: name.replace('query', new_name['query']).replace('subject', new_name['subject']) for name in
-                   df.columns}
+    # This is a hack which assumes only seq2ref!!! Should not be used!@%%@!
+    new_name = {'query': 'read', 'subject': 'ref'}
+    new_columns = {name: name.replace('query', new_name['query']).replace('subject', new_name['subject']) for name in df.columns}
     return df.rename(columns=new_columns)
 
 
