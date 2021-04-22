@@ -145,12 +145,11 @@ def parallel_calc_linked_mutations(freqs_file_path, output_dir, mutation_read_li
 
 
 def check_consensus_alignment_with_ref(reference_file, with_indels, min_coverage, iteration_data_dir, basecall_dir,
-                                       iteration_counter, overlapping_reads):
+                                       iteration_counter):
     reference = get_sequence_from_fasta(reference_file)
     freqs_file_path = os.path.join(iteration_data_dir, f"freqs_{iteration_counter}.tsv")
     called_bases_files = get_files_by_extension(basecall_dir, "called_bases")
-    create_freqs_file(called_bases_files=called_bases_files, output_path=freqs_file_path,
-                      overlapping_reads=overlapping_reads)
+    create_freqs_file(called_bases_files=called_bases_files, output_path=freqs_file_path)
     if with_indels == "Y":
         consensus_path = os.path.join(iteration_data_dir, f"consensus_with_indels_{iteration_counter}.fasta")
         drop_indels = False
@@ -265,8 +264,7 @@ def process_data(with_indels, dust, evalue, fastq_files, log, max_basecall_itera
                                                              basecall_dir=basecall_dir,
                                                              with_indels=with_indels,
                                                              iteration_data_dir=iteration_data_dir,
-                                                             min_coverage=min_coverage,
-                                                             overlapping_reads=overlapping_reads)
+                                                             min_coverage=min_coverage)
         log.info(f'Iteration alignment score: {round(alignment_score, 4)}')
         if alignment_score == 1:
             break
@@ -307,8 +305,6 @@ def runner(input_dir, reference_file, output_dir, max_basecall_iterations, min_c
         output_dir = assign_output_dir(db_path)
     validate_input(output_dir, input_dir, reference_file)
     log = pipeline_logger(logger_name='AccuNGS-Runner', log_folder=output_dir)
-    if overlapping_reads == 'Y':
-        min_coverage /= 2
     try:
         filenames = set_filenames(output_dir=output_dir)
         if not cpu_count:
@@ -335,8 +331,7 @@ def runner(input_dir, reference_file, output_dir, max_basecall_iterations, min_c
                                       task=task, basecall_dir=filenames['basecall_dir'])
         log.info("Aggregating processed fastq files outputs...")
         aggregate_processed_output(input_dir=filenames['processing_dir'], output_dir=output_dir,
-                                   reference=reference_file, min_coverage=min_coverage,
-                                   overlapping_reads=overlapping_reads)
+                                   reference=reference_file, min_coverage=min_coverage)
         log.info("Generating graphs...")
         graph_summary(freqs_file=filenames['freqs_file_path'], blast_file=filenames['blast_file'],
                       read_counter_file=filenames['read_counter_file'], stretches_file=filenames['stretches'],
