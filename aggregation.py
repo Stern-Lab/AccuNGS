@@ -27,7 +27,7 @@ def convert_called_bases_to_freqs(called_bases):
             dummy_bases.append({'ref_pos': pos, 'read_base': base})
     freq_dummies = pd.DataFrame.from_dict(dummy_bases)
     freqs = pd.concat([freq_dummies, called_bases])
-    freqs = freqs.reset_index().groupby(['ref_pos', 'read_base'])['read_id'].nunique()
+    freqs = freqs.groupby(['ref_pos', 'read_base'])['read_id'].nunique()
     ref_df = called_bases[['ref_pos', 'ref_base']]
     return freqs, ref_df
 
