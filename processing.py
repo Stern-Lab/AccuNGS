@@ -50,9 +50,10 @@ def run_blast(reads_fasta, reference, output, mode, task, evalue, perc_identity,
 
 
 def _rename_columns(df, mode):
+    new_name = {}
     if mode == 'SeqToRef':
         new_name = {'query': 'read', 'subject': 'ref'}
-    else:
+    elif mode == 'RefToSeq':
         new_name = {'query': 'ref', 'subject': 'read'}
     new_columns = {name: name.replace('query', new_name['query']).replace('subject', new_name['subject']) for name in
                    df.columns}
