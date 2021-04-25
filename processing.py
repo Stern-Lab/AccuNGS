@@ -55,6 +55,8 @@ def _rename_columns(df, mode):
         new_name = {'query': 'read', 'subject': 'ref'}
     elif mode == 'RefToSeq':
         new_name = {'query': 'ref', 'subject': 'read'}
+    else:
+        raise Exception("blast mode must be either RefToSeq or SeqToRef! ")
     new_columns = {name: name.replace('query', new_name['query']).replace('subject', new_name['subject']) for name in
                    df.columns}
     return df.rename(columns=new_columns)
