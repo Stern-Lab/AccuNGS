@@ -82,7 +82,7 @@ def filter_reads_by_alignment_count(alignments, reads_overlap):
     read_counter = alignments.groupby('read_id').size()
     multiple_reads = read_counter[read_counter > 2].index
     multiple_alignments = alignments[alignments['read_id'].isin(multiple_reads)].copy()
-    if reads_overlap:
+    if reads_overlap == 'Y':
         single_reads = list(read_counter[read_counter == 1].index)
         ignored_reads['read_id'] = single_reads
         ignored_reads['dropped_because'] = "single read"
@@ -194,18 +194,20 @@ def filter_bases(called_bases, quality_threshold, reads_overlap):
     called_bases, multi_aligned_bases = filter_target_nunique_by(called_bases, by=['read_id', 'read_pos'],
                                                                  target_column='ref_pos')
     multi_aligned_bases['dropped_because'] = "read position aligned to more than one ref position"
-    called_bases, mismatching_bases = filter_target_nunique_by(called_bases, by=['read_id', 'ref_pos'],
-                                                               target_column='read_base')
-    mismatching_bases['dropped_because'] = "overlapping reads mismatch"
     called_bases, low_quality_bases = filter_target_mean_by(called_bases, by=['read_id', 'ref_pos'],
                                                             target_column='quality', min_mean=quality_threshold)
     low_quality_bases['dropped_because'] = f"base phred score lower than threshold: {quality_threshold}"
-    ignored_bases = [multi_aligned_bases, mismatching_bases, low_quality_bases]
-    if reads_overlap:
-        called_bases, no_plus_minus_bases = filter_target_nunique_by(called_bases, by=['read_id', 'ref_pos'],
+    ignored_bases = [multi_aligned_bases, low_quality_bases]
+    if reads_overlap == "Y" or reads_overlap == "M":
+        called_bases, mismatching_bases = filter_target_nunique_by(called_bases, by=['read_id', 'ref_pos'],
+                                                                   target_column='read_base')
+        mismatching_bases['dropped_because'] = "overlapping reads mismatch"
+        ignored_bases.append(mismatching_bases)
+        if reads_overlap == "Y":
+            called_bases, no_plus_minus_bases = filter_target_nunique_by(called_bases, by=['read_id', 'ref_pos'],
                                                                      target_column='plus_or_minus', required_value=2)
-        no_plus_minus_bases['dropped_because'] = "did not align with both plus and minus"
-        ignored_bases.append(no_plus_minus_bases)
+            no_plus_minus_bases['dropped_because'] = "did not align with both plus and minus"
+            ignored_bases.append(no_plus_minus_bases)
     ignored_bases = pd.concat(ignored_bases)
     return called_bases, ignored_bases
 
