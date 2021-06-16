@@ -207,6 +207,11 @@ def filter_bases(called_bases, quality_threshold, reads_overlap):
         no_plus_minus_bases['dropped_because'] = "did not align with both plus and minus"
         ignored_bases.append(no_plus_minus_bases)
     ignored_bases = pd.concat(ignored_bases)
+    mapped_twice, mapped_once = filter_target_nunique_by(called_bases, by=['read_id', 'ref_pos'],
+                                                         target_column='plus_or_minus', required_value=2)
+    mapped_twice['is_overlapping'] = "1"
+    mapped_once['is_overlapping'] = "0"
+    called_bases = pd.concat([mapped_twice, mapped_once])
     return called_bases, ignored_bases
 
 
