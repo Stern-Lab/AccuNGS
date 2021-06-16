@@ -379,9 +379,11 @@ def create_runner_parser():
     parser.add_argument("-m", "--max_basecall_iterations", type=int,
                         help="Number of times to rerun with previous consensus as the new reference before giving up.")
     parser.add_argument("-or", "--overlapping_reads",
-                        help="Y/N/M, Yes, No, Mixed reads. merge opposing reads in the same directory in Y or M mode. "
-                             "This assumes 2 fastq/gz files in each sub directory of the input_dir and would drop all "
-                             "non overlapping areas of the reads, in Y or M mode.")
+                        help="Y/N/M, run pipeline with, without, or with mixed overlapping reads. Y- merge opposing "
+                             "reads in the same directory and drop non overlapping areas of the reads. "
+                             "M - Merge opposing reads but keep non overlapping areas."
+                             "N - No merge, assume reads are independent. "
+                             "Y & M assume 2 fastq/gz files in each sub directory of the input_dir.")
     parser.add_argument("-bt", "--blast_task", help="blast's task parameter")
     parser.add_argument("-be", "--blast_evalue", help="blast's e value parameter", type=float)
     parser.add_argument("-bd", "--blast_dust", help="blast's dust parameter")
