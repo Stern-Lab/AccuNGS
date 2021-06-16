@@ -250,13 +250,12 @@ def infer_haplotypes(cpu_count, filenames, linked_mutations_dir, log, max_read_s
 def process_data(with_indels, dust, evalue, fastq_files, log, max_basecall_iterations,
                  min_coverage, mode, num_alignments, overlapping_reads, output_dir, perc_identity, processing_dir,
                  quality_threshold, reference_file, soft_masking, task, basecall_dir):
-    reads_overlap = True if overlapping_reads == 'Y' or overlapping_reads == 'y' else False
     for basecall_iteration_counter in range(1, max_basecall_iterations + 1):
         log.info(f"Processing fastq files iteration {basecall_iteration_counter}/{max_basecall_iterations}")
         parallel_process(processing_dir=processing_dir, fastq_files=fastq_files, reference_file=reference_file,
                          quality_threshold=quality_threshold, task=task, evalue=evalue, dust=dust, mode=mode,
                          num_alignments=num_alignments, soft_masking=soft_masking, perc_identity=perc_identity,
-                         reads_overlap=reads_overlap)
+                         reads_overlap=overlapping_reads)
         iteration_data_dir = os.path.join(output_dir, 'iteration_data')
         os.makedirs(iteration_data_dir, exist_ok=True)
         alignment_score = check_consensus_alignment_with_ref(reference_file=reference_file,
@@ -380,8 +379,11 @@ def create_runner_parser():
     parser.add_argument("-m", "--max_basecall_iterations", type=int,
                         help="Number of times to rerun with previous consensus as the new reference before giving up.")
     parser.add_argument("-or", "--overlapping_reads",
-                        help="Y/N, merge opposing reads in the same directory. This assumes 2 fastq/gz files in each "
-                             "sub directory of the input_dir and would drop all non overlapping areas of the reads.")
+                        help="Y/N/M, run pipeline with, without, or with mixed overlapping reads. Y- merge opposing "
+                             "reads in the same directory and drop non overlapping areas of the reads. "
+                             "M - Merge opposing reads but keep non overlapping areas."
+                             "N - No merge, assume reads are independent. "
+                             "Y & M assume 2 fastq/gz files in each sub directory of the input_dir.")
     parser.add_argument("-bt", "--blast_task", help="blast's task parameter")
     parser.add_argument("-be", "--blast_evalue", help="blast's e value parameter", type=float)
     parser.add_argument("-bd", "--blast_dust", help="blast's dust parameter")
