@@ -107,7 +107,7 @@ def md5_dir(directory: Union[str, Path]) -> str:
     return str(md5_update_from_dir(directory, hashlib.md5()).hexdigest())
 
 
-def create_new_ref_with_freqs(reference_fasta_file, freqs_file, min_coverage, output_file, drop_indels):
+def create_new_ref_with_freqs(reference_fasta_file, freqs_file, min_coverage, output_file, drop_indels, ref_mode):
     # TODO: what about deletions in the start or begining?
     """Create reference from freqs filling unaligned parts with the given reference file."""
     with open(reference_fasta_file, "r") as handle:
@@ -115,17 +115,25 @@ def create_new_ref_with_freqs(reference_fasta_file, freqs_file, min_coverage, ou
     if len(records) != 1:
         raise Exception("fasta file must contain only one record!")
     record = records[0]
-    ref = pd.DataFrame(list(str(record.seq)), columns=['ref_base_from_fasta'])
-    ref.index = (ref.index + 1).astype(float)
-    df = pd.read_table(freqs_file)
-    df = df[df["base_rank"] == 0]
-    df.loc[df["coverage"] <= min_coverage, 'read_base'] = np.nan
-    df = df[df['frequency'] > 0.5]                          # drop low frequency insertions
+
+    freqs_df = pd.read_table(freqs_file)
+    freqs_df = freqs_df[freqs_df["base_rank"] == 0]
+    freqs_df.loc[freqs_df["coverage"] <= min_coverage, 'read_base'] = np.nan
+
+    # check for the state
+    if ref_mode == 'M':
+        freqs_df = freqs_df[freqs_df['frequency'] > 0.5]  # drop low frequency insertions
+    elif ref_mode == 'S':
+        freqs_df = freqs_df[freqs_df['frequency'] > 0.8]
+
     if drop_indels:
-        df = df[df["ref_pos"] == np.round(df['ref_pos'])]   # drop insertions
-        df = df[df["read_base"] != "-"]                     # drop deletions
-    df = df.merge(ref, left_on='ref_pos', right_index=True, how='outer').sort_values(by='ref_pos')
-    new_seq = df['read_base'].fillna(df['ref_base_from_fasta']).replace('-', np.nan).dropna().str.cat()
+        freqs_df = freqs_df[freqs_df["ref_pos"] == np.round(freqs_df['ref_pos'])]  # drop insertions
+        freqs_df = freqs_df[freqs_df["read_base"] != "-"]  # drop deletions
+
+    # create the new conc - not depending on the reference
+    new_seq = freqs_df['read_base'].fillna('N')
+    new_seq = new_seq.replace('-', np.nan).dropna()  # drop deletions
+    new_seq = new_seq.str.cat()
     new_sequence = Seq.Seq(new_seq)
     record.seq = new_sequence
     with open(output_file, "w") as output_handle:
