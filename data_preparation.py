@@ -126,7 +126,7 @@ def prepare_data_in_dir(input_dir, output_dir, rep_length, overlapping_reads, lo
     if len(files) == 0:
         log.warning(f"Did not find any relevant files in {input_dir} !")
         return None
-    if overlapping_reads == "Y" or overlapping_reads == "M":
+    if overlapping_reads == "Y" or overlapping_reads == "P":
         if len(files) == 2:
             log.debug(f"Found 2 opposing read files in {input_dir}")
             merged_reads = os.path.join(output_dir, input_dir_name + '_merged_reads.fastq')

@@ -198,7 +198,7 @@ def filter_bases(called_bases, quality_threshold, reads_overlap):
                                                             target_column='quality', min_mean=quality_threshold)
     low_quality_bases['dropped_because'] = f"base phred score lower than threshold: {quality_threshold}"
     ignored_bases = [multi_aligned_bases, low_quality_bases]
-    if reads_overlap == "Y" or reads_overlap == "M":
+    if reads_overlap == "Y" or reads_overlap == "P":
         called_bases, mismatching_bases = filter_target_nunique_by(called_bases, by=['read_id', 'ref_pos'],
                                                                    target_column='read_base')
         mismatching_bases['dropped_because'] = "overlapping reads mismatch"
