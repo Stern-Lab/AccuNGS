@@ -424,8 +424,11 @@ def create_runner_parser():
     parser.add_argument("-mm", "--max_memory", help='limit memory usage to this many megabytes '
                                                     '(None would use available memory when starting to run)')
     parser.add_argument("-ch", "--calculate_haplotypes", help='Y/N, Run pipeline including calculating haplotypes')
-    parser.add_argument("-rm", "--ref_mode", help='M/S, majority - mutation above 50% or strict - mutation above 80%.')
-    parser.add_argument("-ft", "--freq_th", required=False, help='the frequency threshold for consensus')
+    parser.add_argument("-rm", "--ref_mode", help='M/S, majority - mutation above 50% are considered for the '
+                                                  'consensus calculation, or strict - insert the threshold using ft '
+                                                  'parameter.')
+    parser.add_argument("-ft", "--freq_th", required=False, help='the frequency threshold for consensus, only for '
+                                                                 'strict - S mode. ')
     return parser
 
 
