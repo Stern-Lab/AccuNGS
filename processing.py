@@ -132,7 +132,7 @@ def fix_insertions_index(df, ref_start):
 def parse_alignment_data(data, read_seq, ref_seq, read_start, ref_start, mode, minus_seq=False):
     if minus_seq and (mode == "SeqToRef"):
         ref_start = ref_start.replace('start', 'end')
-        complimentary_base = {"A": "T", "T": "A", "C": "G", "G": "C", "-": "-"}
+        complimentary_base = {"A": "T", "T": "A", "C": "G", "G": "C", "-": "-", "N": "N"}
         seq = {'read': read_seq, 'ref': ref_seq}
         for seq_type, seq_data in seq.items():  # reverse and take complimentary
             seq_data = list(reverse_string(data[seq_data]))
@@ -205,7 +205,8 @@ def filter_bases(called_bases, quality_threshold, reads_overlap):
         ignored_bases.append(mismatching_bases)
         if reads_overlap == "Y":
             called_bases, no_plus_minus_bases = filter_target_nunique_by(called_bases, by=['read_id', 'ref_pos'],
-                                                                     target_column='plus_or_minus', required_value=2)
+                                                                         target_column='plus_or_minus',
+                                                                         required_value=2)
             no_plus_minus_bases['dropped_because'] = "did not align with both plus and minus"
             ignored_bases.append(no_plus_minus_bases)
     ignored_bases = pd.concat(ignored_bases)
