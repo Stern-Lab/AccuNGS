@@ -296,6 +296,29 @@ def validate_input(output_dir, input_dir, reference_file, mode):
         raise Exception("Could not find files ending with '.fastq' or 'fastq.gz' in input_dir !")
 
 
+def create_stats_file(output_dir, filenames, overlapping_reads, reads_input_num):
+    file_path = os.path.join(output_dir, "stats_file.stats")
+    called_bases_path = os.path.join(output_dir, "called_bases.tsv")
+    dict_states = {'N': '1', 'M': '1 or 2', 'Y': 'exactly 2'}
+    with open(filenames['read_counter_file'], 'r') as read_counter:
+        counter_pd = pd.read_csv(read_counter, sep="\t", engine='python')
+        len_counter = str(len(counter_pd.read_id))
+        mapped_once = str(len(counter_pd.loc[counter_pd['number_of_alignments'] == 1].read_id))
+        mapped_twice = str(len(counter_pd.loc[counter_pd['number_of_alignments'] == 2].read_id))
+    with open(called_bases_path, 'r') as called_bases_file:
+        called_bases = pd.read_csv(called_bases_file, sep="\t", engine='python')['read_id']
+        called_size = called_bases.size
+        called_bases_reads = called_bases.nunique()
+    with open(file_path, 'w+') as stats_file:
+        stats_file.write("Number of reapets requested: " + dict_states[overlapping_reads] + "\n")
+        stats_file.write("Number of overall reads in input: " + str(reads_input_num) + "\n")
+        stats_file.write("Number of reads mapped to reference: " + len_counter + "\n")
+        stats_file.write("Number or reads mapped exactly once: " + mapped_once + "\n")
+        stats_file.write("Number or reads mapped exactly twice: " + mapped_twice + "\n")
+        stats_file.write("Number or reads who contributed to freqs file: " + str(called_bases_reads) + "\n")
+        stats_file.write("Number or called bases: " + str(called_size) + "\n")
+
+
 def runner(input_dir, reference_file, output_dir, max_basecall_iterations, min_coverage, db_comment,
            quality_threshold, task, evalue, dust, num_alignments, soft_masking, perc_identity, mode, max_read_size,
            with_indels, stretches_pvalue, stretches_distance, stretches_to_plot, cleanup,
@@ -317,8 +340,9 @@ def runner(input_dir, reference_file, output_dir, max_basecall_iterations, min_c
         log.debug(f"runner params: {params}")  # TODO: why does this contain status..?
         log.info("Preparing data")
         update_meta_data(output_dir=output_dir, status='Preparing data...', db_path=db_path)
-        prepare_data(input_dir=input_dir, output_dir=filenames['data_dir'], overlapping_reads=overlapping_reads,
-                     cpu_count=cpu_count, max_memory=max_memory)
+        reads_input_num = prepare_data(input_dir=input_dir, output_dir=filenames['data_dir'],
+                                       overlapping_reads=overlapping_reads,
+                                       cpu_count=cpu_count, max_memory=max_memory)
         data_files = get_files_in_dir(filenames['data_dir'])
         fastq_files = [file_path for file_path in data_files if "fastq.part_" in os.path.basename(file_path)]
         log.info(f"Processing {len(fastq_files)} fastq files.")
@@ -333,6 +357,7 @@ def runner(input_dir, reference_file, output_dir, max_basecall_iterations, min_c
         log.info("Aggregating processed fastq files outputs...")
         aggregate_processed_output(input_dir=filenames['processing_dir'], output_dir=output_dir,
                                    reference=reference_file, min_coverage=min_coverage)
+        create_stats_file(output_dir, filenames, overlapping_reads, reads_input_num)
         log.info("Generating graphs...")
         graph_summary(freqs_file=filenames['freqs_file_path'], blast_file=filenames['blast_file'],
                       read_counter_file=filenames['read_counter_file'], stretches_file=filenames['stretches'],
