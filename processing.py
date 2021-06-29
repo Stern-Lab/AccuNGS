@@ -66,14 +66,20 @@ def get_alignments(blast_output, fastq_file, reads_overlap, mode):
     df = pd.read_csv(blast_output, sep="\t", index_col=False,
                      names=["query_id", "subject_id", "query_start", 'query_end', 'subject_start',
                             'subject_end', 'plus_or_minus', 'length', 'mutations', 'query_seq', 'subject_seq'])
-    alignments = _rename_columns(df, mode)
-    suspicious_reads = pd.DataFrame()
-    alignments, ignored_reads, multi_mapped_alignments, read_counter = filter_reads_by_alignment_count(alignments,
+    if not df.empty:
+        alignments = _rename_columns(df, mode)
+        suspicious_reads = pd.DataFrame()
+        alignments, ignored_reads, multi_mapped_alignments, read_counter = filter_reads_by_alignment_count(alignments,
                                                                                                        reads_overlap)
-    multi_mapped_alignments['suspicious_because'] = "multiple alignments"
-    suspicious_reads = suspicious_reads.append(multi_mapped_alignments)
-    quality = get_quality(fastq_file, alignments)
-    alignments['quality'] = alignments.read_id.map(lambda r: quality[r])
+        multi_mapped_alignments['suspicious_because'] = "multiple alignments"
+        suspicious_reads = suspicious_reads.append(multi_mapped_alignments)
+        quality = get_quality(fastq_file, alignments)
+        alignments['quality'] = alignments.read_id.map(lambda r: quality[r])
+    else:
+        alignments=pd.DataFrame()
+        ignored_reads = pd.DataFrame()
+        suspicious_reads=pd.DataFrame()
+        read_counter = list()
     return alignments, ignored_reads.reset_index(drop=True), suspicious_reads.reset_index(drop=True), read_counter
 
 
@@ -217,14 +223,15 @@ def basecall(blast_output_file, fastq_file, output_dir, quality_threshold, mode,
     base_filename = os.path.basename(fastq_file)
     alignments, ignored_reads, suspicious_reads, read_counter = get_alignments(blast_output_file, fastq_file=fastq_file,
                                                                                reads_overlap=reads_overlap, mode=mode)
-    read_counter.to_csv(os.path.join(output_dir, base_filename + ".read_counter"), sep="\t")
-    suspicious_reads.to_csv(os.path.join(output_dir, base_filename + ".suspicious_reads"), sep="\t")
-    ignored_reads.to_csv(os.path.join(output_dir, base_filename + ".ignored_reads"), sep="\t")
-    called_bases = alignments.apply(lambda row: get_alignment_df(row, mode=mode), axis=1)
-    called_bases = pd.concat(list(called_bases)).reset_index(drop=True)
-    called_bases, ignored_bases = filter_bases(called_bases, quality_threshold, reads_overlap)
-    ignored_bases.to_csv(os.path.join(output_dir, base_filename + ".ignored_bases"), sep="\t", index=False)
-    called_bases.to_csv(os.path.join(output_dir, base_filename + ".called_bases"), sep="\t", index=False)
+    if not alignments.empty:
+        read_counter.to_csv(os.path.join(output_dir, base_filename + ".read_counter"), sep="\t")
+        suspicious_reads.to_csv(os.path.join(output_dir, base_filename + ".suspicious_reads"), sep="\t")
+        ignored_reads.to_csv(os.path.join(output_dir, base_filename + ".ignored_reads"), sep="\t")
+        called_bases = alignments.apply(lambda row: get_alignment_df(row, mode=mode), axis=1)
+        called_bases = pd.concat(list(called_bases)).reset_index(drop=True)
+        called_bases, ignored_bases = filter_bases(called_bases, quality_threshold, reads_overlap)
+        ignored_bases.to_csv(os.path.join(output_dir, base_filename + ".ignored_bases"), sep="\t", index=False)
+        called_bases.to_csv(os.path.join(output_dir, base_filename + ".called_bases"), sep="\t", index=False)
 
 
 def convert_fastq_to_fasta(output_dir, fastq_file):
