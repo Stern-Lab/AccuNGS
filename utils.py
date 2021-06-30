@@ -107,7 +107,7 @@ def md5_dir(directory: Union[str, Path]) -> str:
     return str(md5_update_from_dir(directory, hashlib.md5()).hexdigest())
 
 
-def create_new_ref_with_freqs(reference_fasta_file, freqs_file, min_coverage, output_file, drop_indels, ref_mode, freq_th):
+def create_new_ref_with_freqs(reference_fasta_file, freqs_file, min_coverage, output_file, drop_indels, freq_threshold):
     # TODO: what about deletions in the start or begining?
     """Create reference from freqs filling unaligned parts with the given reference file."""
     with open(reference_fasta_file, "r") as handle:
@@ -119,12 +119,7 @@ def create_new_ref_with_freqs(reference_fasta_file, freqs_file, min_coverage, ou
     freqs_df = pd.read_table(freqs_file)
     freqs_df = freqs_df[freqs_df["base_rank"] == 0]
     freqs_df.loc[freqs_df["coverage"] <= min_coverage, 'read_base'] = np.nan
-
-    # check for the state
-    if ref_mode == 'M':
-        freqs_df = freqs_df[freqs_df['frequency'] > 0.5]  # drop low frequency insertions
-    elif ref_mode == 'S':
-        freqs_df = freqs_df[freqs_df['frequency'] > float(freq_th)]
+    freqs_df = freqs_df[freqs_df['frequency'] > float(freq_threshold)]
 
     if drop_indels:
         freqs_df = freqs_df[freqs_df["ref_pos"] == np.round(freqs_df['ref_pos'])]  # drop insertions

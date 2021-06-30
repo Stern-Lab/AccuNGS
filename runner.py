@@ -145,7 +145,7 @@ def parallel_calc_linked_mutations(freqs_file_path, output_dir, mutation_read_li
 
 
 def check_consensus_alignment_with_ref(reference_file, with_indels, min_coverage, iteration_data_dir, basecall_dir,
-                                       iteration_counter, ref_mode, freq_th):
+                                       iteration_counter, freq_threshold):
     reference = get_sequence_from_fasta(reference_file)
     freqs_file_path = os.path.join(iteration_data_dir, f"freqs_{iteration_counter}.tsv")
     called_bases_files = get_files_by_extension(basecall_dir, "called_bases")
@@ -158,7 +158,7 @@ def check_consensus_alignment_with_ref(reference_file, with_indels, min_coverage
         drop_indels = True
     create_new_ref_with_freqs(reference_fasta_file=reference_file, freqs_file=freqs_file_path,
                               min_coverage=min_coverage, output_file=consensus_path, drop_indels=drop_indels,
-                              ref_mode=ref_mode, freq_th=freq_th)
+                              freq_threshold=freq_threshold)
     consensus = get_sequence_from_fasta(consensus_path)
     alignment_score = pairwise2.align.globalxx(consensus, reference, score_only=True)
     alignment_score = alignment_score / max(len(consensus), len(reference))
@@ -250,7 +250,7 @@ def infer_haplotypes(cpu_count, filenames, linked_mutations_dir, log, max_read_s
 
 def process_data(with_indels, dust, evalue, fastq_files, log, max_basecall_iterations,
                  min_coverage, mode, num_alignments, overlapping_reads, output_dir, perc_identity, processing_dir,
-                 quality_threshold, reference_file, soft_masking, task, basecall_dir, ref_mode, freq_th):
+                 quality_threshold, reference_file, soft_masking, task, basecall_dir, freq_threshold):
     for basecall_iteration_counter in range(1, max_basecall_iterations + 1):
         log.info(f"Processing fastq files iteration {basecall_iteration_counter}/{max_basecall_iterations}")
         parallel_process(processing_dir=processing_dir, fastq_files=fastq_files, reference_file=reference_file,
@@ -264,8 +264,7 @@ def process_data(with_indels, dust, evalue, fastq_files, log, max_basecall_itera
                                                              basecall_dir=basecall_dir,
                                                              with_indels=with_indels,
                                                              iteration_data_dir=iteration_data_dir,
-                                                             min_coverage=min_coverage, ref_mode=ref_mode,
-                                                             freq_th=freq_th)
+                                                             min_coverage=min_coverage, freq_threshold=freq_threshold)
         log.info(f'Iteration alignment score: {round(alignment_score, 4)}')
         if alignment_score == 1:
             break
@@ -275,7 +274,7 @@ def process_data(with_indels, dust, evalue, fastq_files, log, max_basecall_itera
     return reference_file
 
 
-def validate_input(output_dir, input_dir, reference_file, mode, ref_mode, freq_th):
+def validate_input(output_dir, input_dir, reference_file, mode, freq_threshold):
     if mode != 'RefToSeq' and mode != 'SeqToRef':
         raise Exception("blast mode must be either RefToSeq or SeqToRef! ")
     if os.path.exists(output_dir):
@@ -296,26 +295,20 @@ def validate_input(output_dir, input_dir, reference_file, mode, ref_mode, freq_t
     files_fastagz = get_files_by_extension(input_dir, "fastq.gz")
     if len(files_fasta) == 0 and len(files_fastagz) == 0:
         raise Exception("Could not find files ending with '.fastq' or 'fastq.gz' in input_dir !")
-    if ref_mode != 'M' and ref_mode != 'S':
-        raise Exception("reference mode should be 'S' - strict or 'M' - major")
-    if ref_mode == 'S':
-        if not freq_th:
-            raise Exception("in reference mode 'S' - must enter the frequency threshold, ft parameter ")
-        else:
-            if float(freq_th) < 0 or float(freq_th) > 1:
-                raise Exception(
-                    "in reference mode 'S' - the frequency threshold, ft parameter must be between 0 and 1.")
+    if float(freq_threshold) < 0 or float(freq_threshold) > 1:
+        raise Exception(
+            "in reference mode 'S' - the frequency threshold, ft parameter must be between 0 and 1.")
 
 
 def runner(input_dir, reference_file, output_dir, max_basecall_iterations, min_coverage, db_comment,
            quality_threshold, task, evalue, dust, num_alignments, soft_masking, perc_identity, mode, max_read_size,
            with_indels, stretches_pvalue, stretches_distance, stretches_to_plot, cleanup,
-           cpu_count, overlapping_reads, db_path, max_memory, ref_mode, freq_th, calculate_haplotypes="Y"):
+           cpu_count, overlapping_reads, db_path, max_memory, freq_threshold, calculate_haplotypes="Y"):
     if not db_path:
         db_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'db')
     if not output_dir:
         output_dir = assign_output_dir(db_path)
-    validate_input(output_dir, input_dir, reference_file, mode, ref_mode, freq_th)
+    validate_input(output_dir, input_dir, reference_file, mode, freq_threshold)
     log = pipeline_logger(logger_name='AccuNGS-Runner', log_folder=output_dir)
     try:
         filenames = set_filenames(output_dir=output_dir)
@@ -340,12 +333,10 @@ def runner(input_dir, reference_file, output_dir, max_basecall_iterations, min_c
                                       mode=mode, num_alignments=num_alignments, overlapping_reads=overlapping_reads,
                                       output_dir=output_dir, perc_identity=perc_identity, reference_file=reference_file,
                                       processing_dir=filenames['processing_dir'], quality_threshold=quality_threshold,
-                                      task=task, basecall_dir=filenames['basecall_dir'], ref_mode=ref_mode,
-                                      freq_th=freq_th)
+                                      task=task, basecall_dir=filenames['basecall_dir'], freq_threshold=freq_threshold)
         log.info("Aggregating processed fastq files outputs...")
         aggregate_processed_output(input_dir=filenames['processing_dir'], output_dir=output_dir,
-                                   reference=reference_file, min_coverage=min_coverage, ref_mode=ref_mode,
-                                   freq_th=freq_th)
+                                   reference=reference_file, min_coverage=min_coverage, freq_threshold=freq_threshold)
         log.info("Generating graphs...")
         graph_summary(freqs_file=filenames['freqs_file_path'], blast_file=filenames['blast_file'],
                       read_counter_file=filenames['read_counter_file'], stretches_file=filenames['stretches'],
@@ -424,11 +415,7 @@ def create_runner_parser():
     parser.add_argument("-mm", "--max_memory", help='limit memory usage to this many megabytes '
                                                     '(None would use available memory when starting to run)')
     parser.add_argument("-ch", "--calculate_haplotypes", help='Y/N, Run pipeline including calculating haplotypes')
-    parser.add_argument("-rm", "--ref_mode", help='M/S, majority - mutation above 50% are considered for the '
-                                                  'consensus calculation, or strict - insert the threshold using ft '
-                                                  'parameter.')
-    parser.add_argument("-ft", "--freq_th", required=False, help='the frequency threshold for consensus, only for '
-                                                                 'strict - S mode. ')
+    parser.add_argument("-ft", "--freq_threshold", required=False, help='the frequency threshold for consensus')
     return parser
 
 
@@ -448,4 +435,4 @@ if __name__ == "__main__":
            stretches_pvalue=float(args['stretches_pvalue']), stretches_distance=float(args['stretches_distance']),
            cleanup=args['cleanup'], with_indels=args['with_indels'], calculate_haplotypes=args['calculate_haplotypes'],
            stretches_to_plot=int(args['stretches_to_plot']), max_read_size=int(args['stretches_max_read_size']),
-           db_path=args['db_path'], ref_mode=args['ref_mode'], freq_th=args['freq_th'])
+           db_path=args['db_path'], freq_threshold=args['freq_threshold'])
