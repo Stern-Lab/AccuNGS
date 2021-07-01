@@ -136,22 +136,12 @@ def prepare_data_in_dir(input_dir, output_dir, rep_length, overlapping_reads, lo
                 merged_reads = extract_gz(merged_reads, output_dir=output_dir)
             split_fastq_file(fastq_file=merged_reads, output_dir=output_dir, cpu_count=cpu_count, max_memory=max_memory)
         else:
-            raise Exception(f"When using merge_opposing !")
-        with open(merged_reads, 'r') as fh:
-            n = 0
-            for line in fh:
-                n += 1
-        return n / 4
+            raise Exception(f"There are not 2 files to merge - overlapping or partial overlapping reads.")
     else:
-        n = 0
         for file in files:
             if file_type == 'gz':
                 file = extract_gz(file, output_dir=output_dir)
-            with open(file, 'r') as fh:
-                for line in fh:
-                    n += 1
             split_fastq_file(fastq_file=file, output_dir=output_dir, cpu_count=cpu_count, max_memory=max_memory)
-        return n / 4
 
 
 def prepare_data(input_dir, output_dir, cpu_count, max_memory, overlapping_reads, rep_length=60):
@@ -159,13 +149,12 @@ def prepare_data(input_dir, output_dir, cpu_count, max_memory, overlapping_reads
     if not cpu_count:
         cpu_count = mp.cpu_count()
     os.makedirs(output_dir, exist_ok=True)
-    sum = prepare_data_in_dir(input_dir=input_dir, output_dir=output_dir, rep_length=rep_length, max_memory=max_memory,
-                              overlapping_reads=overlapping_reads, log=log, cpu_count=cpu_count)
+    prepare_data_in_dir(input_dir=input_dir, output_dir=output_dir, rep_length=rep_length, max_memory=max_memory,
+                        overlapping_reads=overlapping_reads, log=log, cpu_count=cpu_count)
     sub_dirs = [f.path for f in os.scandir(input_dir) if f.is_dir()]
     for dir_path in sub_dirs:
-        sum += prepare_data_in_dir(input_dir=dir_path, output_dir=output_dir, rep_length=rep_length,
-                                   max_memory=max_memory, overlapping_reads=overlapping_reads, log=log, cpu_count=cpu_count)
-    return sum
+        prepare_data_in_dir(input_dir=dir_path, output_dir=output_dir, rep_length=rep_length,
+                            max_memory=max_memory, overlapping_reads=overlapping_reads, log=log, cpu_count=cpu_count)
 
 
 if __name__ == "__main__":
