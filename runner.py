@@ -296,7 +296,7 @@ def validate_input(output_dir, input_dir, reference_file, mode):
         raise Exception("Could not find files ending with '.fastq' or 'fastq.gz' in input_dir !")
 
 
-def get_reads_in_input(input_dir, log):
+def get_number_of_reads_in_input(input_dir, log):
     files = find_read_files(input_dir=input_dir, log=log)[0]
     reads_input_num = 0
     for file in files:
@@ -308,7 +308,7 @@ def get_reads_in_input(input_dir, log):
     return reads_input_num
 
 
-def get_mapped(input_dir):
+def get_mapped_reads(input_dir):
     counter_pd = pd.read_csv(input_dir, sep="\t")
     len_counter = str(len(counter_pd))
     mapped_once = str(len(counter_pd.loc[counter_pd['number_of_alignments'] == 1].read_id))
@@ -319,8 +319,8 @@ def get_mapped(input_dir):
 def create_stats_file(output_dir, filenames, overlapping_reads, log):
     stats_file_path = os.path.join(output_dir, "stats.txt")
     dict_states = {'N': '1', 'M': '1 or 2', 'Y': 'exactly 2'}
-    reads_input_num = get_reads_in_input(input_dir=filenames['data_dir'], log=log)
-    mapped_total, mapped_once, mapped_twice = get_mapped(filenames['read_counter_file'])
+    reads_input_num = get_number_of_reads_in_input(input_dir=filenames['data_dir'], log=log)
+    mapped_total, mapped_once, mapped_twice = get_mapped_reads(filenames['read_counter_file'])
 
     with open(stats_file_path, 'w+') as stats_file:
         stats_file.write(f"Number of repeats requested: {dict_states[overlapping_reads]} \n "
