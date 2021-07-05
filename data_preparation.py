@@ -136,7 +136,8 @@ def prepare_data_in_dir(input_dir, output_dir, rep_length, overlapping_reads, lo
                 merged_reads = extract_gz(merged_reads, output_dir=output_dir)
             split_fastq_file(fastq_file=merged_reads, output_dir=output_dir, cpu_count=cpu_count, max_memory=max_memory)
         else:
-            raise Exception(f"There are not 2 files to merge - overlapping or partial overlapping reads.")
+            raise Exception(f"There are not 2 files to merge - overlapping or partial overlapping reads. If you want to"
+                            f" use mixed overlap or overlap state - make sure there are 2 filed in the input folder")
     else:
         for file in files:
             if file_type == 'gz':

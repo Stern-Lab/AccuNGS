@@ -296,38 +296,38 @@ def validate_input(output_dir, input_dir, reference_file, mode):
         raise Exception("Could not find files ending with '.fastq' or 'fastq.gz' in input_dir !")
 
 
-def create_stats_file(output_dir, input_dir, filenames, overlapping_reads, log):
-    stats_file_path = os.path.join(output_dir, "stats.txt")
-    called_bases_path = os.path.join(output_dir, "called_bases.tsv")  # maybe get from df
-    dict_states = {'N': '1', 'M': '1 or 2', 'Y': 'exactly 2'}
-
-    reads_in_files = find_read_files(input_dir=filenames['data_dir'], log=log)[0]
+def get_reads_in_input(input_dir, log):
+    files = find_read_files(input_dir=input_dir, log=log)[0]
     reads_input_num = 0
-    for file in reads_in_files:
+    for file in files:
         reads_input_num += len(list(SeqIO.parse(file, "fastq")))
     sub_dirs = [f.path for f in os.scandir(input_dir) if f.is_dir()]
     for dir_path in sub_dirs:
         for file in dir_path:
             reads_input_num += len(list(SeqIO.parse(file, "fastq")))
+    return reads_input_num
 
-    counter_pd = pd.read_csv(filenames['read_counter_file'], sep="\t")
+
+def get_mapped(input_dir):
+    counter_pd = pd.read_csv(input_dir, sep="\t")
     len_counter = str(len(counter_pd))
     mapped_once = str(len(counter_pd.loc[counter_pd['number_of_alignments'] == 1].read_id))
     mapped_twice = str(len(counter_pd.loc[counter_pd['number_of_alignments'] == 2].read_id))
+    return len_counter, mapped_once, mapped_twice
 
-    called_bases = pd.read_csv(called_bases_path, sep="\t")['read_id']
-    called_size = called_bases.size
-    called_bases_reads = called_bases.nunique()
+
+def create_stats_file(output_dir, filenames, overlapping_reads, log):
+    stats_file_path = os.path.join(output_dir, "stats.txt")
+    dict_states = {'N': '1', 'M': '1 or 2', 'Y': 'exactly 2'}
+    reads_input_num = get_reads_in_input(input_dir=filenames['data_dir'], log=log)
+    mapped_total, mapped_once, mapped_twice = get_mapped(filenames['read_counter_file'])
 
     with open(stats_file_path, 'w+') as stats_file:
-        data = f"Number of repeats requested: {dict_states[overlapping_reads]} \n " \
-               f"Number of overall reads in input: {str(reads_input_num)} \n " \
-               f"Number of reads mapped to reference: {len_counter} \n " \
-               f"Number or reads mapped exactly once: {mapped_once} \n " \
-               f"Number or reads mapped exactly twice: {mapped_twice} \n " \
-               f"Number or reads who contributed to freqs file: {str(called_bases_reads)} \n " \
-               f"Number or called bases: {str(called_size)} \n"
-        stats_file.write(data)
+        stats_file.write(f"Number of repeats requested: {dict_states[overlapping_reads]} \n "
+                         f"Number of overall reads in input: {str(reads_input_num)} \n "
+                         f"Number of reads mapped to reference: {mapped_total} \n "
+                         f"Number or reads mapped exactly once: {mapped_once} \n "
+                         f"Number or reads mapped exactly twice: {mapped_twice} \n ")
 
 
 def runner(input_dir, reference_file, output_dir, max_basecall_iterations, min_coverage, db_comment,
@@ -367,7 +367,7 @@ def runner(input_dir, reference_file, output_dir, max_basecall_iterations, min_c
         log.info("Aggregating processed fastq files outputs...")
         aggregate_processed_output(input_dir=filenames['processing_dir'], output_dir=output_dir,
                                    reference=reference_file, min_coverage=min_coverage)
-        create_stats_file(output_dir, input_dir, filenames, overlapping_reads, log)
+        create_stats_file(output_dir, filenames, overlapping_reads, log)
         log.info("Generating graphs...")
         graph_summary(freqs_file=filenames['freqs_file_path'], blast_file=filenames['blast_file'],
                       read_counter_file=filenames['read_counter_file'], stretches_file=filenames['stretches'],

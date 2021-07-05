@@ -66,20 +66,14 @@ def get_alignments(blast_output, fastq_file, reads_overlap, mode):
     df = pd.read_csv(blast_output, sep="\t", index_col=False,
                      names=["query_id", "subject_id", "query_start", 'query_end', 'subject_start',
                             'subject_end', 'plus_or_minus', 'length', 'mutations', 'query_seq', 'subject_seq'])
-    if not df.empty:
-        alignments = _rename_columns(df, mode)
-        suspicious_reads = pd.DataFrame()
-        alignments, ignored_reads, multi_mapped_alignments, read_counter = filter_reads_by_alignment_count(alignments,
+    alignments = _rename_columns(df, mode)
+    suspicious_reads = pd.DataFrame()
+    alignments, ignored_reads, multi_mapped_alignments, read_counter = filter_reads_by_alignment_count(alignments,
                                                                                                        reads_overlap)
-        multi_mapped_alignments['suspicious_because'] = "multiple alignments"
-        suspicious_reads = suspicious_reads.append(multi_mapped_alignments)
-        quality = get_quality(fastq_file, alignments)
-        alignments['quality'] = alignments.read_id.map(lambda r: quality[r])
-    else:
-        alignments=pd.DataFrame()
-        ignored_reads = pd.DataFrame()
-        suspicious_reads=pd.DataFrame()
-        read_counter = list()
+    multi_mapped_alignments['suspicious_because'] = "multiple alignments"
+    suspicious_reads = suspicious_reads.append(multi_mapped_alignments)
+    quality = get_quality(fastq_file, alignments)
+    alignments['quality'] = alignments.read_id.map(lambda r: quality[r])
     return alignments, ignored_reads.reset_index(drop=True), suspicious_reads.reset_index(drop=True), read_counter
 
 
@@ -221,9 +215,11 @@ def filter_bases(called_bases, quality_threshold, reads_overlap):
 
 def basecall(blast_output_file, fastq_file, output_dir, quality_threshold, mode, reads_overlap):
     base_filename = os.path.basename(fastq_file)
-    alignments, ignored_reads, suspicious_reads, read_counter = get_alignments(blast_output_file, fastq_file=fastq_file,
-                                                                               reads_overlap=reads_overlap, mode=mode)
-    if not alignments.empty:
+    if os.stat(blast_output_file).st_size != 0:
+        alignments, ignored_reads, suspicious_reads, read_counter = get_alignments(blast_output_file,
+                                                                                   fastq_file=fastq_file,
+                                                                                   reads_overlap=reads_overlap,
+                                                                                   mode=mode)
         read_counter.to_csv(os.path.join(output_dir, base_filename + ".read_counter"), sep="\t")
         suspicious_reads.to_csv(os.path.join(output_dir, base_filename + ".suspicious_reads"), sep="\t")
         ignored_reads.to_csv(os.path.join(output_dir, base_filename + ".ignored_reads"), sep="\t")
