@@ -23,7 +23,7 @@ from utils import get_files_by_extension, concatenate_files_by_extension, create
 def convert_called_bases_to_freqs(called_bases):
     dummy_bases = []
     for pos in called_bases.ref_pos.unique():
-        for base in ['A', 'G', 'T', 'C', '-']:
+        for base in ['A', 'G', 'T', 'C', '-', 'N']:
             dummy_bases.append({'ref_pos': pos, 'read_base': base})
     freq_dummies = pd.DataFrame.from_dict(dummy_bases)
     freqs = pd.concat([freq_dummies, called_bases])
@@ -55,7 +55,7 @@ def create_freqs_file(called_bases_files, output_path):
     coverage = freqs.groupby('ref_pos').base_count.sum()
     freqs['coverage'] = freqs.ref_pos.map(lambda pos: coverage[round(pos)])
     freqs['frequency'] = freqs['base_count'] / freqs['coverage']
-    freqs['base_rank'] = 5 - freqs.groupby('ref_pos').base_count.rank('min')
+    freqs['base_rank'] = 6 - freqs.groupby('ref_pos').base_count.rank('min')
     freqs['probability'] = 1 - 10 ** (np.log10(1.00 - freqs["frequency"] + 1e-07) * (freqs["coverage"] + 1))
     # TODO: does probability logic make sense? same as perl script
     freqs.to_csv(output_path, sep="\t", index=False)
