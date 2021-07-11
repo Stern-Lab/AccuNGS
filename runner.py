@@ -370,10 +370,8 @@ def runner(input_dir, reference_file, output_dir, max_basecall_iterations, min_c
                                       task=task, basecall_dir=filenames['basecall_dir'], freq_threshold=freq_threshold)
         log.info("Aggregating processed fastq files outputs...")
         aggregate_processed_output(input_dir=filenames['processing_dir'], output_dir=output_dir,
-
-                                   reference=reference_file, min_coverage=min_coverage)
+                                   reference=reference_file, min_coverage=min_coverage,  freq_threshold=freq_threshold)
         create_stats_file(output_dir, filenames, overlapping_reads, log)
-                                   reference=reference_file, min_coverage=min_coverage, freq_threshold=freq_threshold)
         log.info("Generating graphs...")
         graph_summary(freqs_file=filenames['freqs_file_path'], blast_file=filenames['blast_file'],
                       read_counter_file=filenames['read_counter_file'], stretches_file=filenames['stretches'],
