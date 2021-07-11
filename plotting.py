@@ -104,7 +104,8 @@ def graph_summary(freqs_file, blast_file, read_counter_file, stretches_file, out
     axes[0][0] = graph_blast_length_distribution(blast_file, axes[0][0])
     axes[0][1] = graph_read_counter(read_counter_file, axes[0][1])
     axes[0][2] = graph_coverage(freqs, axes[0][2])
-    axes[1][0] = graph_mutation_freqs_by_mutation(mutation_data, axes[1][0])
-    axes[1][1] = graph_mutation_freqs_by_position(mutation_data, axes[1][1])
+    if not mutation_data.empty:
+        axes[1][0] = graph_mutation_freqs_by_mutation(mutation_data, axes[1][0])
+        axes[1][1] = graph_mutation_freqs_by_position(mutation_data, axes[1][1])
     axes[1][2] = graph_haplotype_overview(stretches_file, axes[1][2], stretches_to_plot=stretches_to_plot)
     fig.savefig(output_file, bbox_inches="tight", pad_inches=0.3)

@@ -23,18 +23,18 @@ from logger import pipeline_logger
 from utils import get_files_by_extension, extract_gz
 
 
-def merger_generator(forward_handle,reverse_handle, rep_length, log):
+def merger_generator(forward_handle, reverse_handle, rep_length, log):
     for a, b in zip(SeqIO.parse(forward_handle, "fastq"), SeqIO.parse(reverse_handle, "fastq")):
         if a.id.split(" ")[0] != b.id.split(" ")[0]:
             # TODO: what does this mean and shouldnt it be an exception?
             log.warning("Problem, discrepancy in pair id's: {}, {}".format(a.id.split(" ")[0], b.id.split(" ")[0]))
         new_seq_id = a.id.split(" ")[0]
-        new_seq_str = str(a.seq) + ("N"*rep_length) + str(b.seq)
+        new_seq_str = str(a.seq) + ("N" * rep_length) + str(b.seq)
         a_quals = a.letter_annotations["phred_quality"]
         b_quals = b.letter_annotations["phred_quality"]
-        new_seq_qual = a_quals+[1.0 for a in range(rep_length)]+b_quals
+        new_seq_qual = a_quals + [1.0 for a in range(rep_length)] + b_quals
         new_seq = SeqRecord(Seq.Seq(new_seq_str), id=new_seq_id, description="",
-                          letter_annotations={"phred_quality": new_seq_qual})
+                            letter_annotations={"phred_quality": new_seq_qual})
         yield new_seq
 
 
@@ -88,7 +88,7 @@ def split_fastq_file(fastq_file, output_dir, cpu_count, max_memory):
     record_iter = SeqIO.parse(open(fastq_file), "fastq")
     fastq_file_name = os.path.basename(fastq_file)
     for i, batch in enumerate(batch_iterator(record_iter, part_size)):
-        filename = os.path.join(output_dir, f"{fastq_file_name}.part_{i+1}")
+        filename = os.path.join(output_dir, f"{fastq_file_name}.part_{i + 1}")
         with open(filename, "w") as handler:
             SeqIO.write(batch, handler, "fastq")
 
@@ -136,7 +136,8 @@ def prepare_data_in_dir(input_dir, output_dir, rep_length, overlapping_reads, lo
                 merged_reads = extract_gz(merged_reads, output_dir=output_dir)
             split_fastq_file(fastq_file=merged_reads, output_dir=output_dir, cpu_count=cpu_count, max_memory=max_memory)
         else:
-            raise Exception(f"When using merge_opposing !")
+            raise Exception(f"when parameter overlapping_reads is set to {overlapping_reads}, there should be 2 fastq "
+                            f"files in input_dir but found only one! Consult docs for details.")
     else:
         for file in files:
             if file_type == 'gz':
@@ -153,8 +154,8 @@ def prepare_data(input_dir, output_dir, cpu_count, max_memory, overlapping_reads
                         overlapping_reads=overlapping_reads, log=log, cpu_count=cpu_count)
     sub_dirs = [f.path for f in os.scandir(input_dir) if f.is_dir()]
     for dir_path in sub_dirs:
-        prepare_data_in_dir(input_dir=dir_path, output_dir=output_dir, rep_length=rep_length, max_memory=max_memory,
-                            overlapping_reads=overlapping_reads, log=log, cpu_count=cpu_count)
+        prepare_data_in_dir(input_dir=dir_path, output_dir=output_dir, rep_length=rep_length,
+                            max_memory=max_memory, overlapping_reads=overlapping_reads, log=log, cpu_count=cpu_count)
 
 
 if __name__ == "__main__":
