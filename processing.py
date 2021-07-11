@@ -190,14 +190,20 @@ def filter_target_nunique_by(df, target_column, by, required_value=1):
     return df_with_right_number_of_targets, df_with_wrong_number_of_targets
 
 
+def filter_target_n(called_bases):
+    return called_bases[called_bases['read_base'] != 'N'].copy(), called_bases[called_bases['read_base'] == 'N'].copy()
+
+
 def filter_bases(called_bases, quality_threshold, reads_overlap):
     called_bases, multi_aligned_bases = filter_target_nunique_by(called_bases, by=['read_id', 'read_pos'],
                                                                  target_column='ref_pos')
     multi_aligned_bases['dropped_because'] = "read position aligned to more than one ref position"
+    called_bases, n_bases = filter_target_n(called_bases)
+    n_bases['dropped_because'] = f"N base is not included in the freqs file"
     called_bases, low_quality_bases = filter_target_mean_by(called_bases, by=['read_id', 'ref_pos'],
                                                             target_column='quality', min_mean=quality_threshold)
     low_quality_bases['dropped_because'] = f"base phred score lower than threshold: {quality_threshold}"
-    ignored_bases = [multi_aligned_bases, low_quality_bases]
+    ignored_bases = [multi_aligned_bases, low_quality_bases, n_bases]
     if reads_overlap == "Y" or reads_overlap == "P":
         called_bases, mismatching_bases = filter_target_nunique_by(called_bases, by=['read_id', 'ref_pos'],
                                                                    target_column='read_base')
