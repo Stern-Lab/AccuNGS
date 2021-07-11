@@ -136,7 +136,7 @@ def trim_read_id_prefixes(files, read_id_prefix_file):
                 df.to_csv(file, sep='\t', index=False)
 
 
-def aggregate_processed_output(input_dir, output_dir, reference, min_coverage):
+def aggregate_processed_output(input_dir, output_dir, reference, min_coverage, freq_threshold):
     os.makedirs(output_dir, exist_ok=True)
     freqs_file_path = os.path.join(output_dir, "freqs.tsv")
     basecall_dir = os.path.join(input_dir, 'basecall')
@@ -156,9 +156,11 @@ def aggregate_processed_output(input_dir, output_dir, reference, min_coverage):
         concatenate_files_by_extension(input_dir=basecall_dir, extension=file_type,
                                        output_path=os.path.join(output_dir, f"{file_type}.tsv"))
     create_new_ref_with_freqs(reference_fasta_file=reference, freqs_file=freqs_file_path, min_coverage=min_coverage,
-                              output_file=os.path.join(output_dir, "consensus_without_indels.fasta"), drop_indels=True)
+                              output_file=os.path.join(output_dir, "consensus_without_indels.fasta"), drop_indels=True,
+                              freq_threshold=freq_threshold)
     create_new_ref_with_freqs(reference_fasta_file=reference, freqs_file=freqs_file_path, min_coverage=min_coverage,
-                              output_file=os.path.join(output_dir, "consensus_with_indels.fasta"), drop_indels=False)
+                              output_file=os.path.join(output_dir, "consensus_with_indels.fasta"), drop_indels=False,
+                              freq_threshold=freq_threshold)
 
 
 if __name__ == "__main__":
