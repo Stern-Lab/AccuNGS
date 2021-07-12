@@ -199,7 +199,7 @@ def filter_bases(called_bases, quality_threshold, reads_overlap):
                                                                  target_column='ref_pos')
     multi_aligned_bases['dropped_because'] = "read position aligned to more than one ref position"
     called_bases, n_bases = filter_target_n(called_bases)
-    n_bases['dropped_because'] = f"N base is not included in the freqs file"
+    n_bases['dropped_because'] = f"remove N base "
     called_bases, low_quality_bases = filter_target_mean_by(called_bases, by=['read_id', 'ref_pos'],
                                                             target_column='quality', min_mean=quality_threshold)
     low_quality_bases['dropped_because'] = f"base phred score lower than threshold: {quality_threshold}"

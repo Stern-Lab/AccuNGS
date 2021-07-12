@@ -322,7 +322,7 @@ def get_mapped_reads(input_dir):
 
 def create_stats_file(output_dir, filenames, overlapping_reads, log):
     stats_file_path = os.path.join(output_dir, "stats.txt")
-    dict_states = {'N': '1', 'M': '1 or 2', 'Y': 'exactly 2'}
+    dict_states = {'N': '1', 'P': '1 or 2', 'Y': 'exactly 2'}
     reads_input_num = get_number_of_reads_in_input(input_dir=filenames['data_dir'], log=log)
     mapped_total, mapped_once, mapped_twice = get_mapped_reads(filenames['read_counter_file'])
 
