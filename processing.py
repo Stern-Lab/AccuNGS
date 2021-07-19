@@ -113,7 +113,7 @@ def get_max_insertion_value(df_index, insertion):
 def fix_insertions_index(df, ref_start):
     # change insertions index to original index + 0.001
     df.index = df.index + ref_start
-    insertions = df[df.ref_seq == "A"].index.to_list()
+    insertions = df[df.ref_seq == "-"].index.to_list()
     df_index = [float(i) for i in df.index.to_list()]
     insertion_counter = 0
     for insertion in insertions:
