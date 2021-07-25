@@ -119,7 +119,7 @@ def create_new_ref_with_freqs(reference_fasta_file, freqs_file, min_coverage, ou
     freqs_df = pd.read_table(freqs_file)
     freqs_df = freqs_df[freqs_df["base_rank"] == 0]
     freqs_df.loc[freqs_df["coverage"] <= min_coverage, 'read_base'] = np.nan
-    freqs_df = freqs_df[freqs_df['frequency'] > float(freq_threshold)]
+    freqs_df.loc[freqs_df['frequency'] <= float(freq_threshold), 'read_base'] = np.nan
 
     if drop_indels:
         freqs_df = freqs_df[freqs_df["ref_pos"] == np.round(freqs_df['ref_pos'])]  # drop insertions

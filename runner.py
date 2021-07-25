@@ -296,8 +296,7 @@ def validate_input(output_dir, input_dir, reference_file, mode, freq_threshold):
     if len(files_fasta) == 0 and len(files_fastagz) == 0:
         raise Exception("Could not find files ending with '.fastq' or 'fastq.gz' in input_dir !")
     if float(freq_threshold) < 0 or float(freq_threshold) > 1:
-        raise Exception(
-            "the frequency threshold, ft parameter must be between 0 and 1.")
+        raise Exception("the frequency threshold, ft parameter must be between 0 and 1.")
 
 
 def get_number_of_reads_in_input(input_dir, log):
