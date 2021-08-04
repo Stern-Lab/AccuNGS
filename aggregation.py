@@ -56,7 +56,7 @@ def create_freqs_file(called_bases_files, output_path):
     coverage = freqs.groupby('ref_pos').base_count.sum()
     freqs['coverage'] = freqs.ref_pos.map(lambda pos: coverage[round(pos)])
     freqs['frequency'] = freqs['base_count'] / freqs['coverage']
-    freqs['base_rank'] = 5 - freqs.groupby('ref_pos').base_count.rank('min')
+    freqs['base_rank'] = freqs.read_base.nunique() - freqs.groupby('ref_pos').base_count.rank('min')
     freqs['probability'] = 1 - 10 ** (np.log10(1.00 - freqs["frequency"] + 1e-07) * (freqs["coverage"] + 1))
     # TODO: does probability logic make sense? same as perl script
     freqs.to_csv(output_path, sep="\t", index=False)

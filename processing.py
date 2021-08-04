@@ -170,13 +170,13 @@ def get_alignment_df(alignment_data, mode):
     return bases.reset_index(drop=True)
 
 
-def filter_target_mean_by(df, target_column, by, min_mean):
-    target_nunique_values = df.groupby(by)[target_column].mean()
-    target_nunique_values.name = 'tmpCol'
-    target_nunique_values = target_nunique_values.reset_index()
-    df = df.merge(target_nunique_values, on=by)
-    df_with_high_mean = df[df['tmpCol'] >= min_mean].drop(columns=['tmpCol']).copy()
-    df_with_low_mean = df[df['tmpCol'] < min_mean].drop(columns=['tmpCol']).copy()
+def filter_target_max_by(df, target_column, by, min_value):
+    target_values = df.groupby(by)[target_column].max()
+    target_values.name = 'tmpCol'
+    target_values = target_values.reset_index()
+    df = df.merge(target_values, on=by)
+    df_with_high_mean = df[df['tmpCol'] >= min_value].drop(columns=['tmpCol']).copy()
+    df_with_low_mean = df[df['tmpCol'] < min_value].drop(columns=['tmpCol']).copy()
     return df_with_high_mean, df_with_low_mean
 
 
@@ -194,8 +194,8 @@ def filter_bases(called_bases, quality_threshold, reads_overlap):
     called_bases, multi_aligned_bases = filter_target_nunique_by(called_bases, by=['read_id', 'read_pos'],
                                                                  target_column='ref_pos')
     multi_aligned_bases['dropped_because'] = "read position aligned to more than one ref position"
-    called_bases, low_quality_bases = filter_target_mean_by(called_bases, by=['read_id', 'ref_pos'],
-                                                            target_column='quality', min_mean=quality_threshold)
+    called_bases, low_quality_bases = filter_target_max_by(called_bases, by=['read_id', 'ref_pos'],
+                                                           target_column='quality', min_value=quality_threshold)
     low_quality_bases['dropped_because'] = f"base phred score lower than threshold: {quality_threshold}"
     ignored_bases = [multi_aligned_bases, low_quality_bases]
     called_bases['overlap'] = 0
