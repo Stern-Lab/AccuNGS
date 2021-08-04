@@ -198,17 +198,22 @@ def filter_bases(called_bases, quality_threshold, reads_overlap):
                                                             target_column='quality', min_mean=quality_threshold)
     low_quality_bases['dropped_because'] = f"base phred score lower than threshold: {quality_threshold}"
     ignored_bases = [multi_aligned_bases, low_quality_bases]
+    called_bases['overlap'] = 0
     if reads_overlap == "Y" or reads_overlap == "M":
         called_bases, mismatching_bases = filter_target_nunique_by(called_bases, by=['read_id', 'ref_pos'],
                                                                    target_column='read_base')
         mismatching_bases['dropped_because'] = "overlapping reads mismatch"
         ignored_bases.append(mismatching_bases)
+        called_bases, no_plus_minus_bases = filter_target_nunique_by(called_bases, by=['read_id', 'ref_pos'],
+                                                                     target_column='plus_or_minus',
+                                                                     required_value=2)
+        called_bases['overlap'] = 1
         if reads_overlap == "Y":
-            called_bases, no_plus_minus_bases = filter_target_nunique_by(called_bases, by=['read_id', 'ref_pos'],
-                                                                         target_column='plus_or_minus',
-                                                                         required_value=2)
             no_plus_minus_bases['dropped_because'] = "did not align with both plus and minus"
             ignored_bases.append(no_plus_minus_bases)
+        elif reads_overlap == "M":
+            no_plus_minus_bases['overlap'] = 0
+            called_bases = pd.concat([called_bases, no_plus_minus_bases])
     ignored_bases = pd.concat(ignored_bases)
     return called_bases, ignored_bases
 

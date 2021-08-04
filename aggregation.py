@@ -27,24 +27,25 @@ def convert_called_bases_to_freqs(called_bases):
             dummy_bases.append({'ref_pos': pos, 'read_base': base})
     freq_dummies = pd.DataFrame.from_dict(dummy_bases)
     freqs = pd.concat([freq_dummies, called_bases])
-    freqs = freqs.groupby(['ref_pos', 'read_base'])['read_id'].nunique()
+    freqs = freqs.groupby(['ref_pos', 'read_base']).agg({'read_id': 'nunique', 'overlap': 'sum'})
     ref_df = called_bases[['ref_pos', 'ref_base']]
     return freqs, ref_df
 
 
 def aggregate_called_bases(called_bases_files):
-    freqs = pd.Series(dtype=int)
+    freqs = pd.DataFrame()
     ref_df = pd.DataFrame()
     for called_bases_file in called_bases_files:
         called_bases_df = pd.read_csv(called_bases_file, sep="\t")
-        freqs_part, ref_df_part = convert_called_bases_to_freqs(called_bases_df)
+        freqs_part, ref_df_part, = convert_called_bases_to_freqs(called_bases_df)
         if freqs.empty:
             freqs = freqs_part
         else:
             freqs = freqs.add(freqs_part, fill_value=0)
             ref_df = pd.concat([ref_df, ref_df_part]).drop_duplicates()
-    freqs.name = 'base_count'
-    freqs = pd.DataFrame(freqs).reset_index()
+    freqs = freqs.reset_index().rename(columns={'read_id': 'base_count'})
+    freqs['overlap_ratio'] = (freqs['overlap'] / freqs['base_count']).fillna(0) / 2  # overlap counts twice!
+    freqs = freqs.drop(columns=['overlap'])
     freqs = freqs.merge(ref_df, on=['ref_pos'], how='left')
     freqs['ref_pos'] = round(freqs['ref_pos'], 3)  # fix that floating point nonsense
     return freqs
