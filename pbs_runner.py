@@ -52,49 +52,49 @@ def runner_cmd(input_dir, output_dir, reference_file, max_basecall_iterations, d
                max_read_size, base_path, cleanup, cpu_count, overlapping_reads, calculate_haplotypes):
     runner_path = os.path.join(base_path, 'runner.py')
     cmd = f"{python_path} {runner_path} -i {input_dir} -o {output_dir} -r {reference_file} "
-    if max_basecall_iterations:
+    if max_basecall_iterations is not None:
         cmd += f" -m {max_basecall_iterations}"
-    if str(quality_threshold):
+    if quality_threshold is not None:
         cmd += f" -qt {quality_threshold}"
-    if task:
+    if task is not None:
         cmd += f" -bt {task}"
-    if evalue:
+    if evalue is not None:
         cmd += f" -be {evalue}"
-    if dust:
+    if dust is not None:
         cmd += f" -bd {dust}"
-    if num_alignments:
+    if num_alignments is not None:
         cmd += f" -bn {num_alignments}"
-    if mode:
+    if mode is not None:
         cmd += f" -bm {mode}"
-    if str(perc_identity):
+    if perc_identity is not None:
         cmd += f" -bp {perc_identity}"
-    if soft_masking:
+    if soft_masking is not None:
         cmd += f" -bs {soft_masking}"
-    if str(min_coverage):
+    if min_coverage is not None:
         cmd += f" -mc {min_coverage}"
-    if str(min_frequency):
+    if min_frequency is not None:
         cmd += f" -mf {min_frequency}"
-    if align_to_ref:
+    if align_to_ref is not None:
         cmd += f" -ar {align_to_ref}"
-    if stretches_pvalue:
+    if stretches_pvalue is not None:
         cmd += f" -sp {stretches_pvalue}"
-    if stretches_distance:
+    if stretches_distance is not None:
         cmd += f" -sd {stretches_distance}"
-    if stretches_to_plot:
+    if stretches_to_plot is not None:
         cmd += f" -stp {stretches_to_plot}"
-    if max_read_size:
+    if max_read_size is not None:
         cmd += f" -smrs {max_read_size}"
-    if cleanup:
+    if cleanup is not None:
         cmd += f" -c {cleanup}"
-    if cpu_count:
+    if cpu_count is not None:
         cmd += f" -cc {cpu_count}"
-    if overlapping_reads:
+    if overlapping_reads is not None:
         cmd += f" -or {overlapping_reads}"
-    if db_path:
+    if db_path is not None:
         cmd += f" -db {db_path}"
-    if db_comment:
+    if db_comment is not None:
         cmd += f" -dbc '{db_comment}'"
-    if calculate_haplotypes:
+    if calculate_haplotypes is not None:
         cmd += f" -ch '{calculate_haplotypes}'"
     return cmd
 
