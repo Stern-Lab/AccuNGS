@@ -134,7 +134,7 @@ def trim_read_id_prefixes(files, read_id_prefix_file):
                 df.to_csv(file, sep='\t', index=False)
 
 
-def aggregate_processed_output(input_dir, output_dir, reference_file, min_coverage):
+def aggregate_processed_output(input_dir, output_dir, reference_file, min_coverage, min_frequency):
     os.makedirs(output_dir, exist_ok=True)
     freqs_file_path = os.path.join(output_dir, "freqs.tsv")
     basecall_dir = os.path.join(input_dir, 'basecall')
@@ -154,9 +154,9 @@ def aggregate_processed_output(input_dir, output_dir, reference_file, min_covera
     for file_type in ['called_bases', 'ignored_bases', 'suspicious_reads', 'ignored_reads']:
         concatenate_files_by_extension(input_dir=basecall_dir, extension=file_type,
                                        output_path=os.path.join(output_dir, f"{file_type}.tsv"))
-    create_consensus_file(freqs_file=freqs_file_path, min_coverage=min_coverage,
+    create_consensus_file(freqs_file=freqs_file_path, min_coverage=min_coverage, min_frequency=min_frequency,
                           output_file=os.path.join(output_dir, "consensus_aligned_to_ref.fasta"), align_to_ref=True)
-    create_consensus_file(freqs_file=freqs_file_path, min_coverage=min_coverage,
+    create_consensus_file(freqs_file=freqs_file_path, min_coverage=min_coverage, min_frequency=min_frequency,
                           output_file=os.path.join(output_dir, "consensus.fasta"), align_to_ref=False)
 
 
@@ -167,9 +167,10 @@ if __name__ == "__main__":
     parser.add_argument("-o", "--output_dir", required=True)
     parser.add_argument("-r", "--reference_file", required=True)
     parser.add_argument("-mc", "--min_coverage",
-                        help="bases with less than this coverage will be excluded from affecting the consensus "
-                             "(default: 10)")
+                        help="bases with less than this coverage will be substituted by Ns in the consensus")
+    parser.add_argument("-mf", "--min_frequency",
+                        help="bases with less than this frequency will be substituted by Ns in the consensus")
 
     args = parser.parse_args()
     aggregate_processed_output(input_dir=args.input_dir, output_dir=args.output_dir, reference_file=args.reference,
-                               min_coverage=args.min_coverage)
+                               min_coverage=args.min_coverage, min_frequency=args.min_frequency)

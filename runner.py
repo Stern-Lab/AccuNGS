@@ -145,7 +145,7 @@ def parallel_calc_linked_mutations(freqs_file_path, output_dir, mutation_read_li
 
 
 def check_consensus_alignment_with_ref(reference_file, align_to_ref, min_coverage, iteration_data_dir, basecall_dir,
-                                       iteration_counter):
+                                       iteration_counter, min_frequency):
     reference = get_sequence_from_fasta(reference_file)
     freqs_file_path = os.path.join(iteration_data_dir, f"freqs_{iteration_counter}.tsv")
     called_bases_files = get_files_by_extension(basecall_dir, "called_bases")
@@ -156,7 +156,7 @@ def check_consensus_alignment_with_ref(reference_file, align_to_ref, min_coverag
     else:
         consensus_path = os.path.join(iteration_data_dir, f"consensus_{iteration_counter}.fasta")
         align_to_ref = False
-    create_consensus_file(freqs_file=freqs_file_path,
+    create_consensus_file(freqs_file=freqs_file_path, min_frequency=min_frequency,
                           min_coverage=min_coverage, output_file=consensus_path, align_to_ref=align_to_ref)
     consensus = get_sequence_from_fasta(consensus_path)
     alignment_score = pairwise2.align.globalxx(consensus, reference, score_only=True)
@@ -247,7 +247,7 @@ def infer_haplotypes(cpu_count, filenames, linked_mutations_dir, log, max_read_s
                         output=filenames['stretches'])  # TODO: refactor that function
 
 
-def process_data(align_to_ref, dust, evalue, fastq_files, log, max_basecall_iterations,
+def process_data(align_to_ref, dust, evalue, fastq_files, log, max_basecall_iterations, min_frequency,
                  min_coverage, mode, num_alignments, overlapping_reads, output_dir, perc_identity, processing_dir,
                  quality_threshold, reference_file, soft_masking, task, basecall_dir):
     for basecall_iteration_counter in range(1, max_basecall_iterations + 1):
@@ -263,7 +263,8 @@ def process_data(align_to_ref, dust, evalue, fastq_files, log, max_basecall_iter
                                                              basecall_dir=basecall_dir,
                                                              align_to_ref=align_to_ref,
                                                              iteration_data_dir=iteration_data_dir,
-                                                             min_coverage=min_coverage)
+                                                             min_coverage=min_coverage,
+                                                             min_frequency=min_frequency)
         log.info(f'Iteration alignment score: {round(alignment_score, 4)}')
         if alignment_score == 1:
             break
@@ -332,7 +333,7 @@ def create_stats_file(output_dir, filenames, overlapping_reads, log):
 
 def runner(input_dir, reference_file, output_dir, max_basecall_iterations, min_coverage, db_comment,
            quality_threshold, task, evalue, dust, num_alignments, soft_masking, perc_identity, mode, max_read_size,
-           align_to_ref, stretches_pvalue, stretches_distance, stretches_to_plot, cleanup,
+           align_to_ref, stretches_pvalue, stretches_distance, stretches_to_plot, cleanup, min_frequency,
            cpu_count, overlapping_reads, db_path, max_memory, calculate_haplotypes="Y"):
     if not db_path:
         db_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'db')
@@ -357,7 +358,7 @@ def runner(input_dir, reference_file, output_dir, max_basecall_iterations, min_c
         fastq_files = [file_path for file_path in data_files if "fastq.part_" in os.path.basename(file_path)]
         log.info(f"Processing {len(fastq_files)} fastq files.")
         update_meta_data(output_dir=output_dir, status='Processing data...', db_path=db_path)
-        reference_file = process_data(align_to_ref=align_to_ref, dust=dust,
+        reference_file = process_data(align_to_ref=align_to_ref, dust=dust, min_frequency=min_frequency,
                                       evalue=evalue, fastq_files=fastq_files, log=log, soft_masking=soft_masking,
                                       max_basecall_iterations=max_basecall_iterations, min_coverage=min_coverage,
                                       mode=mode, num_alignments=num_alignments, overlapping_reads=overlapping_reads,
@@ -366,7 +367,8 @@ def runner(input_dir, reference_file, output_dir, max_basecall_iterations, min_c
                                       task=task, basecall_dir=filenames['basecall_dir'])
         log.info("Aggregating processed fastq files outputs...")
         aggregate_processed_output(input_dir=filenames['processing_dir'], output_dir=output_dir,
-                                   reference_file=reference_file, min_coverage=min_coverage)
+                                   reference_file=reference_file, min_coverage=min_coverage,
+                                   min_frequency=min_frequency)
         create_stats_file(output_dir, filenames, overlapping_reads, log)
         log.info("Generating graphs...")
         graph_summary(freqs_file=filenames['freqs_file_path'], blast_file=filenames['blast_file'],
@@ -429,7 +431,9 @@ def create_runner_parser():
     parser.add_argument("-qt", "--quality_threshold", type=int,
                         help="phred score must be higher than this to be included")
     parser.add_argument("-mc", "--min_coverage", type=int,
-                        help="Minimal coverage required for a position to be considered as consensus")
+                        help="bases with less than this coverage will be substituted by Ns in the consensus")
+    parser.add_argument("-mf", "--min_frequency", type=float,
+                        help="bases with less than this frequency will be substituted by Ns in the consensus")
     parser.add_argument("-ar", "--align_to_ref", help="Y/N, generate consensus aligned to the original reference")
     parser.add_argument("-sp", "--stretches_pvalue", type=float,
                         help="only consider joint mutations with pvalue below this value")
@@ -461,7 +465,7 @@ if __name__ == "__main__":
            num_alignments=int(args['blast_num_alignments']),
            mode=args['blast_mode'], perc_identity=float(args['blast_perc_identity']), cpu_count=args['cpu_count'],
            min_coverage=int(args['min_coverage']), db_comment=args['db_comment'],
-           soft_masking=args['blast_soft_masking'],
+           soft_masking=args['blast_soft_masking'], min_frequency=float(args['min_frequency']),
            stretches_pvalue=float(args['stretches_pvalue']), stretches_distance=float(args['stretches_distance']),
            cleanup=args['cleanup'], align_to_ref=args['align_to_ref'], calculate_haplotypes=args['calculate_haplotypes'],
            stretches_to_plot=int(args['stretches_to_plot']), max_read_size=int(args['stretches_max_read_size']),

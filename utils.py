@@ -109,7 +109,7 @@ def md5_dir(directory: Union[str, Path]) -> str:
     return str(md5_update_from_dir(directory, hashlib.md5()).hexdigest())
 
 
-def create_consensus_file(freqs_file, min_coverage, output_file, align_to_ref, min_frequency=0.5):
+def create_consensus_file(freqs_file, min_coverage, output_file, align_to_ref, min_frequency):
     # TODO: what about deletions in the start or begining?
     """Create consensus file from freqs file"""
     df = pd.read_table(freqs_file)
