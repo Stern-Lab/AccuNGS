@@ -54,7 +54,7 @@ def runner_cmd(input_dir, output_dir, reference_file, max_basecall_iterations, d
     cmd = f"{python_path} {runner_path} -i {input_dir} -o {output_dir} -r {reference_file} "
     if max_basecall_iterations:
         cmd += f" -m {max_basecall_iterations}"
-    if quality_threshold:
+    if str(quality_threshold):
         cmd += f" -qt {quality_threshold}"
     if task:
         cmd += f" -bt {task}"
@@ -66,13 +66,13 @@ def runner_cmd(input_dir, output_dir, reference_file, max_basecall_iterations, d
         cmd += f" -bn {num_alignments}"
     if mode:
         cmd += f" -bm {mode}"
-    if perc_identity:
+    if str(perc_identity):
         cmd += f" -bp {perc_identity}"
     if soft_masking:
         cmd += f" -bs {soft_masking}"
-    if min_coverage:
+    if str(min_coverage):
         cmd += f" -mc {min_coverage}"
-    if min_frequency:
+    if str(min_frequency):
         cmd += f" -mf {min_frequency}"
     if align_to_ref:
         cmd += f" -ar {align_to_ref}"
