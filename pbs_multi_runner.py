@@ -26,7 +26,7 @@ def multi_runner(params_list):
         args.update(
             {key: value for key, value in params_dict.items() if value is not None})    # overide with params dict
         pbs_runner(input_dir=args['input_dir'], output_dir=args['output_dir'], reference_file=args['reference_file'],
-                   max_basecall_iterations=args['max_basecall_iterations'],
+                   max_basecall_iterations=args['max_basecall_iterations'], min_frequency=args['min_frequency'],
                    quality_threshold=args['quality_threshold'], task=args['blast_task'], cleanup=args['cleanup'],
                    evalue=args['blast_evalue'], dust=args['blast_dust'], num_alignments=args['blast_num_alignments'],
                    mode=args['blast_mode'], perc_identity=args['blast_perc_identity'], db_comment=args['db_comment'],
