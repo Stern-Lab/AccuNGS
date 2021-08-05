@@ -17,48 +17,46 @@ import os
 import numpy as np
 import pandas as pd
 
-from utils import get_files_by_extension, concatenate_files_by_extension, create_new_ref_with_freqs, get_files_in_dir
+from utils import get_files_by_extension, concatenate_files_by_extension, create_consensus_file, get_files_in_dir, \
+    get_sequence_from_fasta
 
 
-def convert_called_bases_to_freqs(called_bases):
+def convert_called_bases_to_freqs(called_bases, reference):
+    ref = pd.Series(list(reference), index=range(1, len(reference) + 1))
     dummy_bases = []
-    for pos in called_bases.ref_pos.unique():
+    for pos in ref.index:
         for base in ['A', 'G', 'T', 'C', '-']:
-            dummy_bases.append({'ref_pos': pos, 'read_base': base})
+            dummy_bases.append({'ref_pos': pos, 'read_base': base, 'ref_base': ref[pos]})
     freq_dummies = pd.DataFrame.from_dict(dummy_bases)
     freqs = pd.concat([freq_dummies, called_bases])
-    freqs = freqs.groupby(['ref_pos', 'read_base']).agg({'read_id': 'nunique', 'overlap': 'sum'})
-    ref_df = called_bases[['ref_pos', 'ref_base']]
-    return freqs, ref_df
+    freqs = freqs.groupby(['ref_pos', 'read_base', 'ref_base']).agg({'read_id': 'nunique', 'overlap': 'sum'})
+    return freqs
 
 
-def aggregate_called_bases(called_bases_files):
+def aggregate_called_bases(called_bases_files, reference):
     freqs = pd.DataFrame()
-    ref_df = pd.DataFrame()
     for called_bases_file in called_bases_files:
         called_bases_df = pd.read_csv(called_bases_file, sep="\t")
-        freqs_part, ref_df_part, = convert_called_bases_to_freqs(called_bases_df)
+        freqs_part = convert_called_bases_to_freqs(called_bases_df, reference)
         if freqs.empty:
             freqs = freqs_part
         else:
             freqs = freqs.add(freqs_part, fill_value=0)
-            ref_df = pd.concat([ref_df, ref_df_part]).drop_duplicates()
     freqs = freqs.reset_index().rename(columns={'read_id': 'base_count'})
     freqs['overlap_ratio'] = (freqs['overlap'] / freqs['base_count']).fillna(0) / 2  # overlap counts twice!
     freqs = freqs.drop(columns=['overlap'])
-    freqs = freqs.merge(ref_df, on=['ref_pos'], how='left')
     freqs['ref_pos'] = round(freqs['ref_pos'], 3)  # fix that floating point nonsense
     return freqs
 
 
-def create_freqs_file(called_bases_files, output_path):
-    freqs = aggregate_called_bases(called_bases_files)
+def create_freqs_file(called_bases_files, output_path, reference):
+    freqs = aggregate_called_bases(called_bases_files, reference)
     coverage = freqs.groupby('ref_pos').base_count.sum()
     freqs['coverage'] = freqs.ref_pos.map(lambda pos: coverage[round(pos)])
-    freqs['frequency'] = freqs['base_count'] / freqs['coverage']
+    freqs['frequency'] = (freqs['base_count'] / freqs['coverage']).fillna(0)
     freqs['base_rank'] = freqs.read_base.nunique() - freqs.groupby('ref_pos').base_count.rank('min')
+    # TODO: remove magic number and make sense of probability stuff
     freqs['probability'] = 1 - 10 ** (np.log10(1.00 - freqs["frequency"] + 1e-07) * (freqs["coverage"] + 1))
-    # TODO: does probability logic make sense? same as perl script
     freqs.to_csv(output_path, sep="\t", index=False)
 
 
@@ -136,7 +134,7 @@ def trim_read_id_prefixes(files, read_id_prefix_file):
                 df.to_csv(file, sep='\t', index=False)
 
 
-def aggregate_processed_output(input_dir, output_dir, reference, min_coverage):
+def aggregate_processed_output(input_dir, output_dir, reference_file, min_coverage):
     os.makedirs(output_dir, exist_ok=True)
     freqs_file_path = os.path.join(output_dir, "freqs.tsv")
     basecall_dir = os.path.join(input_dir, 'basecall')
@@ -147,7 +145,8 @@ def aggregate_processed_output(input_dir, output_dir, reference, min_coverage):
     basecall_files = get_files_in_dir(basecall_dir)
     read_id_prefix_file = os.path.join(output_dir, "read_id_prefixes.json")
     trim_read_id_prefixes(files=basecall_files, read_id_prefix_file=read_id_prefix_file)
-    create_freqs_file(called_bases_files=called_bases_files, output_path=freqs_file_path)
+    reference = get_sequence_from_fasta(reference_file)
+    create_freqs_file(called_bases_files=called_bases_files, output_path=freqs_file_path, reference=reference)
     read_counters = get_files_by_extension(basecall_dir, "read_counter")
     aggregate_read_counters(read_counters=read_counters, output_path=os.path.join(output_dir, "read_counter.tsv"))
     concatenate_files_by_extension(input_dir=blast_dir, extension="blast", remove_headers=False,
@@ -155,10 +154,10 @@ def aggregate_processed_output(input_dir, output_dir, reference, min_coverage):
     for file_type in ['called_bases', 'ignored_bases', 'suspicious_reads', 'ignored_reads']:
         concatenate_files_by_extension(input_dir=basecall_dir, extension=file_type,
                                        output_path=os.path.join(output_dir, f"{file_type}.tsv"))
-    create_new_ref_with_freqs(reference_fasta_file=reference, freqs_file=freqs_file_path, min_coverage=min_coverage,
-                              output_file=os.path.join(output_dir, "consensus_without_indels.fasta"), drop_indels=True)
-    create_new_ref_with_freqs(reference_fasta_file=reference, freqs_file=freqs_file_path, min_coverage=min_coverage,
-                              output_file=os.path.join(output_dir, "consensus_with_indels.fasta"), drop_indels=False)
+    create_consensus_file(freqs_file=freqs_file_path, min_coverage=min_coverage,
+                          output_file=os.path.join(output_dir, "consensus_aligned_to_ref.fasta"), align_to_ref=True)
+    create_consensus_file(freqs_file=freqs_file_path, min_coverage=min_coverage,
+                          output_file=os.path.join(output_dir, "consensus.fasta"), align_to_ref=False)
 
 
 if __name__ == "__main__":
@@ -172,5 +171,5 @@ if __name__ == "__main__":
                              "(default: 10)")
 
     args = parser.parse_args()
-    aggregate_processed_output(input_dir=args.input_dir, output_dir=args.output_dir, reference=args.reference,
+    aggregate_processed_output(input_dir=args.input_dir, output_dir=args.output_dir, reference_file=args.reference,
                                min_coverage=args.min_coverage)

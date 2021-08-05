@@ -5,6 +5,7 @@ import shutil
 import sys
 import decimal
 import hashlib
+import time
 from _hashlib import HASH as Hash
 from pathlib import Path
 from typing import Union
@@ -13,6 +14,7 @@ import numpy as np
 import pandas as pd
 
 from Bio import SeqIO, Seq
+from Bio.SeqRecord import SeqRecord
 
 
 def get_files_by_extension(dir_path, extension):
@@ -107,27 +109,22 @@ def md5_dir(directory: Union[str, Path]) -> str:
     return str(md5_update_from_dir(directory, hashlib.md5()).hexdigest())
 
 
-def create_new_ref_with_freqs(reference_fasta_file, freqs_file, min_coverage, output_file, drop_indels):
+def create_consensus_file(freqs_file, min_coverage, output_file, align_to_ref, min_frequency=0.5):
     # TODO: what about deletions in the start or begining?
-    """Create reference from freqs filling unaligned parts with the given reference file."""
-    with open(reference_fasta_file, "r") as handle:
-        records = list(SeqIO.parse(handle, "fasta"))
-    if len(records) != 1:
-        raise Exception("fasta file must contain only one record!")
-    record = records[0]
-    ref = pd.DataFrame(list(str(record.seq)), columns=['ref_base_from_fasta'])
-    ref.index = (ref.index + 1).astype(float)
+    """Create consensus file from freqs file"""
     df = pd.read_table(freqs_file)
     df = df[df["base_rank"] == 0]
-    df.loc[df["coverage"] <= min_coverage, 'read_base'] = np.nan
-    df = df[df['frequency'] > 0.5]                          # drop low frequency insertions
-    if drop_indels:
-        df = df[df["ref_pos"] == np.round(df['ref_pos'])]   # drop insertions
-        df = df[df["read_base"] != "-"]                     # drop deletions
-    df = df.merge(ref, left_on='ref_pos', right_index=True, how='outer').sort_values(by='ref_pos')
-    new_seq = df['read_base'].fillna(df['ref_base_from_fasta']).replace('-', np.nan).dropna().str.cat()
-    new_sequence = Seq.Seq(new_seq)
-    record.seq = new_sequence
+    df.loc[df["coverage"] <= min_coverage, 'read_base'] = 'N'
+    df.loc[df["frequency"] <= min_frequency, 'read_base'] = 'N'
+    df = df[(df["ref_pos"] == np.round(df['ref_pos'])) | (df['frequency'] > min_frequency)]  # drop low freq insertions
+    if align_to_ref:
+        df = df[df["ref_pos"] == np.round(df['ref_pos'])]      # drop insertions
+        df["read_base"] = df["read_base"].replace('-', 'N')    # turn deletions into N's
+    consensus = df[df['read_base'] != '-']['read_base']        # drop deletions from consensus
+    record = SeqRecord(
+        Seq.Seq(consensus.str.cat()),
+        id="AccuNGS consensus",
+        description=f"Generated on {time.asctime()}",)
     with open(output_file, "w") as output_handle:
         SeqIO.write(record, output_handle, "fasta")
 

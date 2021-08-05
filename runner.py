@@ -38,8 +38,8 @@ Output: concatenations - concatenated outputs of stage II
         read_id_prefix_file - a json file containing a dictionary of read prefixes to save memory in the other files.
         mutation_read_list - a file describing in which reads each mutation appeared.
         freqs - a frequencies file describing the different alleles and their frequencies for each position.
-        consensus_with_indels - a fasta file of the majority frequency derived from the freqs file including indels
-        consensus_without_indels - a fasta file of the majority frequency derived from the freqs file exclusing indels
+        consensus_aligned_to_ref - a fasta file of the majority frequency derived from the freqs file aligned to the original reference
+        consensus - a fasta file of the majority frequency derived from the freqs file
         read_counter - a file counting how many alignments were called for each read.
 
 IV - Haplotype Inference
@@ -67,7 +67,7 @@ from plotting import graph_summary
 from processing import process_fastq
 from aggregation import aggregate_processed_output, create_freqs_file, create_mutation_read_list_file
 from logger import pipeline_logger
-from utils import get_files_in_dir, get_sequence_from_fasta, get_mp_results_and_report, create_new_ref_with_freqs, \
+from utils import get_files_in_dir, get_sequence_from_fasta, get_mp_results_and_report, create_consensus_file, \
     get_files_by_extension, concatenate_files_by_extension, get_config, md5_dir, md5_file
 from haplotypes.co_occurs_to_stretches import calculate_stretches
 
@@ -144,31 +144,31 @@ def parallel_calc_linked_mutations(freqs_file_path, output_dir, mutation_read_li
         get_mp_results_and_report(parts)
 
 
-def check_consensus_alignment_with_ref(reference_file, with_indels, min_coverage, iteration_data_dir, basecall_dir,
+def check_consensus_alignment_with_ref(reference_file, align_to_ref, min_coverage, iteration_data_dir, basecall_dir,
                                        iteration_counter):
     reference = get_sequence_from_fasta(reference_file)
     freqs_file_path = os.path.join(iteration_data_dir, f"freqs_{iteration_counter}.tsv")
     called_bases_files = get_files_by_extension(basecall_dir, "called_bases")
-    create_freqs_file(called_bases_files=called_bases_files, output_path=freqs_file_path)
-    if with_indels == "Y":
-        consensus_path = os.path.join(iteration_data_dir, f"consensus_with_indels_{iteration_counter}.fasta")
-        drop_indels = False
+    create_freqs_file(called_bases_files=called_bases_files, output_path=freqs_file_path, reference=reference)
+    if align_to_ref == "Y":
+        consensus_path = os.path.join(iteration_data_dir, f"consensus_aligned_to_ref_{iteration_counter}.fasta")
+        align_to_ref = True
     else:
-        consensus_path = os.path.join(iteration_data_dir, f"consensus_without_indels_{iteration_counter}.fasta")
-        drop_indels = True
-    create_new_ref_with_freqs(reference_fasta_file=reference_file, freqs_file=freqs_file_path,
-                              min_coverage=min_coverage, output_file=consensus_path, drop_indels=drop_indels)
+        consensus_path = os.path.join(iteration_data_dir, f"consensus_{iteration_counter}.fasta")
+        align_to_ref = False
+    create_consensus_file(freqs_file=freqs_file_path,
+                          min_coverage=min_coverage, output_file=consensus_path, align_to_ref=align_to_ref)
     consensus = get_sequence_from_fasta(consensus_path)
     alignment_score = pairwise2.align.globalxx(consensus, reference, score_only=True)
     alignment_score = alignment_score / max(len(consensus), len(reference))
     return alignment_score
 
 
-def get_consensus_path(basecall_iteration_counter, with_indels, iteration_data_dir):
-    consensus = os.path.join(iteration_data_dir, "consensus_with")
-    if with_indels != "Y":
-        consensus += "out"
-    consensus += f"_indels_{basecall_iteration_counter}.fasta"
+def get_consensus_path(basecall_iteration_counter, align_to_ref, iteration_data_dir):
+    consensus = os.path.join(iteration_data_dir, "consensus")
+    if align_to_ref == "Y":
+        consensus += "_aligned_to_ref"
+    consensus += f"_{basecall_iteration_counter}.fasta"
     return consensus
 
 
@@ -247,7 +247,7 @@ def infer_haplotypes(cpu_count, filenames, linked_mutations_dir, log, max_read_s
                         output=filenames['stretches'])  # TODO: refactor that function
 
 
-def process_data(with_indels, dust, evalue, fastq_files, log, max_basecall_iterations,
+def process_data(align_to_ref, dust, evalue, fastq_files, log, max_basecall_iterations,
                  min_coverage, mode, num_alignments, overlapping_reads, output_dir, perc_identity, processing_dir,
                  quality_threshold, reference_file, soft_masking, task, basecall_dir):
     for basecall_iteration_counter in range(1, max_basecall_iterations + 1):
@@ -261,14 +261,14 @@ def process_data(with_indels, dust, evalue, fastq_files, log, max_basecall_itera
         alignment_score = check_consensus_alignment_with_ref(reference_file=reference_file,
                                                              iteration_counter=basecall_iteration_counter,
                                                              basecall_dir=basecall_dir,
-                                                             with_indels=with_indels,
+                                                             align_to_ref=align_to_ref,
                                                              iteration_data_dir=iteration_data_dir,
                                                              min_coverage=min_coverage)
         log.info(f'Iteration alignment score: {round(alignment_score, 4)}')
         if alignment_score == 1:
             break
         consensus_path = get_consensus_path(basecall_iteration_counter=basecall_iteration_counter,
-                                            with_indels=with_indels, iteration_data_dir=iteration_data_dir)
+                                            align_to_ref=align_to_ref, iteration_data_dir=iteration_data_dir)
         reference_file = consensus_path
     return reference_file
 
@@ -332,7 +332,7 @@ def create_stats_file(output_dir, filenames, overlapping_reads, log):
 
 def runner(input_dir, reference_file, output_dir, max_basecall_iterations, min_coverage, db_comment,
            quality_threshold, task, evalue, dust, num_alignments, soft_masking, perc_identity, mode, max_read_size,
-           with_indels, stretches_pvalue, stretches_distance, stretches_to_plot, cleanup,
+           align_to_ref, stretches_pvalue, stretches_distance, stretches_to_plot, cleanup,
            cpu_count, overlapping_reads, db_path, max_memory, calculate_haplotypes="Y"):
     if not db_path:
         db_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'db')
@@ -357,7 +357,7 @@ def runner(input_dir, reference_file, output_dir, max_basecall_iterations, min_c
         fastq_files = [file_path for file_path in data_files if "fastq.part_" in os.path.basename(file_path)]
         log.info(f"Processing {len(fastq_files)} fastq files.")
         update_meta_data(output_dir=output_dir, status='Processing data...', db_path=db_path)
-        reference_file = process_data(with_indels=with_indels, dust=dust,
+        reference_file = process_data(align_to_ref=align_to_ref, dust=dust,
                                       evalue=evalue, fastq_files=fastq_files, log=log, soft_masking=soft_masking,
                                       max_basecall_iterations=max_basecall_iterations, min_coverage=min_coverage,
                                       mode=mode, num_alignments=num_alignments, overlapping_reads=overlapping_reads,
@@ -366,7 +366,7 @@ def runner(input_dir, reference_file, output_dir, max_basecall_iterations, min_c
                                       task=task, basecall_dir=filenames['basecall_dir'])
         log.info("Aggregating processed fastq files outputs...")
         aggregate_processed_output(input_dir=filenames['processing_dir'], output_dir=output_dir,
-                                   reference=reference_file, min_coverage=min_coverage)
+                                   reference_file=reference_file, min_coverage=min_coverage)
         create_stats_file(output_dir, filenames, overlapping_reads, log)
         log.info("Generating graphs...")
         graph_summary(freqs_file=filenames['freqs_file_path'], blast_file=filenames['blast_file'],
@@ -414,11 +414,11 @@ def create_runner_parser():
     parser.add_argument("-m", "--max_basecall_iterations", type=int,
                         help="Number of times to rerun with previous consensus as the new reference before giving up.")
     parser.add_argument("-or", "--overlapping_reads",
-                        help="Y/N/M, run pipeline with, without, or with mixed overlapping reads. Y- merge opposing "
+                        help="Y/N/P, run pipeline with, without, or with partial overlapping reads. Y- merge opposing "
                              "reads in the same directory and drop non overlapping areas of the reads. "
-                             "M - Merge opposing reads but keep non overlapping areas."
+                             "P - Merge opposing reads but keep non overlapping areas."
                              "N - No merge, assume reads are independent. "
-                             "Y & M assume 2 fastq/gz files in each sub directory of the input_dir.")
+                             "Y & P assume 2 fastq/gz files in each sub directory of the input_dir.")
     parser.add_argument("-bt", "--blast_task", help="blast's task parameter")
     parser.add_argument("-be", "--blast_evalue", help="blast's e value parameter", type=float)
     parser.add_argument("-bd", "--blast_dust", help="blast's dust parameter")
@@ -430,7 +430,7 @@ def create_runner_parser():
                         help="phred score must be higher than this to be included")
     parser.add_argument("-mc", "--min_coverage", type=int,
                         help="Minimal coverage required for a position to be considered as consensus")
-    parser.add_argument("-wi", "--with_indels", help="Y/N, create consensus with or without indels")
+    parser.add_argument("-ar", "--align_to_ref", help="Y/N, generate consensus aligned to the original reference")
     parser.add_argument("-sp", "--stretches_pvalue", type=float,
                         help="only consider joint mutations with pvalue below this value")
     parser.add_argument("-sd", "--stretches_distance", type=float,
@@ -463,6 +463,6 @@ if __name__ == "__main__":
            min_coverage=int(args['min_coverage']), db_comment=args['db_comment'],
            soft_masking=args['blast_soft_masking'],
            stretches_pvalue=float(args['stretches_pvalue']), stretches_distance=float(args['stretches_distance']),
-           cleanup=args['cleanup'], with_indels=args['with_indels'], calculate_haplotypes=args['calculate_haplotypes'],
+           cleanup=args['cleanup'], align_to_ref=args['align_to_ref'], calculate_haplotypes=args['calculate_haplotypes'],
            stretches_to_plot=int(args['stretches_to_plot']), max_read_size=int(args['stretches_max_read_size']),
            db_path=args['db_path'])

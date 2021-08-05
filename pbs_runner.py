@@ -160,7 +160,7 @@ if __name__ == "__main__":
                evalue=args['blast_evalue'], dust=args['blast_dust'], num_alignments=args['blast_num_alignments'],
                mode=args['blast_mode'], perc_identity=args['blast_perc_identity'],
                min_coverage=args['min_coverage'], cleanup=args['cleanup'], default_command=args['default_command'],
-               with_indels=args['with_indels'], queue=args['queue'], python_path=args['python_path'],
+               with_indels=args['align_to_ref'], queue=args['queue'], python_path=args['python_path'],
                stretches_pvalue=args['stretches_pvalue'], stretches_distance=args['stretches_distance'],
                stretches_to_plot=args['stretches_to_plot'], max_read_size=args['stretches_max_read_size'],
                cpu_count=args['cpu_count'], overlapping_reads=args['overlapping_reads'], db_path=args['db_path'],
