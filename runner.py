@@ -297,18 +297,6 @@ def validate_input(output_dir, input_dir, reference_file, mode):
         raise Exception("Could not find files ending with '.fastq' or 'fastq.gz' in input_dir !")
 
 
-def get_number_of_reads_in_input(input_dir, log):
-    files = find_read_files(input_dir=input_dir, log=log)[0]
-    reads_input_num = 0
-    for file in files:
-        reads_input_num += len(list(SeqIO.parse(file, "fastq")))
-    sub_dirs = [f.path for f in os.scandir(input_dir) if f.is_dir()]
-    for dir_path in sub_dirs:
-        for file in dir_path:
-            reads_input_num += len(list(SeqIO.parse(file, "fastq")))
-    return reads_input_num
-
-
 def get_mapped_reads(read_counter_file):
     counter_pd = pd.read_csv(read_counter_file, sep="\t")
     len_counter = len(counter_pd)
@@ -319,12 +307,9 @@ def get_mapped_reads(read_counter_file):
 
 def create_stats_file(output_dir, filenames, log):
     stats_file_path = os.path.join(output_dir, "stats.txt")
-    reads_input_num = get_number_of_reads_in_input(input_dir=filenames['data_dir'], log=log)
     mapped_total, mapped_once, mapped_twice = get_mapped_reads(filenames['read_counter_file'])
-
     with open(stats_file_path, 'w+') as stats_file:
-        stats_file.write(f"Number of overall reads in input: {str(reads_input_num)} \n "
-                         f"Number of reads mapped to reference: {mapped_total} \n "
+        stats_file.write(f"Number of reads mapped to reference: {mapped_total} \n "
                          f"Number or reads mapped exactly once: {mapped_once} \n "
                          f"Number or reads mapped exactly twice: {mapped_twice} \n ")
 
