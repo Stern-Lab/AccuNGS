@@ -9,12 +9,12 @@ from pbs_multi_runner import multi_runner
 
 
 def tester():
-    params_file = '/sternadi/home/volume2/ita/sternlab-public/tester_params.json'
+    params_file = '/sternadi/home/volume2/ita/sternlab-public/tester/params.json'
     with open(params_file) as jsonfile:
         json_string = jsonfile.read()
         params_list = json.loads(json_string)
     now = datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
-    output_dir = '/sternadi/home/volume2/ita/sternlab-public/db/tester/' + now
+    output_dir = '/sternadi/home/volume2/ita/sternlab-public/tester/tests/' + now
     os.makedirs(output_dir, exist_ok=True)
     for param_dict in params_list:
         param_dict['output_dir'] = os.path.join(output_dir, param_dict['output_dir'])
