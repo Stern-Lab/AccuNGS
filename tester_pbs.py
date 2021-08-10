@@ -37,6 +37,7 @@ def tester():
     start_time = time.time()
     while not os.path.isfile(meta_data_files[0]):
         wait_till_timeout(start_time, timeout)
+    print('Finally wrote some metadata, yay!')
     for meta_data_file in meta_data_files:
         meta_data = read_json_file(meta_data_file)
         start_time = time.time()
