@@ -220,7 +220,7 @@ def create_dir_also_if_exists(output_dir):
 
 
 def assign_output_dir(db_path, alias=None):
-    now = datetime.now().strftime('%Y-%m-%d-%H:%M:%S')
+    now = datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
     output_dir_name = now
     if alias:
         output_dir_name = alias + "_" + output_dir_name
