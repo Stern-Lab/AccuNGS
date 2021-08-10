@@ -13,7 +13,7 @@ def tester():
     with open(params_file) as jsonfile:
         json_string = jsonfile.read()
         params_list = json.loads(json_string)
-    now = datetime.now().strftime('%Y-%m-%d-%H:%M:%S')
+    now = datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
     output_dir = '/sternadi/home/volume2/ita/sternlab-public/db/tester/' + now
     os.makedirs(output_dir, exist_ok=True)
     for param_dict in params_list:
