@@ -49,7 +49,7 @@ def tester():
         if 'Done' in status:
             print(f"job {job_name} passed!")
         else:
-            print(f'error in job {job_name} !')
+            print(f"error in job {job_name} ! dig deeper in {meta_data['output_dir']}")
 
 
 if __name__ == "__main__":
