@@ -30,7 +30,8 @@ def run_project(args):
     with open(params_list_file, 'w') as write_handle:
         json.dump(params_list, write_handle, indent=4)
     print(f"Project params file in {params_list_file}")
-    multi_runner(params_list)
+    job_ids = multi_runner(params_list)
+    return job_ids
 
 
 if __name__ == "__main__":
