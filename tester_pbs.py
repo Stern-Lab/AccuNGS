@@ -42,6 +42,7 @@ def tester():
         meta_data = read_json_file(meta_data_file)
         start_time = time.time()
         while '...' in meta_data['status']:
+            print(meta_data['status'])
             wait_till_timeout(start_time, timeout)
         status = meta_data['status'][:6]
         job_name = os.path.dirname(meta_data['output_dir'])
