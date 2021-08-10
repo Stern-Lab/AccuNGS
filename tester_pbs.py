@@ -26,6 +26,8 @@ def tester():
     for param_dict in params_list:
         param_dict['output_dir'] = os.path.join(output_dir, param_dict['output_dir'])
     multi_runner(params_list)
+    print('Giving the jobs a bit of time to start...')
+    sleep(20)
     meta_data_files = [os.path.join(param_dict['output_dir'], 'meta_data.json') for param_dict in params_list]
     start_time = time.time()
     for meta_data_file in meta_data_files:
