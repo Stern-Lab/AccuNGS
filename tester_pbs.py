@@ -39,6 +39,7 @@ def tester():
         wait_till_timeout(start_time, timeout)
     for meta_data_file in meta_data_files:
         meta_data = read_json_file(meta_data_file)
+        start_time = time.time()
         while '...' in meta_data['status']:
             wait_till_timeout(start_time, timeout)
         status = meta_data['status'][:6]
