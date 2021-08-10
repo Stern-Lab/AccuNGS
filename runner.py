@@ -350,8 +350,9 @@ def runner(input_dir, reference_file, output_dir, max_basecall_iterations, min_c
                                       task=task, basecall_dir=filenames['basecall_dir'])
         log.info("Aggregating processed fastq files outputs...")
         aggregate_processed_output(input_dir=filenames['processing_dir'], output_dir=output_dir,
-                                   reference_file=reference_file, min_coverage=min_coverage,
-                                   min_frequency=min_frequency)
+                                   min_coverage=min_coverage, min_frequency=min_frequency)
+        last_freqs = os.path.join(output_dir, 'iteration_data', f'freqs_{max_basecall_iterations}.tsv')
+        shutil.copy(last_freqs, filenames['freqs_file_path'])
         create_stats_file(output_dir, filenames, log)
         log.info("Generating graphs...")
         graph_summary(freqs_file=filenames['freqs_file_path'], blast_file=filenames['blast_file'],

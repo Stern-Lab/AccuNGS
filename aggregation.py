@@ -134,7 +134,7 @@ def trim_read_id_prefixes(files, read_id_prefix_file):
                 df.to_csv(file, sep='\t', index=False)
 
 
-def aggregate_processed_output(input_dir, output_dir, reference_file, min_coverage, min_frequency):
+def aggregate_processed_output(input_dir, output_dir, min_coverage, min_frequency):
     os.makedirs(output_dir, exist_ok=True)
     freqs_file_path = os.path.join(output_dir, "freqs.tsv")
     basecall_dir = os.path.join(input_dir, 'basecall')
@@ -145,8 +145,6 @@ def aggregate_processed_output(input_dir, output_dir, reference_file, min_covera
     basecall_files = get_files_in_dir(basecall_dir)
     read_id_prefix_file = os.path.join(output_dir, "read_id_prefixes.json")
     trim_read_id_prefixes(files=basecall_files, read_id_prefix_file=read_id_prefix_file)
-    reference = get_sequence_from_fasta(reference_file)
-    create_freqs_file(called_bases_files=called_bases_files, output_path=freqs_file_path, reference=reference)
     read_counters = get_files_by_extension(basecall_dir, "read_counter")
     aggregate_read_counters(read_counters=read_counters, output_path=os.path.join(output_dir, "read_counter.tsv"))
     concatenate_files_by_extension(input_dir=blast_dir, extension="blast", remove_headers=False,
@@ -172,5 +170,5 @@ if __name__ == "__main__":
                         help="bases with less than this frequency will be substituted by Ns in the consensus")
 
     args = parser.parse_args()
-    aggregate_processed_output(input_dir=args.input_dir, output_dir=args.output_dir, reference_file=args.reference,
+    aggregate_processed_output(input_dir=args.input_dir, output_dir=args.output_dir,
                                min_coverage=args.min_coverage, min_frequency=args.min_frequency)
