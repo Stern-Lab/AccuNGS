@@ -45,9 +45,9 @@ def tester():
             wait_till_timeout(start_time, timeout)
             meta_data = read_json_file(meta_data_file)
         status = meta_data['status'][:6]
-        job_name = os.path.dirname(meta_data['output_dir'])
+        job_name = os.path.basename(meta_data['output_dir'])
         if 'Done' in status:
-            print(f"job {job_name} Done!")
+            print(f"job {job_name} passed!")
         else:
             print(f'error in job {job_name} !')
 
