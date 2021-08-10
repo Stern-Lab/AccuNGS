@@ -39,11 +39,11 @@ def tester():
         wait_till_timeout(start_time, timeout)
     print('Finally wrote some metadata, yay!')
     for meta_data_file in meta_data_files:
-        meta_data = read_json_file(meta_data_file)
         start_time = time.time()
+        meta_data = read_json_file(meta_data_file)
         while '...' in meta_data['status']:
-            print(meta_data['status'])
             wait_till_timeout(start_time, timeout)
+            meta_data = read_json_file(meta_data_file)
         status = meta_data['status'][:6]
         job_name = os.path.dirname(meta_data['output_dir'])
         if 'Done' in status:
