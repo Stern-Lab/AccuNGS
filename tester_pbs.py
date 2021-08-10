@@ -27,7 +27,7 @@ def tester():
     params_file = '/sternadi/home/volume2/ita/sternlab-public/tester/params.json'
     params_list = read_json_file(params_file)
     now = datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
-    output_dir = '/sternadi/home/volume2/ita/sternlab-public/tester/tests/' + now
+    output_dir = '/sternadi/nobackup/volume1/pipeline_tests/' + now
     os.makedirs(output_dir, exist_ok=True)
     for param_dict in params_list:
         param_dict['output_dir'] = os.path.join(output_dir, param_dict['output_dir'])
