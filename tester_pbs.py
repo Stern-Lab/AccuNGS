@@ -21,7 +21,7 @@ def tester():
     multi_runner(params_list)
     print('Waiting for jobs to finish...')
     sleep(10)
-    print(f"found {len(os.listdir())} files!")
+    print(f"found {len(os.listdir(output_dir))} files!")
 
 
 if __name__ == "__main__":

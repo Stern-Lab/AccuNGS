@@ -309,23 +309,21 @@ def get_number_of_reads_in_input(input_dir, log):
     return reads_input_num
 
 
-def get_mapped_reads(input_dir):
-    counter_pd = pd.read_csv(input_dir, sep="\t")
-    len_counter = str(len(counter_pd))
-    mapped_once = str(len(counter_pd.loc[counter_pd['number_of_alignments'] == 1].read_id))
-    mapped_twice = str(len(counter_pd.loc[counter_pd['number_of_alignments'] == 2].read_id))
+def get_mapped_reads(read_counter_file):
+    counter_pd = pd.read_csv(read_counter_file, sep="\t")
+    len_counter = len(counter_pd)
+    mapped_once = len(counter_pd.loc[counter_pd['number_of_alignments'] == 1].read_id)
+    mapped_twice = len(counter_pd.loc[counter_pd['number_of_alignments'] == 2].read_id)
     return len_counter, mapped_once, mapped_twice
 
 
-def create_stats_file(output_dir, filenames, overlapping_reads, log):
+def create_stats_file(output_dir, filenames, log):
     stats_file_path = os.path.join(output_dir, "stats.txt")
-    dict_states = {'N': '1', 'M': '1 or 2', 'Y': 'exactly 2'}
     reads_input_num = get_number_of_reads_in_input(input_dir=filenames['data_dir'], log=log)
     mapped_total, mapped_once, mapped_twice = get_mapped_reads(filenames['read_counter_file'])
 
     with open(stats_file_path, 'w+') as stats_file:
-        stats_file.write(f"Number of repeats requested: {dict_states[overlapping_reads]} \n "
-                         f"Number of overall reads in input: {str(reads_input_num)} \n "
+        stats_file.write(f"Number of overall reads in input: {str(reads_input_num)} \n "
                          f"Number of reads mapped to reference: {mapped_total} \n "
                          f"Number or reads mapped exactly once: {mapped_once} \n "
                          f"Number or reads mapped exactly twice: {mapped_twice} \n ")
@@ -369,7 +367,7 @@ def runner(input_dir, reference_file, output_dir, max_basecall_iterations, min_c
         aggregate_processed_output(input_dir=filenames['processing_dir'], output_dir=output_dir,
                                    reference_file=reference_file, min_coverage=min_coverage,
                                    min_frequency=min_frequency)
-        create_stats_file(output_dir, filenames, overlapping_reads, log)
+        create_stats_file(output_dir, filenames, log)
         log.info("Generating graphs...")
         graph_summary(freqs_file=filenames['freqs_file_path'], blast_file=filenames['blast_file'],
                       read_counter_file=filenames['read_counter_file'], stretches_file=filenames['stretches'],
