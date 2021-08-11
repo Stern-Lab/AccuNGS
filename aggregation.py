@@ -29,7 +29,8 @@ def convert_called_bases_to_freqs(called_bases, reference):
             dummy_bases.append({'ref_pos': pos, 'read_base': base, 'ref_base': ref[pos]})
     freq_dummies = pd.DataFrame.from_dict(dummy_bases)
     freqs = pd.concat([freq_dummies, called_bases])
-    freqs = freqs.groupby(['ref_pos', 'read_base', 'ref_base']).agg({'read_id': 'nunique', 'overlap': 'sum'})
+    freqs = freqs.groupby(['ref_pos', 'read_base', 'ref_base']).agg({'read_id': 'nunique', 'overlap': 'sum',
+                                                                     'quality': 'sum'})
     return freqs
 
 
@@ -44,7 +45,9 @@ def aggregate_called_bases(called_bases_files, reference):
             freqs = freqs.add(freqs_part, fill_value=0)
     freqs = freqs.reset_index().rename(columns={'read_id': 'base_count'})
     freqs['overlap_ratio'] = (freqs['overlap'] / freqs['base_count']).fillna(0) / 2  # overlap counts twice!
-    freqs = freqs.drop(columns=['overlap'])
+    freqs['total_times_called'] = freqs['base_count'] * (1 + freqs['overlap_ratio'])
+    freqs['avg_qscore'] = round((freqs['quality'] / freqs['total_times_called']).fillna(0), 1)
+    freqs = freqs.drop(columns=['overlap', 'quality', 'total_times_called'])
     freqs['ref_pos'] = round(freqs['ref_pos'], 3)  # fix that floating point nonsense
     return freqs
 
