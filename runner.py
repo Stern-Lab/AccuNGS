@@ -159,9 +159,10 @@ def check_consensus_alignment_with_ref(reference_file, align_to_ref, min_coverag
     create_consensus_file(freqs_file=freqs_file_path, min_frequency=min_frequency,
                           min_coverage=min_coverage, output_file=consensus_path, align_to_ref=align_to_ref)
     consensus = get_sequence_from_fasta(consensus_path)
-    alignment_score = pairwise2.align.globalxx(consensus, reference, score_only=True)
-    alignment_score = alignment_score / max(len(consensus), len(reference))
-    return alignment_score
+    alignment = pairwise2.align.globalxx(consensus, reference)[0]
+    alignment_score = alignment.score / max(len(consensus), len(reference))
+    alignment = alignment.seqA
+    return alignment_score, alignment
 
 
 def get_consensus_path(basecall_iteration_counter, align_to_ref, iteration_data_dir):
@@ -250,6 +251,7 @@ def infer_haplotypes(cpu_count, filenames, linked_mutations_dir, log, max_read_s
 def process_data(align_to_ref, dust, evalue, fastq_files, log, max_basecall_iterations, min_frequency,
                  min_coverage, mode, num_alignments, overlapping_reads, output_dir, perc_identity, processing_dir,
                  quality_threshold, reference_file, soft_masking, task, basecall_dir):
+    alignments = []
     for basecall_iteration_counter in range(1, max_basecall_iterations + 1):
         log.info(f"Processing fastq files iteration {basecall_iteration_counter}/{max_basecall_iterations}")
         parallel_process(processing_dir=processing_dir, fastq_files=fastq_files, reference_file=reference_file,
@@ -258,20 +260,21 @@ def process_data(align_to_ref, dust, evalue, fastq_files, log, max_basecall_iter
                          reads_overlap=overlapping_reads)
         iteration_data_dir = os.path.join(output_dir, 'iteration_data')
         os.makedirs(iteration_data_dir, exist_ok=True)
-        alignment_score = check_consensus_alignment_with_ref(reference_file=reference_file,
-                                                             iteration_counter=basecall_iteration_counter,
-                                                             basecall_dir=basecall_dir,
-                                                             align_to_ref=align_to_ref,
-                                                             iteration_data_dir=iteration_data_dir,
-                                                             min_coverage=min_coverage,
-                                                             min_frequency=min_frequency)
+        alignment_score, alignment = check_consensus_alignment_with_ref(reference_file=reference_file,
+                                                                        iteration_counter=basecall_iteration_counter,
+                                                                        basecall_dir=basecall_dir,
+                                                                        align_to_ref=align_to_ref,
+                                                                        iteration_data_dir=iteration_data_dir,
+                                                                        min_coverage=min_coverage,
+                                                                        min_frequency=min_frequency)
+        alignments.append(alignment)
         log.info(f'Iteration alignment score: {round(alignment_score, 4)}')
         if alignment_score == 1:
             break
         consensus_path = get_consensus_path(basecall_iteration_counter=basecall_iteration_counter,
                                             align_to_ref=align_to_ref, iteration_data_dir=iteration_data_dir)
         reference_file = consensus_path
-    return reference_file
+    return reference_file, alignments
 
 
 def validate_input(output_dir, input_dir, reference_file, mode):
@@ -305,13 +308,16 @@ def get_mapped_reads(read_counter_file):
     return len_counter, mapped_once, mapped_twice
 
 
-def create_stats_file(output_dir, filenames, log):
+def create_stats_file(output_dir, filenames, alignments):
     stats_file_path = os.path.join(output_dir, "stats.txt")
     mapped_total, mapped_once, mapped_twice = get_mapped_reads(filenames['read_counter_file'])
+    text = f"Number of reads mapped to reference: {mapped_total} \n"\
+           f"Number or reads mapped exactly once: {mapped_once} \n"\
+           f"Number or reads mapped exactly twice: {mapped_twice} \n"
+    for i, alignment in enumerate(alignments):
+        text += f"Alignment {i+1}: \n {alignment} \n"
     with open(stats_file_path, 'w+') as stats_file:
-        stats_file.write(f"Number of reads mapped to reference: {mapped_total} \n "
-                         f"Number or reads mapped exactly once: {mapped_once} \n "
-                         f"Number or reads mapped exactly twice: {mapped_twice} \n ")
+        stats_file.write(text)
 
 
 def runner(input_dir, reference_file, output_dir, max_basecall_iterations, min_coverage, db_comment,
@@ -341,7 +347,7 @@ def runner(input_dir, reference_file, output_dir, max_basecall_iterations, min_c
         fastq_files = [file_path for file_path in data_files if "fastq.part_" in os.path.basename(file_path)]
         log.info(f"Processing {len(fastq_files)} fastq files.")
         update_meta_data(output_dir=output_dir, status='Processing data...', db_path=db_path)
-        reference_file = process_data(align_to_ref=align_to_ref, dust=dust, min_frequency=min_frequency,
+        reference_file, alignments = process_data(align_to_ref=align_to_ref, dust=dust, min_frequency=min_frequency,
                                       evalue=evalue, fastq_files=fastq_files, log=log, soft_masking=soft_masking,
                                       max_basecall_iterations=max_basecall_iterations, min_coverage=min_coverage,
                                       mode=mode, num_alignments=num_alignments, overlapping_reads=overlapping_reads,
@@ -353,7 +359,7 @@ def runner(input_dir, reference_file, output_dir, max_basecall_iterations, min_c
         shutil.copy(last_freqs, filenames['freqs_file_path'])
         aggregate_processed_output(input_dir=filenames['processing_dir'], output_dir=output_dir,
                                    min_coverage=min_coverage, min_frequency=min_frequency)
-        create_stats_file(output_dir, filenames, log)
+        create_stats_file(output_dir, filenames, alignments)
         log.info("Generating graphs...")
         graph_summary(freqs_file=filenames['freqs_file_path'], blast_file=filenames['blast_file'],
                       read_counter_file=filenames['read_counter_file'], stretches_file=filenames['stretches'],
