@@ -59,6 +59,7 @@ from datetime import datetime
 from functools import partial
 import pandas as pd
 import Bio
+from Bio import pairwise2, SeqIO
 
 from data_preparation import prepare_data, find_read_files
 from graph_haplotypes import graph_haplotypes
@@ -160,7 +161,7 @@ def check_consensus_alignment_with_ref(reference_file, align_to_ref, min_coverag
                           min_coverage=min_coverage, output_file=consensus_path, align_to_ref=align_to_ref)
     consensus = get_sequence_from_fasta(consensus_path)
     #TODO: get helpdesk to create the right environment and remove this crap..
-    alignment = Bio.pairwise2.align.globalxx(consensus, reference)[0]
+    alignment = pairwise2.align.globalxx(consensus, reference)[0]
     if float(Bio.__version__) > 1.76:
         alignment_score = alignment.score / max(len(consensus), len(reference))
         alignment = alignment.seqA
@@ -294,7 +295,7 @@ def validate_input(output_dir, input_dir, reference_file, mode):
         raise Exception("reference_file must exist!")
     else:
         with open(reference_file, "r") as handle:
-            fasta = Bio.SeqIO.parse(handle, "fasta")
+            fasta = SeqIO.parse(handle, "fasta")
             if not any(fasta):
                 raise Exception("reference_file must be of type fasta!")
     if not os.path.isdir(input_dir):
