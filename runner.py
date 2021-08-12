@@ -166,8 +166,8 @@ def check_consensus_alignment_with_ref(reference_file, align_to_ref, min_coverag
         alignment_score = alignment.score / max(len(consensus), len(reference))
         alignment = alignment.seqA
     else:
-        alignment_score = alignment[0] / max(len(consensus), len(reference))
-        alignment = alignment[2]
+        alignment_score = int(alignment[2]) / max(len(consensus), len(reference))
+        alignment = alignment[0]
     return alignment_score, alignment
 
 
