@@ -58,7 +58,7 @@ import shutil
 from datetime import datetime
 from functools import partial
 import pandas as pd
-from Bio import pairwise2, SeqIO
+import Bio
 
 from data_preparation import prepare_data, find_read_files
 from graph_haplotypes import graph_haplotypes
@@ -159,9 +159,14 @@ def check_consensus_alignment_with_ref(reference_file, align_to_ref, min_coverag
     create_consensus_file(freqs_file=freqs_file_path, min_frequency=min_frequency,
                           min_coverage=min_coverage, output_file=consensus_path, align_to_ref=align_to_ref)
     consensus = get_sequence_from_fasta(consensus_path)
-    alignment = pairwise2.align.globalxx(consensus, reference)[0]
-    alignment_score = alignment.score / max(len(consensus), len(reference))
-    alignment = alignment.seqA
+    #TODO: get helpdesk to create the right environment and remove this crap..
+    alignment = Bio.pairwise2.align.globalxx(consensus, reference)[0]
+    if float(Bio.__version__) > 1.76:
+        alignment_score = alignment.score / max(len(consensus), len(reference))
+        alignment = alignment.seqA
+    else:
+        alignment_score = alignment[0] / max(len(consensus), len(reference))
+        alignment = alignment[2]
     return alignment_score, alignment
 
 
@@ -289,7 +294,7 @@ def validate_input(output_dir, input_dir, reference_file, mode):
         raise Exception("reference_file must exist!")
     else:
         with open(reference_file, "r") as handle:
-            fasta = SeqIO.parse(handle, "fasta")
+            fasta = Bio.SeqIO.parse(handle, "fasta")
             if not any(fasta):
                 raise Exception("reference_file must be of type fasta!")
     if not os.path.isdir(input_dir):
