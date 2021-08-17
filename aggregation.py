@@ -58,8 +58,7 @@ def create_freqs_file(called_bases_files, output_path, reference):
     freqs['coverage'] = freqs.ref_pos.map(lambda pos: coverage[round(pos)])
     freqs['frequency'] = (freqs['base_count'] / freqs['coverage']).fillna(0)
     freqs['base_rank'] = freqs.read_base.nunique() - freqs.groupby('ref_pos').base_count.rank('min')
-    # TODO: remove magic number and make sense of probability stuff
-    freqs['probability'] = 1 - 10 ** (np.log10(1.00 - freqs["frequency"] + 1e-07) * (freqs["coverage"] + 1))
+    freqs['probability'] = 1 - (1 - freqs["frequency"]) ** freqs['coverage']
     freqs.to_csv(output_path, sep="\t", index=False)
 
 
