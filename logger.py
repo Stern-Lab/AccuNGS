@@ -22,7 +22,7 @@ def _create_new_logger(logger, log_file):
     ch = logging.StreamHandler()
     ch.setLevel(logging.INFO)
     # create file handler and set level to debug
-    if not os.path.exists(log_file): #create file if it doesn't exist.
+    if not os.path.exists(log_file):  # create file if it doesn't exist.
         open(log_file, 'w').close()
     fh = logging.FileHandler(log_file)
     fh.setLevel(logging.DEBUG)
