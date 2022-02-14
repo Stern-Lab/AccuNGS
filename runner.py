@@ -280,7 +280,7 @@ def process_data(align_to_ref, dust, evalue, fastq_files, log, max_basecall_iter
         consensus_path = get_consensus_path(basecall_iteration_counter=basecall_iteration_counter,
                                             align_to_ref=align_to_ref, iteration_data_dir=iteration_data_dir)
         reference_file = consensus_path
-    return reference_file, alignments
+    return reference_file, alignments, basecall_iteration_counter
 
 
 def validate_input(output_dir, input_dir, reference_file, mode):
@@ -353,15 +353,16 @@ def runner(input_dir, reference_file, output_dir, max_basecall_iterations, min_c
         fastq_files = [file_path for file_path in data_files if "fastq.part_" in os.path.basename(file_path)]
         log.info(f"Processing {len(fastq_files)} fastq files.")
         update_meta_data(output_dir=output_dir, status='Processing data...', db_path=db_path)
-        reference_file, alignments = process_data(align_to_ref=align_to_ref, dust=dust, min_frequency=min_frequency,
-                                      evalue=evalue, fastq_files=fastq_files, log=log, soft_masking=soft_masking,
-                                      max_basecall_iterations=max_basecall_iterations, min_coverage=min_coverage,
-                                      mode=mode, num_alignments=num_alignments, overlapping_reads=overlapping_reads,
-                                      output_dir=output_dir, perc_identity=perc_identity, reference_file=reference_file,
-                                      processing_dir=filenames['processing_dir'], quality_threshold=quality_threshold,
-                                      task=task, basecall_dir=filenames['basecall_dir'])
+        reference_file, alignments, iterations = process_data(
+            align_to_ref=align_to_ref, dust=dust, min_frequency=min_frequency,
+            evalue=evalue, fastq_files=fastq_files, log=log, soft_masking=soft_masking,
+            max_basecall_iterations=max_basecall_iterations, min_coverage=min_coverage,
+            mode=mode, num_alignments=num_alignments, overlapping_reads=overlapping_reads,
+            output_dir=output_dir, perc_identity=perc_identity, reference_file=reference_file,
+            processing_dir=filenames['processing_dir'], quality_threshold=quality_threshold,
+            task=task, basecall_dir=filenames['basecall_dir'])
         log.info("Aggregating processed fastq files outputs...")
-        last_freqs = os.path.join(output_dir, 'iteration_data', f'freqs_{max_basecall_iterations}.tsv')
+        last_freqs = os.path.join(output_dir, 'iteration_data', f'freqs_{iterations}.tsv')
         shutil.copy(last_freqs, filenames['freqs_file_path'])
         aggregate_processed_output(input_dir=filenames['processing_dir'], output_dir=output_dir,
                                    min_coverage=min_coverage, min_frequency=min_frequency)
