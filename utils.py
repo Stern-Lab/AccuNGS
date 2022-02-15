@@ -110,9 +110,9 @@ def md5_dir(directory: Union[str, Path]) -> str:
 
 
 def create_consensus_file(freqs_file, min_coverage, output_file, align_to_ref, min_frequency):
-    # TODO: what about deletions in the start or begining?
     """Create consensus file from freqs file"""
     df = pd.read_table(freqs_file)
+    max_pos = round(df['ref_pos'].max())
     df = df[df["base_rank"] == 0]
     df.loc[df["coverage"] <= min_coverage, 'read_base'] = 'N'
     df.loc[df["frequency"] <= min_frequency, 'read_base'] = 'N'
@@ -120,6 +120,10 @@ def create_consensus_file(freqs_file, min_coverage, output_file, align_to_ref, m
     if align_to_ref:
         df = df[df["ref_pos"] == np.round(df['ref_pos'])]      # drop insertions
         df["read_base"] = df["read_base"].replace('-', 'N')    # turn deletions into N's
+        # filtering on rank==0 removed positions with 0 coverage so we bring them back
+        missing_positions = [{'ref_pos': x, 'read_base': 'N'}
+                             for x in range(1, max_pos + 1) if x not in df['ref_pos'].unique()]
+        df = df.append(missing_positions).sort_values('ref_pos')
     consensus = df[df['read_base'] != '-']['read_base']        # drop deletions from consensus
     record = SeqRecord(
         Seq.Seq(consensus.str.cat()),
