@@ -12,7 +12,7 @@ def create_params_list(args):
     parent_input = args['input_dir']
     parent_output = args['output_dir']
     params_list = []
-    dir_list = os.listdir(parent_input)
+    dir_list = [x for x in os.listdir(parent_input) if os.path.isdir(os.path.join(parent_input, x))]
     if len(dir_list) == 0:
         raise Exception(f"input_dir ({parent_input}) does not contain sub-directories."
                         f"Input data should be arranged in sub-directories of input_dir.")
