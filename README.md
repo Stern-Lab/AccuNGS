@@ -14,11 +14,13 @@ todo: supported input files, what is overlap and what is the reference
 todo: explain freqs, consensus, called_bases, filttered things and maybe examples of graphs.
 ## Parameters
 todo: parse --help in here
+#### BLAST Parameters
+#### Basecall Parameters
 ## Running on a PBS cluster
 todo: runner, pbs_runner, pbs_multi_runner, project_runner & config.ini
 
-# Overview
-The pipeline is divided into 4 parts each having it's own .py file: <br>
+# Algorithm Overview
+The pipeline is divided into 4 stages each having it's own .py file: <br>
 I   -  [Prepare Data](#prepare-data)  - Prepare files for efficient parallel processing <br>
 II  -  [Process](#process)  - Parallel run BLAST and basecall on each of the outputs of the previous step <br>
 III -  [Aggregate](#aggregate) - Aggregate outputs of parallel runs (aggregation.py) <br>
@@ -32,11 +34,7 @@ Based on the values in --max_memory / --mm and --cpu_count / -cc the pipeline wi
 
 ## Process 
 Filename: processing.py <br>
-This is where the heavy duty computation takes place and it is a stepwise 
-1. run BLAST and basecall on each of the output files of stage I in parallel.<br>
-2. compare the resulting consensus alignment with the reference.
-Runs BLAST and then basecall on each of the files created by the previous step in parallel. Loops over every nucleotide and decides whether to filter it out based on the given [parameters](#parameters). After running on all files, creates a freqs file and a consensus alignment. Compares the reference and the consensus scores files, if they are identical continue to next stage. else: rerun this step until they are identical or a maximuam threshold set by --max_basecall_iterations / -m is reached.
-
+Runs [BLAST](https://blast.ncbi.nlm.nih.gov/Blast.cgi) and then basecall on each of the files created in stage I in parallel. BLAST is a local alignment tool used to align the reads with the reference file given by parameter --reference / -r . All the relevant BLAST variables can be set with their [corresponding parameters](#blast-parameters). Basecall loops over every nucleotide and decides whether to filter it out based on the relevant [parameters](#basecall-parameters). After the parallel run on all stage I output files is complete, a freqs file and a consensus alignment are created. If the concensus and the reference files are identical, the pipeline continues to stage III. If they are not identical, stage II is repeated but with the newly created consensus file given as the new reference file. This loop continues until the consensus converges fully or a maximuam threshold of iterations set by --max_basecall_iterations / -m is reached.
 
 ## Aggregate
 Filename: agrregation.py <br>
