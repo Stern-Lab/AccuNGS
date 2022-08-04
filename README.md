@@ -1,3 +1,7 @@
+This is a work in progress of a python implementation of the entire pipeline.
+In order to install the environment: <br>
+<code>conda env create --file requirements.txt name_of_new_environment</code>
+
 # <center>___AccuNGS___
 # Introduction
 <b><i>AccuNGS</b></i> is the main computational pipeline used by SternLab. <br>
@@ -8,14 +12,40 @@ Within AccuNGS wet protocol, the sequencing library is created to maximize overl
 todo: gotta package and test this thing.. 
 
 # Usage
-## Input
-todo: supported input files, what is overlap and what is the reference
+AccuNGS pipeline was designed to run locally while using available memory and cpus efficiently and it also natively supports running on a [PBS cluster](#running-on-a-pbs-cluster) system. AccuNGS has three [required parameters](#required-parameters) and all other parameters have default values which can be changed by editing the file <i>config.ini</i> in the installation directory. AccuNGS pipeline was designed to run on fastq files with maximal overlap between the forward and reverse reads but can also be run on fastq files without any overlap using the using the parameter <code>--overlapping_reads N</code>
+
 ## Output
 todo: explain freqs, consensus, called_bases, filttered things and maybe examples of graphs.
+
 ## Parameters
-todo: parse --help in here
-#### BLAST Parameters
+#### Required Parameters
+  - <code>-i / --input_dir</code> - Path to directory containing fastq/fastq.gz files or sub directories containg fastq/fastq.gz files.
+- <code>-o / --output_dir</code> - Path to directory where output files will go.
+- <code>-r / --reference_file</code> - Full path to reference fasta file which fastq files will be aligned against using BLAST.
+
 #### Basecall Parameters
+- <code>-m / --max_bascall_interations</code> - Maximum number of Process loop iterations (see [Process](#process)).
+- <code>-or / --overlapping_reads</code> - Y/N/P, run pipeline with, without or with partial overlapping reads. Y would ignore all bases without an overlap, N assumes reads are independent and ignores overlap completely and P uses all available information.
+- <code>-qt / --quality_threshold</code> - Filter out all nucleotides with phred score lower than this.
+- <code>-mc / --min_coverage</code> - Positions with less than this coverage will be replaced by N's in the consensus.
+- <code>-mf / --min_frequency</code> - Positions with less than this frequency will be replaced by N's in the consensus.
+- <code>-ar / --align_to_ref</code> - Y/N, align consensus to original reference.
+
+#### BLAST Parameters
+The pipeline allows control of some of BLAST's parameters in order to get a better alignment. For an indepth view of all of BLAST's parameters see [BLAST's documentation](https://www.ncbi.nlm.nih.gov/books/NBK279684/).
+- <code>-bt / --blast_task</code> - BLAST's task parameter.
+- <code>-be / --blast_evalue</code> - BLAST's evalue parameter.
+- <code>-bd / --blast_dust</code> - BLAST's dust parameter.
+- <code>-bn / --blast_num_alignments</code> - BLAST's num_alignments parameter.
+- <code>-bp / --blast_perc_identity</code> - BLAST's perc_identity parameter.
+- <code>-bs / --blast_soft_masking</code> - BLAST's soft_masking parameter.
+
+#### Efficieny Parameters
+- <code>-c / --cleanup</code> - Remove redundant basecall directory when done.
+- <code>-cc / --cpu_count</code> - Max number of CPUs to use (0 means all).
+- <code>-mm / --max_memory</code> - Limit memory usage to this many megabytes (0 would use available memory in the begining of execution).
+  
+
 ## Running on a PBS cluster
 todo: runner, pbs_runner, pbs_multi_runner, project_runner & config.ini
 
@@ -38,9 +68,8 @@ Runs [BLAST](https://blast.ncbi.nlm.nih.gov/Blast.cgi) and then basecall on each
 
 ## Aggregate
 Filename: agrregation.py <br>
-
+Aggregates and cleans up outputs of stage II and creates the main output files.
+  
 ## Summarize
 Filename: summarize.py <br>
-
-This is a work in progress of a python implementation of the entire pipeline.
-In order to install the environment: conda env create --file requirements.txt name_of_new_environment
+Creates a graphical and textual summary of the output.
