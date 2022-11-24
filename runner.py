@@ -309,12 +309,11 @@ def validate_input(output_dir, input_dir, reference_file, mode):
         raise Exception("Could not find files ending with '.fastq' or 'fastq.gz' in input_dir !")
 
 
-def remove_unnecessary_dirs(dirs_to_remove):
+def remove_unnecessary_files(dirs_to_remove, files_to_remove):
+    for file_path in files_to_remove:
+        os.remove(file_path)
     for dir_path in dirs_to_remove:
         shutil.rmtree(dir_path)
-        with open(dir_path, 'w') as f:
-            f.write("The files in this directory have been automatically removed to reserve space. "
-                    "To these files from being removed, run with option --cleanup N")
 
 
 def runner(input_dir, reference_file, output_dir, max_basecall_iterations, min_coverage, db_comment,
@@ -380,8 +379,9 @@ def runner(input_dir, reference_file, output_dir, max_basecall_iterations, min_c
                              output_dir=output_dir)
         if cleanup == "Y":
             dirs_to_remove = [filenames['basecall_dir'], filenames['data_dir']]
-            log.info(f"Removing intermediary files to save space.")
-            remove_unnecessary_dirs(dirs_to_remove)
+            files_to_remove = [filenames['blast_file']]
+            log.info(f"Removing intermediary files to save space...")
+            remove_unnecessary_files(dirs_to_remove, files_to_remove)
         update_meta_data(output_dir=output_dir, status='Done', db_path=db_path)
         log.info(f"Done!")
     except Exception as e:

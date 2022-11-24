@@ -141,16 +141,16 @@ def aggregate_processed_output(input_dir, output_dir, min_coverage, min_frequenc
     os.makedirs(output_dir, exist_ok=True)
     basecall_dir = os.path.join(input_dir, 'basecall')
     freqs_file_path = os.path.join(output_dir, "freqs.tsv")
+    blast_dir = os.path.join(input_dir, 'blast')
+    concatenate_files_by_extension(input_dir=blast_dir, extension="blast", remove_headers=False,
+                                   output_path=os.path.join(output_dir, "blast.tsv"))
     if cleanup != 'Y':  # organise intermediary files
-        blast_dir = os.path.join(input_dir, 'blast')
         called_bases_files = get_files_by_extension(basecall_dir, "called_bases")
         if len(called_bases_files) == 0:
             raise Exception(f"Could not find files of type *.called_bases in {input_dir}")
         basecall_files = get_files_in_dir(basecall_dir)
         read_id_prefix_file = os.path.join(output_dir, "read_id_prefixes.json")
         trim_read_id_prefixes(files=basecall_files, read_id_prefix_file=read_id_prefix_file)
-        concatenate_files_by_extension(input_dir=blast_dir, extension="blast", remove_headers=False,
-                                       output_path=os.path.join(output_dir, "blast.tsv"))
         for file_type in ['called_bases', 'ignored_bases', 'suspicious_reads', 'ignored_reads']:
             concatenate_files_by_extension(input_dir=basecall_dir, extension=file_type,
                                            output_path=os.path.join(output_dir, f"{file_type}.tsv"))
