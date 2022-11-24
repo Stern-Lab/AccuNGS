@@ -309,11 +309,21 @@ def validate_input(output_dir, input_dir, reference_file, mode):
         raise Exception("Could not find files ending with '.fastq' or 'fastq.gz' in input_dir !")
 
 
+def try_to_rmtree(path_to_delete, retry_attempts=5):
+    # this is a hack to avoid a bug rmtree throws about a non-empty dir sometimes...
+    if retry_attempts:
+        try:
+            if os.path.isdir(path_to_delete):
+                shutil.rmtree(path_to_delete)
+        except:
+            try_to_rmtree(path_to_delete, retry_attempts-1)
+
+
 def remove_unnecessary_files(dirs_to_remove, files_to_remove):
     for file_path in files_to_remove:
         os.remove(file_path)
     for dir_path in dirs_to_remove:
-        shutil.rmtree(dir_path)
+        try_to_rmtree(dir_path)
 
 
 def runner(input_dir, reference_file, output_dir, max_basecall_iterations, min_coverage, db_comment,
