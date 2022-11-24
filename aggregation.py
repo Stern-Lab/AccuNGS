@@ -59,6 +59,7 @@ def create_freqs_file(called_bases_files, output_path, reference):
     freqs['frequency'] = (freqs['base_count'] / freqs['coverage']).fillna(0)
     freqs['base_rank'] = freqs.read_base.nunique() - freqs.groupby('ref_pos').base_count.rank('min')
     freqs['probability'] = 1 - (1 - freqs["frequency"]) ** freqs['coverage']
+    freqs = round(freqs, 4)
     freqs.to_csv(output_path, sep="\t", index=False)
 
 
