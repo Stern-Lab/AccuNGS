@@ -309,14 +309,6 @@ def validate_input(output_dir, input_dir, reference_file, mode):
         raise Exception("Could not find files ending with '.fastq' or 'fastq.gz' in input_dir !")
 
 
-def get_mapped_reads(read_counter_file):
-    counter_pd = pd.read_csv(read_counter_file, sep="\t")
-    len_counter = len(counter_pd)
-    mapped_once = len(counter_pd.loc[counter_pd['number_of_alignments'] == 1].read_id)
-    mapped_twice = len(counter_pd.loc[counter_pd['number_of_alignments'] == 2].read_id)
-    return len_counter, mapped_once, mapped_twice
-
-
 def remove_unnecessary_dirs(dirs_to_remove):
     for dir_path in dirs_to_remove:
         shutil.rmtree(dir_path)

@@ -180,3 +180,11 @@ def create_fixed_param_list(input_dir, output_dir, params_dict):
         param.update(params_dict)
         param_list.append(param)
     return param_list
+
+
+def get_mapped_reads(read_counter_file):
+    counter_pd = pd.read_csv(read_counter_file, sep="\t")
+    len_counter = len(counter_pd)
+    mapped_once = len(counter_pd.loc[counter_pd['number_of_alignments'] == 1].read_id)
+    mapped_twice = len(counter_pd.loc[counter_pd['number_of_alignments'] == 2].read_id)
+    return len_counter, mapped_once, mapped_twice
