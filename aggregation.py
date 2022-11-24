@@ -136,24 +136,25 @@ def trim_read_id_prefixes(files, read_id_prefix_file):
                 df.to_csv(file, sep='\t', index=False)
 
 
-def aggregate_processed_output(input_dir, output_dir, min_coverage, min_frequency):
+def aggregate_processed_output(input_dir, output_dir, min_coverage, min_frequency, cleanup):
     os.makedirs(output_dir, exist_ok=True)
-    freqs_file_path = os.path.join(output_dir, "freqs.tsv")
     basecall_dir = os.path.join(input_dir, 'basecall')
-    blast_dir = os.path.join(input_dir, 'blast')
-    called_bases_files = get_files_by_extension(basecall_dir, "called_bases")
-    if len(called_bases_files) == 0:
-        raise Exception(f"Could not find files of type *.called_bases in {input_dir}")
-    basecall_files = get_files_in_dir(basecall_dir)
-    read_id_prefix_file = os.path.join(output_dir, "read_id_prefixes.json")
-    trim_read_id_prefixes(files=basecall_files, read_id_prefix_file=read_id_prefix_file)
+    freqs_file_path = os.path.join(output_dir, "freqs.tsv")
+    if cleanup != 'Y':  # organise intermediary files
+        blast_dir = os.path.join(input_dir, 'blast')
+        called_bases_files = get_files_by_extension(basecall_dir, "called_bases")
+        if len(called_bases_files) == 0:
+            raise Exception(f"Could not find files of type *.called_bases in {input_dir}")
+        basecall_files = get_files_in_dir(basecall_dir)
+        read_id_prefix_file = os.path.join(output_dir, "read_id_prefixes.json")
+        trim_read_id_prefixes(files=basecall_files, read_id_prefix_file=read_id_prefix_file)
+        concatenate_files_by_extension(input_dir=blast_dir, extension="blast", remove_headers=False,
+                                       output_path=os.path.join(output_dir, "blast.tsv"))
+        for file_type in ['called_bases', 'ignored_bases', 'suspicious_reads', 'ignored_reads']:
+            concatenate_files_by_extension(input_dir=basecall_dir, extension=file_type,
+                                           output_path=os.path.join(output_dir, f"{file_type}.tsv"))
     read_counters = get_files_by_extension(basecall_dir, "read_counter")
     aggregate_read_counters(read_counters=read_counters, output_path=os.path.join(output_dir, "read_counter.tsv"))
-    concatenate_files_by_extension(input_dir=blast_dir, extension="blast", remove_headers=False,
-                                   output_path=os.path.join(output_dir, "blast.tsv"))
-    for file_type in ['called_bases', 'ignored_bases', 'suspicious_reads', 'ignored_reads']:
-        concatenate_files_by_extension(input_dir=basecall_dir, extension=file_type,
-                                       output_path=os.path.join(output_dir, f"{file_type}.tsv"))
     create_consensus_file(freqs_file=freqs_file_path, min_coverage=min_coverage, min_frequency=min_frequency,
                           output_file=os.path.join(output_dir, "consensus_aligned_to_ref.fasta"), align_to_ref=True)
     create_consensus_file(freqs_file=freqs_file_path, min_coverage=min_coverage, min_frequency=min_frequency,

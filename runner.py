@@ -1,6 +1,10 @@
 """
+TODO: copy readme?
+      remove haplotypes stuff
+      remove blast mode
+      remove db stuff?
+
 This is where the magic happens!
-This tool ... TODO: what is this and what does it do?!
 
 It is meant to be able to run locally and in pbs_runner.py there is also specific support for pbs cluster systems.
 
@@ -9,7 +13,7 @@ The pipeline is divided into 4 parts each having it's own .py file.
 I   -  Preperation (data_preperation.py)
 II  -  Processing (processing.py)
 III -  Aggregation (aggregation.py)
-IV  -  Haplotype Inference (mutations_linking.py)
+IV  -  Visual Summary (summarize.py)
 
 I - Data Prepeation
 Input: directory containing fastq/gz files or a directory containing such directories.
@@ -56,15 +60,14 @@ import multiprocessing as mp
 import shutil
 
 from datetime import datetime
-from functools import partial
 import pandas as pd
 import Bio
 from Bio import pairwise2, SeqIO
 
-from data_preparation import prepare_data, find_read_files
+from data_preparation import prepare_data
 from graph_haplotypes import graph_haplotypes
 from mutations_linking import get_variants_list, get_mutations_linked_with_position
-from plotting import graph_summary
+from summarize import graph_summary, create_stats_file
 from processing import process_fastq
 from aggregation import aggregate_processed_output, create_freqs_file, create_mutation_read_list_file
 from logger import pipeline_logger
@@ -145,8 +148,8 @@ def parallel_calc_linked_mutations(freqs_file_path, output_dir, mutation_read_li
         get_mp_results_and_report(parts)
 
 
-def check_consensus_alignment_with_ref(reference_file, align_to_ref, min_coverage, iteration_data_dir, basecall_dir,
-                                       iteration_counter, min_frequency):
+def create_consensus_and_check_alignment_with_ref(reference_file, align_to_ref, min_coverage, iteration_data_dir, basecall_dir,
+                                                  iteration_counter, min_frequency):
     reference = get_sequence_from_fasta(reference_file)
     freqs_file_path = os.path.join(iteration_data_dir, f"freqs_{iteration_counter}.tsv")
     called_bases_files = get_files_by_extension(basecall_dir, "called_bases")
@@ -266,13 +269,13 @@ def process_data(align_to_ref, dust, evalue, fastq_files, log, max_basecall_iter
                          reads_overlap=overlapping_reads)
         iteration_data_dir = os.path.join(output_dir, 'iteration_data')
         os.makedirs(iteration_data_dir, exist_ok=True)
-        alignment_score, alignment = check_consensus_alignment_with_ref(reference_file=reference_file,
-                                                                        iteration_counter=basecall_iteration_counter,
-                                                                        basecall_dir=basecall_dir,
-                                                                        align_to_ref=align_to_ref,
-                                                                        iteration_data_dir=iteration_data_dir,
-                                                                        min_coverage=min_coverage,
-                                                                        min_frequency=min_frequency)
+        alignment_score, alignment = create_consensus_and_check_alignment_with_ref(reference_file=reference_file,
+                                                                                   iteration_counter=basecall_iteration_counter,
+                                                                                   basecall_dir=basecall_dir,
+                                                                                   align_to_ref=align_to_ref,
+                                                                                   iteration_data_dir=iteration_data_dir,
+                                                                                   min_coverage=min_coverage,
+                                                                                   min_frequency=min_frequency)
         alignments.append(alignment)
         log.info(f'Iteration alignment score: {round(alignment_score, 4)}')
         if alignment_score == 1:
@@ -314,16 +317,12 @@ def get_mapped_reads(read_counter_file):
     return len_counter, mapped_once, mapped_twice
 
 
-def create_stats_file(output_dir, filenames, alignments):
-    stats_file_path = os.path.join(output_dir, "stats.txt")
-    mapped_total, mapped_once, mapped_twice = get_mapped_reads(filenames['read_counter_file'])
-    text = f"Number of reads mapped to reference: {mapped_total} \n"\
-           f"Number or reads mapped exactly once: {mapped_once} \n"\
-           f"Number or reads mapped exactly twice: {mapped_twice} \n"
-    for i, alignment in enumerate(alignments):
-        text += f"Alignment {i+1}: \n {alignment} \n"
-    with open(stats_file_path, 'w+') as stats_file:
-        stats_file.write(text)
+def remove_unnecessary_dirs(dirs_to_remove):
+    for dir_path in dirs_to_remove:
+        shutil.rmtree(dir_path)
+        with open(dir_path, 'w') as f:
+            f.write("The files in this directory have been automatically removed to reserve space. "
+                    "To these files from being removed, run with option --cleanup N")
 
 
 def runner(input_dir, reference_file, output_dir, max_basecall_iterations, min_coverage, db_comment,
@@ -365,7 +364,7 @@ def runner(input_dir, reference_file, output_dir, max_basecall_iterations, min_c
         last_freqs = os.path.join(output_dir, 'iteration_data', f'freqs_{iterations}.tsv')
         shutil.copy(last_freqs, filenames['freqs_file_path'])
         aggregate_processed_output(input_dir=filenames['processing_dir'], output_dir=output_dir,
-                                   min_coverage=min_coverage, min_frequency=min_frequency)
+                                   min_coverage=min_coverage, min_frequency=min_frequency, cleanup=cleanup)
         create_stats_file(output_dir, filenames, alignments)
         log.info("Generating graphs...")
         graph_summary(freqs_file=filenames['freqs_file_path'], blast_file=filenames['blast_file'],
@@ -388,11 +387,9 @@ def runner(input_dir, reference_file, output_dir, max_basecall_iterations, min_c
             graph_haplotypes(input_file=filenames['stretches'], number_of_stretches=stretches_to_plot,
                              output_dir=output_dir)
         if cleanup == "Y":
-            log.info(f"Removing directory {filenames['basecall_dir']} to save space.")
-            shutil.rmtree(filenames['basecall_dir'])
-            with open(filenames['basecall_dir'], 'w') as f:
-                f.write("Directory 'basecall' which contains the original parts of the output files has been removed. "
-                        "To prevent it from being remove run with option --cleanup N")
+            dirs_to_remove = [filenames['basecall_dir'], filenames['data_dir']]
+            log.info(f"Removing intermediary files to save space.")
+            remove_unnecessary_dirs(dirs_to_remove)
         update_meta_data(output_dir=output_dir, status='Done', db_path=db_path)
         log.info(f"Done!")
     except Exception as e:
@@ -428,9 +425,9 @@ def create_runner_parser():
     parser.add_argument("-qt", "--quality_threshold", type=int,
                         help="phred score must be higher than this to be included")
     parser.add_argument("-mc", "--min_coverage", type=int,
-                        help="bases with less than this coverage will be substituted by Ns in the consensus")
+                        help="positions with less than this coverage will be substituted by Ns in the consensus")
     parser.add_argument("-mf", "--min_frequency", type=float,
-                        help="bases with less than this frequency will be substituted by Ns in the consensus")
+                        help="positions with less than this frequency will be substituted by Ns in the consensus")
     parser.add_argument("-ar", "--align_to_ref", help="Y/N, generate consensus aligned to the original reference")
     parser.add_argument("-sp", "--stretches_pvalue", type=float,
                         help="only consider joint mutations with pvalue below this value")
@@ -440,7 +437,7 @@ def create_runner_parser():
                         help="number of stretches to plot in deep dive")
     parser.add_argument("-smrs", "--stretches_max_read_size", type=int,
                         help="look this many positions forward for joint mutations")
-    parser.add_argument("-c", "--cleanup", help="Remove processing/basecall directory when done")
+    parser.add_argument("-c", "--cleanup", help="Remove intermediary files when done in order to save space")
     parser.add_argument("-cc", "--cpu_count", help="max number of cpus to use (None means all)", type=int)
     parser.add_argument("-db", "--db_path", help='path to db directory')
     parser.add_argument("-dbc", "--db_comment", help='comment to store in db')

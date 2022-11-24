@@ -1,8 +1,9 @@
 import os
-
 import pandas as pd
 import seaborn as sns
 from matplotlib import pyplot as plt
+
+from runner import get_mapped_reads
 
 
 def set_plots_size_params(size):
@@ -109,3 +110,15 @@ def graph_summary(freqs_file, blast_file, read_counter_file, stretches_file, out
         axes[1][1] = graph_mutation_freqs_by_position(mutation_data, axes[1][1])
     axes[1][2] = graph_haplotype_overview(stretches_file, axes[1][2], stretches_to_plot=stretches_to_plot)
     fig.savefig(output_file, bbox_inches="tight", pad_inches=0.3)
+
+
+def create_stats_file(output_dir, filenames, alignments):
+    stats_file_path = os.path.join(output_dir, "stats.txt")
+    mapped_total, mapped_once, mapped_twice = get_mapped_reads(filenames['read_counter_file'])
+    text = f"Number of reads mapped to reference: {mapped_total} \n"\
+           f"Number or reads mapped exactly once: {mapped_once} \n"\
+           f"Number or reads mapped exactly twice: {mapped_twice} \n"
+    for i, alignment in enumerate(alignments):
+        text += f"Alignment {i+1}: \n {alignment} \n"
+    with open(stats_file_path, 'w+') as stats_file:
+        stats_file.write(text)

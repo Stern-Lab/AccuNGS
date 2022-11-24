@@ -120,7 +120,7 @@ def create_consensus_file(freqs_file, min_coverage, output_file, align_to_ref, m
     if align_to_ref:
         df = df[df["ref_pos"] == np.round(df['ref_pos'])]      # drop insertions
         df["read_base"] = df["read_base"].replace('-', 'N')    # turn deletions into N's
-        # filtering on rank==0 removed positions with 0 coverage so we bring them back
+        # filtering on rank==0 removed positions with 0 coverage (coz they have rank 4) so we bring them back
         missing_positions = [{'ref_pos': x, 'read_base': 'N'}
                              for x in range(1, max_pos + 1) if x not in df['ref_pos'].unique()]
         df = df.append(missing_positions).sort_values('ref_pos')

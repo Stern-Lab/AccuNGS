@@ -2,7 +2,7 @@ import os
 import argparse
 import pandas as pd
 from matplotlib import pyplot as plt
-from plotting import set_plots_size_params
+from summarize import set_plots_size_params
 
 # TODO: move to haplotypes
 

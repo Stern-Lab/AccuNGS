@@ -14,7 +14,7 @@ import pandas as pd
 from matplotlib import pyplot as plt
 
 from pbs_runner import create_pbs_cmd_file, submit_cmdfile_to_pbs, pbs_runner
-from plotting import set_plots_size_params
+from summarize import set_plots_size_params
 from utils import get_files_in_dir
 
 STERNLAB_PATH = "/sternadi/home/volume2/ita/AccuNGS-private"
